@@ -53,11 +53,7 @@ struct OuterLevel {
 // through typedef-of-struct hops: thriftrw emits AliasedInner as a
 // distinct named Go type (`type AliasedInner Inner`), so the chain
 // must cast through Inner to reach GetXxx() accessors. OuterWithAlias
-// only carries a single typedef-wrapped field; declaring two siblings
-// that both pointed at Inner (e.g. AliasedInner + DoubleAliasedInner)
-// would surface two distinct paths to the same annotated leaf, which
-// validateUUIDArgs rejects because the generated ActorUUID() accessor
-// can only walk one of them.
+// carries a single typedef-wrapped field.
 struct Inner {
     1: optional string innerUUID (auth.actor_uuid = "true")
 }
@@ -67,6 +63,16 @@ typedef AliasedInner DoubleAliasedInner
 
 struct OuterWithAlias {
     1: optional AliasedInner inner
+}
+
+// PairedStructs holds two independent Struct fields, each of which
+// carries its own auth.actor_uuid-annotated UserIdentifier. The walker
+// treats primary and secondary as two distinct routes to an annotated
+// leaf (they hold different runtime values), so testTwoStructPathsMethod
+// below surfaces a two-element slice: one entry per field.
+struct PairedStructs {
+    1: optional Struct primary
+    2: optional Struct secondary
 }
 
 service TestService {
@@ -133,5 +139,31 @@ service TestService {
     // testImportedTypedef's arg imports a typedef from another package
     string testImportedTypedef(
         1: shared.GlobalRequestActorUUID req (auth.actor_uuid = "true")
+    )
+
+    // testMultiAnnotatedArgsMethod annotates two separate flat args.
+    // Multiple annotations are allowed: the generated ActorUUID()
+    // returns one entry per reachable annotation, so this method's
+    // accessor yields []string{t.GetFirstActor(), t.GetSecondActor()}.
+    string testMultiAnnotatedArgsMethod(
+        1: string firstActor (auth.actor_uuid = "true"),
+        2: string secondActor (auth.actor_uuid = "true"),
+    )
+
+    // testTwoStructPathsMethod reaches the same annotated leaf
+    // (Struct.UserIdentifier) through two distinct sibling fields of
+    // PairedStructs. They are different runtime locations, so the
+    // walker emits both routes and the accessor yields a two-element
+    // slice: one for primary, one for secondary.
+    string testTwoStructPathsMethod(
+        1: PairedStructs pair,
+    )
+
+    // testMixedAnnotatedMethod mixes a directly-annotated flat arg with
+    // a struct-hop annotated arg, proving the slice collects
+    // annotations across heterogeneous argument shapes.
+    string testMixedAnnotatedMethod(
+        1: string directActor (auth.actor_uuid = "true"),
+        2: Struct request,
     )
 }

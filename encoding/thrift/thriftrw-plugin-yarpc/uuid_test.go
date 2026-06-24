@@ -69,9 +69,9 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"interested"}, stepNames(got))
-		assert.False(t, got.IsTypedef)
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"interested"}, stepNames(got[0]))
+		assert.False(t, got[0].IsTypedef)
 	})
 
 	t.Run("structArgWithAnnotatedField", func(t *testing.T) {
@@ -81,9 +81,9 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"request", "UserIdentifier"}, stepNames(got))
-		assert.False(t, got.IsTypedef)
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"request", "UserIdentifier"}, stepNames(got[0]))
+		assert.False(t, got[0].IsTypedef)
 	})
 
 	t.Run("typedefArg", func(t *testing.T) {
@@ -93,9 +93,9 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"identifier"}, stepNames(got))
-		assert.True(t, got.IsTypedef)
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"identifier"}, stepNames(got[0]))
+		assert.True(t, got[0].IsTypedef)
 	})
 
 	t.Run("nestedStructArgArbitraryDepth", func(t *testing.T) {
@@ -105,9 +105,9 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"nested", "mid", "inner", "innerUUID"}, stepNames(got))
-		assert.False(t, got.IsTypedef)
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"nested", "mid", "inner", "innerUUID"}, stepNames(got[0]))
+		assert.False(t, got[0].IsTypedef)
 	})
 
 	t.Run("ignoredAnnotationsResolveToNoPath", func(t *testing.T) {
@@ -137,10 +137,10 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"arg", "id"}, stepNames(got),
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"arg", "id"}, stepNames(got[0]),
 			"path must be arg.id (one hop), not arg.loop.id (which traverses the cycle)")
-		assert.Equal(t, []string{"", ""}, stepCasts(got),
+		assert.Equal(t, []string{"", ""}, stepCasts(got[0]),
 			"no typedef hops along this path, so no casts are emitted")
 	})
 
@@ -151,11 +151,11 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"arg", "id"}, stepNames(got))
-		assert.Equal(t, []string{"Inner", ""}, stepCasts(got),
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"arg", "id"}, stepNames(got[0]))
+		assert.Equal(t, []string{"Inner", ""}, stepCasts(got[0]),
 			"the arg step is a typedef of Inner, so its accessor must be cast to *Inner")
-		assert.False(t, got.IsTypedef)
+		assert.False(t, got[0].IsTypedef)
 	})
 
 	t.Run("multiHopTypedefStructArg", func(t *testing.T) {
@@ -165,11 +165,11 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"outer", "deeplyAliased", "id"}, stepNames(got))
-		assert.Equal(t, []string{"", "Inner", ""}, stepCasts(got),
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"outer", "deeplyAliased", "id"}, stepNames(got[0]))
+		assert.Equal(t, []string{"", "Inner", ""}, stepCasts(got[0]),
 			"only the typedef-wrapped step needs a cast, and the cast target is the resolved underlying struct (Inner) regardless of the number of typedef hops")
-		assert.False(t, got.IsTypedef)
+		assert.False(t, got[0].IsTypedef)
 	})
 
 	t.Run("typedefOfStringLeafThroughTypedefStructHop", func(t *testing.T) {
@@ -179,10 +179,10 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"arg", "id"}, stepNames(got))
-		assert.Equal(t, []string{"Inner", ""}, stepCasts(got))
-		assert.True(t, got.IsTypedef,
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"arg", "id"}, stepNames(got[0]))
+		assert.Equal(t, []string{"Inner", ""}, stepCasts(got[0]))
+		assert.True(t, got[0].IsTypedef,
 			"leaf typedef-of-string flag must propagate up through the typedef-of-struct hop so the template wraps the chain in string(...)")
 	})
 
@@ -193,10 +193,10 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"arg", "id"}, stepNames(got),
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"arg", "id"}, stepNames(got[0]),
 			"both `loop` (typedef-wrapped self-ref) and `direct` (bare self-ref) must be skipped; `id` on the same level wins")
-		assert.Equal(t, []string{"", ""}, stepCasts(got))
+		assert.Equal(t, []string{"", ""}, stepCasts(got[0]))
 	})
 
 	t.Run("crossPackageTypedefOfStructEmitsQualifiedCast", func(t *testing.T) {
@@ -221,9 +221,9 @@ func TestUUIDPathInArgs(t *testing.T) {
 		}
 
 		got := uuidPathInArgs(fn, data)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"arg", "crossUUID"}, stepNames(got))
-		assert.Equal(t, []string{innerImportPath + ".CrossInner", ""}, stepCasts(got),
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"arg", "crossUUID"}, stepNames(got[0]))
+		assert.Equal(t, []string{innerImportPath + ".CrossInner", ""}, stepCasts(got[0]),
 			"the cast target's import path must be the included module's package, not the local one")
 	})
 
@@ -234,122 +234,9 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.True(t, ok)
 
 		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"arg", "crossUUID"}, stepNames(got))
-		assert.Equal(t, []string{"CrossInner", ""}, stepCasts(got))
-	})
-}
-
-// TestValidateUUIDArgs covers the per-function validator that the
-// plugin runs upfront in Generate before any code is emitted: it
-// must accept a missing function, a function with no annotations,
-// and a function with exactly one reachable annotation, and reject
-// a function whose args reach more than one annotated leaf — even
-// when one of those leaves sits on a struct that participates in a
-// cycle.
-func TestValidateUUIDArgs(t *testing.T) {
-	t.Run("nilFunction", func(t *testing.T) {
-		assert.NoError(t, validateUUIDAnnotations(nil))
-	})
-
-	t.Run("noAnnotationIsOK", func(t *testing.T) {
-		spec, err := compile.Compile("internal/tests/atomic.thrift")
-		require.NoError(t, err)
-		fn, ok := spec.Services["Store"].Functions["increment"]
-		require.True(t, ok)
-		assert.NoError(t, validateUUIDAnnotations(fn))
-	})
-
-	t.Run("singleAnnotationIsOK", func(t *testing.T) {
-		spec, err := compile.Compile("internal/uuid_test/serviceArg.thrift")
-		require.NoError(t, err)
-		fn, ok := spec.Services["TestService"].Functions["testMethod"]
-		require.True(t, ok)
-		assert.NoError(t, validateUUIDAnnotations(fn))
-	})
-
-	t.Run("multiplePathsToSameLeafErrors", func(t *testing.T) {
-		spec, err := compile.Compile("internal/uuid_test/twoPathsToSameLeaf.thrift")
-		require.NoError(t, err)
-		fn, ok := spec.Services["TestService"].Functions["testMethod"]
-		require.True(t, ok)
-
-		err = validateUUIDAnnotations(fn)
-		require.Error(t, err)
-		for _, want := range []string{"outer.first.id", "outer.second.id"} {
-			assert.Contains(t, err.Error(), want,
-				"both ambiguous paths must appear in the diagnostic so the user can pick which one to keep")
-		}
-	})
-
-	t.Run("multipleAnnotatedArgsErrors", func(t *testing.T) {
-		spec, err := compile.Compile("internal/uuid_test/multipleAnnotatedArgs.thrift")
-		require.NoError(t, err)
-		fn, ok := spec.Services["TestService"].Functions["testMethod"]
-		require.True(t, ok)
-
-		err = validateUUIDAnnotations(fn)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "auth.actor_uuid")
-		assert.Contains(t, err.Error(), `"testMethod"`,
-			"the offending method name must appear in the diagnostic so it points at the .thrift declaration")
-		for _, want := range []string{"firstUUID", "second.id", "thirdUUID"} {
-			assert.Contains(t, err.Error(), want,
-				"error message must list every reachable annotated path")
-		}
-	})
-
-	t.Run("multipleAnnotationsAcrossCycleErrors", func(t *testing.T) {
-		spec, err := compile.Compile("internal/uuid_test/multipleAnnotationsAcrossCycle.thrift")
-		require.NoError(t, err)
-		fn, ok := spec.Services["TestService"].Functions["testMethod"]
-		require.True(t, ok)
-
-		err = validateUUIDAnnotations(fn)
-		require.Error(t, err)
-		for _, want := range []string{"arg.idInsideCycle", "idOutside"} {
-			assert.Contains(t, err.Error(), want,
-				"annotation reachable inside a cycle must still be reported alongside its non-cyclic sibling")
-		}
-	})
-}
-
-// TestValidateUUIDArgsInModule covers the module-level wrapper used
-// by the plugin's Generate entry point: it walks every service and
-// every function in the compiled module and surfaces the first
-// multi-annotation error in deterministic order (services and
-// methods are scanned in alphabetical Thrift-name order, which
-// matters because ThriftRW exposes them as Go maps with randomised
-// iteration).
-func TestValidateUUIDArgsInModule(t *testing.T) {
-	t.Run("nilModule", func(t *testing.T) {
-		assert.NoError(t, validateUUIDArgsInModule(nil))
-	})
-
-	t.Run("cleanModuleWithNoAnnotations", func(t *testing.T) {
-		mod, err := compile.Compile("internal/tests/atomic.thrift")
-		require.NoError(t, err)
-		assert.NoError(t, validateUUIDArgsInModule(mod))
-	})
-
-	t.Run("cleanModuleWithSingleAnnotationsPerMethod", func(t *testing.T) {
-		// WITHSERVICES.thrift has many methods, each with at most
-		// one reachable annotation. The module-level walker must
-		// accept all of them as a group.
-		mod, err := compile.Compile("internal/tests/WITHSERVICES.thrift")
-		require.NoError(t, err)
-		assert.NoError(t, validateUUIDArgsInModule(mod))
-	})
-
-	t.Run("multipleAnnotatedMethodErrorsWithServiceAndMethodNamed", func(t *testing.T) {
-		mod, err := compile.Compile("internal/uuid_test/multipleAnnotatedArgs.thrift")
-		require.NoError(t, err)
-		err = validateUUIDArgsInModule(mod)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), `"TestService"`,
-			"the wrapper must name the offending service so the user can locate it in a multi-service file")
-		assert.Contains(t, err.Error(), `"testMethod"`,
-			"the wrapped per-function error must still name the method")
+		require.Len(t, got, 1)
+		assert.Equal(t, []string{"arg", "crossUUID"}, stepNames(got[0]))
+		assert.Equal(t, []string{"CrossInner", ""}, stepCasts(got[0]))
 	})
 }
 
@@ -460,7 +347,7 @@ func TestGetGeneratedUUID(t *testing.T) {
 		st := withservices.TestService_TestMethod_Args{
 			Interested: ptr.String("my-arg-uuid"),
 		}
-		assert.Equal(t, "my-arg-uuid", st.ActorUUID())
+		assert.Equal(t, []string{"my-arg-uuid"}, st.ActorUUID())
 	})
 	t.Run("struct arg with annotated field", func(t *testing.T) {
 		st := withservices.TestService_TestStructMethod_Args{
@@ -468,18 +355,18 @@ func TestGetGeneratedUUID(t *testing.T) {
 				UserIdentifier: ptr.String("my-struct-uuid"),
 			},
 		}
-		assert.Equal(t, "my-struct-uuid", st.ActorUUID())
+		assert.Equal(t, []string{"my-struct-uuid"}, st.ActorUUID())
 	})
 	t.Run("struct arg with nil request", func(t *testing.T) {
 		var st withservices.TestService_TestStructMethod_Args
-		assert.Equal(t, "", st.ActorUUID())
+		assert.Equal(t, []string{""}, st.ActorUUID())
 	})
 	t.Run("typedef-of-string arg field UUID", func(t *testing.T) {
 		id := withservices.ActorIdentifier("my-typedef-uuid")
 		st := withservices.TestService_TestTypedefMethod_Args{
 			Identifier: &id,
 		}
-		assert.Equal(t, "my-typedef-uuid", st.ActorUUID())
+		assert.Equal(t, []string{"my-typedef-uuid"}, st.ActorUUID())
 	})
 	t.Run("nested struct arg walks full chain", func(t *testing.T) {
 		st := withservices.TestService_TestNestedMethod_Args{
@@ -491,45 +378,79 @@ func TestGetGeneratedUUID(t *testing.T) {
 				},
 			},
 		}
-		assert.Equal(t, "my-nested-uuid", st.ActorUUID())
+		assert.Equal(t, []string{"my-nested-uuid"}, st.ActorUUID())
 	})
 	t.Run("nested struct arg with nil mid is nil-safe", func(t *testing.T) {
 		st := withservices.TestService_TestNestedMethod_Args{
 			Nested: &withservices.OuterLevel{},
 		}
-		assert.Equal(t, "", st.ActorUUID())
+		assert.Equal(t, []string{""}, st.ActorUUID())
 	})
 	t.Run("typedef-of-struct arg casts through underlying struct", func(t *testing.T) {
 		val := withservices.AliasedInner{InnerUUID: ptr.String("typedef-uuid")}
 		st := withservices.TestService_TestTypedefStructMethod_Args{TopLevel: &val}
-		assert.Equal(t, "typedef-uuid", st.ActorUUID())
+		assert.Equal(t, []string{"typedef-uuid"}, st.ActorUUID())
 	})
 	t.Run("typedef-of-struct arg with nil receiver is nil-safe", func(t *testing.T) {
 		var st withservices.TestService_TestTypedefStructMethod_Args
-		assert.Equal(t, "", st.ActorUUID())
+		assert.Equal(t, []string{""}, st.ActorUUID())
 	})
 	t.Run("nested typedef-of-struct chain casts at the typedef hop only", func(t *testing.T) {
 		val := withservices.AliasedInner{InnerUUID: ptr.String("nested-typedef-uuid")}
 		st := withservices.TestService_TestNestedTypedefStructMethod_Args{
 			Outer: &withservices.OuterWithAlias{Inner: &val},
 		}
-		assert.Equal(t, "nested-typedef-uuid", st.ActorUUID())
+		assert.Equal(t, []string{"nested-typedef-uuid"}, st.ActorUUID())
 	})
 	t.Run("nested typedef-of-struct chain with nil typedef hop is nil-safe", func(t *testing.T) {
 		st := withservices.TestService_TestNestedTypedefStructMethod_Args{
 			Outer: &withservices.OuterWithAlias{},
 		}
-		assert.Equal(t, "", st.ActorUUID())
+		assert.Equal(t, []string{""}, st.ActorUUID())
 	})
 	t.Run("two-hop typedef arg uses a single direct cast", func(t *testing.T) {
 		val := withservices.DoubleAliasedInner(withservices.AliasedInner{
 			InnerUUID: ptr.String("two-hop-uuid"),
 		})
 		st := withservices.TestService_TestDoubleTypedefStructMethod_Args{Arg: &val}
-		assert.Equal(t, "two-hop-uuid", st.ActorUUID())
+		assert.Equal(t, []string{"two-hop-uuid"}, st.ActorUUID())
 	})
 	t.Run("two-hop typedef arg with nil receiver is nil-safe", func(t *testing.T) {
 		var st withservices.TestService_TestDoubleTypedefStructMethod_Args
-		assert.Equal(t, "", st.ActorUUID())
+		assert.Equal(t, []string{""}, st.ActorUUID())
+	})
+	t.Run("two annotated flat args yield one slice entry each", func(t *testing.T) {
+		st := withservices.TestService_TestMultiAnnotatedArgsMethod_Args{
+			FirstActor:  ptr.String("first-uuid"),
+			SecondActor: ptr.String("second-uuid"),
+		}
+		assert.Equal(t, []string{"first-uuid", "second-uuid"}, st.ActorUUID(),
+			"each annotated arg contributes its own entry, in declaration order")
+	})
+	t.Run("same leaf reached via two sibling fields yields two entries", func(t *testing.T) {
+		st := withservices.TestService_TestTwoStructPathsMethod_Args{
+			Pair: &withservices.PairedStructs{
+				Primary:   &withservices.Struct{UserIdentifier: ptr.String("primary-uuid")},
+				Secondary: &withservices.Struct{UserIdentifier: ptr.String("secondary-uuid")},
+			},
+		}
+		assert.Equal(t, []string{"primary-uuid", "secondary-uuid"}, st.ActorUUID(),
+			"primary and secondary are distinct runtime fields, so both routes to UserIdentifier are emitted")
+	})
+	t.Run("two annotated args mixing flat and struct-hop shapes", func(t *testing.T) {
+		st := withservices.TestService_TestMixedAnnotatedMethod_Args{
+			DirectActor: ptr.String("direct-uuid"),
+			Request:     &withservices.Struct{UserIdentifier: ptr.String("struct-uuid")},
+		}
+		assert.Equal(t, []string{"direct-uuid", "struct-uuid"}, st.ActorUUID())
+	})
+	t.Run("multi-annotation slice is nil-safe per entry", func(t *testing.T) {
+		st := withservices.TestService_TestTwoStructPathsMethod_Args{
+			Pair: &withservices.PairedStructs{
+				Primary: &withservices.Struct{UserIdentifier: ptr.String("only-primary")},
+			},
+		}
+		assert.Equal(t, []string{"only-primary", ""}, st.ActorUUID(),
+			"a missing sibling surfaces as the empty string but keeps its slice position")
 	})
 }

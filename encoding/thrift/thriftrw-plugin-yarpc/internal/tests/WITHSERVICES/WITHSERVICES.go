@@ -1689,6 +1689,284 @@ func (v *OuterWithAlias) IsSetInner() bool {
 	return v != nil && v.Inner != nil
 }
 
+type PairedStructs struct {
+	Primary   *Struct `json:"primary,omitempty"`
+	Secondary *Struct `json:"secondary,omitempty"`
+}
+
+// ToWire translates a PairedStructs struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *PairedStructs) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Primary != nil {
+		w, err = v.Primary.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.Secondary != nil {
+		w, err = v.Secondary.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _Struct_Read(w wire.Value) (*Struct, error) {
+	var v Struct
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a PairedStructs struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a PairedStructs struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v PairedStructs
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *PairedStructs) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Primary, err = _Struct_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.Secondary, err = _Struct_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a PairedStructs struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a PairedStructs struct could not be encoded.
+func (v *PairedStructs) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Primary != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Primary.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.Secondary != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Secondary.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _Struct_Decode(sr stream.Reader) (*Struct, error) {
+	var v Struct
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a PairedStructs struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a PairedStructs struct could not be generated from the wire
+// representation.
+func (v *PairedStructs) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Primary, err = _Struct_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 2 && fh.Type == wire.TStruct:
+			v.Secondary, err = _Struct_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a PairedStructs
+// struct.
+func (v *PairedStructs) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Primary != nil {
+		fields[i] = fmt.Sprintf("Primary: %v", v.Primary)
+		i++
+	}
+	if v.Secondary != nil {
+		fields[i] = fmt.Sprintf("Secondary: %v", v.Secondary)
+		i++
+	}
+
+	return fmt.Sprintf("PairedStructs{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this PairedStructs match the
+// provided PairedStructs.
+//
+// This function performs a deep comparison.
+func (v *PairedStructs) Equals(rhs *PairedStructs) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Primary == nil && rhs.Primary == nil) || (v.Primary != nil && rhs.Primary != nil && v.Primary.Equals(rhs.Primary))) {
+		return false
+	}
+	if !((v.Secondary == nil && rhs.Secondary == nil) || (v.Secondary != nil && rhs.Secondary != nil && v.Secondary.Equals(rhs.Secondary))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of PairedStructs.
+func (v *PairedStructs) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Primary != nil {
+		err = multierr.Append(err, enc.AddObject("primary", v.Primary))
+	}
+	if v.Secondary != nil {
+		err = multierr.Append(err, enc.AddObject("secondary", v.Secondary))
+	}
+	return err
+}
+
+// GetPrimary returns the value of Primary if it is set or its
+// zero value if it is unset.
+func (v *PairedStructs) GetPrimary() (o *Struct) {
+	if v != nil && v.Primary != nil {
+		return v.Primary
+	}
+
+	return
+}
+
+// IsSetPrimary returns true if Primary is not nil.
+func (v *PairedStructs) IsSetPrimary() bool {
+	return v != nil && v.Primary != nil
+}
+
+// GetSecondary returns the value of Secondary if it is set or its
+// zero value if it is unset.
+func (v *PairedStructs) GetSecondary() (o *Struct) {
+	if v != nil && v.Secondary != nil {
+		return v.Secondary
+	}
+
+	return
+}
+
+// IsSetSecondary returns true if Secondary is not nil.
+func (v *PairedStructs) IsSetSecondary() bool {
+	return v != nil && v.Secondary != nil
+}
+
 type Struct struct {
 	Baz            *string `json:"baz,omitempty"`
 	UserIdentifier *string `json:"UserIdentifier,omitempty"`
@@ -2237,14 +2515,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "WITHSERVICES",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES",
 	FilePath: "tests/WITHSERVICES.thrift",
-	SHA1:     "4f0b4ed039eb3d2b575e429658044796f5df249b",
+	SHA1:     "7c692e94db59c1ba9ec5b16a3ed038198b638a97",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Thrift file that exercises every code path of the auth.actor_uuid\n// annotation: optional and required struct fields, a flat method\n// argument, a struct-typed argument whose own field carries the\n// annotation, a typedef-of-string argument, and an arg whose path to\n// the annotation runs through several nested struct hops. Its sibling\n// NOSERVICES.thrift covers the no-service case; keeping this fixture\n// separate lets TestCodeIsUpToDate enforce drift on the service-arg\n// path too.\n\ninclude \"../random_pkg/shared.thrift\"\n\ntypedef string ActorIdentifier\n\nstruct Struct {\n    1: optional string baz\n    2: optional string UserIdentifier (auth.actor_uuid = \"true\")\n}\n\nstruct StructRequiredUUID {\n    1: optional string baz\n    2: required string UserIdentifier (auth.actor_uuid = \"true\")\n}\n\n// CycleA and CycleB form a mutually recursive struct cycle. ThriftRW\n// happily compiles cyclic struct references (the generated Go uses\n// pointer fields, e.g. `Peer *CycleB`, so the cycle is representable),\n// even though no value of the type can ever be encoded end to end.\n// They live here as a reference for the YARPC plugin's path walker.\nstruct CycleA {\n    1: required CycleB peer\n}\n\nstruct CycleB {\n    1: required CycleA peer\n}\n\n// InnerLevel, MidLevel and OuterLevel form a three-deep struct chain\n// used by testNestedMethod to exercise the arbitrary-depth walker:\n// only the leaf field carries the annotation.\nstruct InnerLevel {\n    1: optional string innerUUID (auth.actor_uuid = \"true\")\n}\n\nstruct MidLevel {\n    1: optional InnerLevel inner\n}\n\nstruct OuterLevel {\n    1: optional MidLevel mid\n}\n\n// AliasedInner / DoubleAliasedInner / OuterWithAlias exercise descent\n// through typedef-of-struct hops: thriftrw emits AliasedInner as a\n// distinct named Go type (`type AliasedInner Inner`), so the chain\n// must cast through Inner to reach GetXxx() accessors. OuterWithAlias\n// only carries a single typedef-wrapped field; declaring two siblings\n// that both pointed at Inner (e.g. AliasedInner + DoubleAliasedInner)\n// would surface two distinct paths to the same annotated leaf, which\n// validateUUIDArgs rejects because the generated ActorUUID() accessor\n// can only walk one of them.\nstruct Inner {\n    1: optional string innerUUID (auth.actor_uuid = \"true\")\n}\n\ntypedef Inner AliasedInner\ntypedef AliasedInner DoubleAliasedInner\n\nstruct OuterWithAlias {\n    1: optional AliasedInner inner\n}\n\nservice TestService {\n    // testMethod carries the annotation directly on a primitive arg.\n    string testMethod(\n        1: string notInterested,\n        2: string interested (auth.actor_uuid = \"true\"),\n    )\n\n    // testStructMethod carries the annotation one struct hop away:\n    // the arg is a Struct whose UserIdentifier field is annotated.\n    // The generated args accessor must chain through\n    // GetRequest().GetUserIdentifier() to surface the UUID.\n    string testStructMethod(\n        1: Struct request,\n    )\n\n    // testTypedefMethod's arg is a `typedef string` whose getter\n    // returns ActorIdentifier rather than string; the generated body\n    // must wrap the call in string(...) to compile.\n    string testTypedefMethod(\n        1: ActorIdentifier identifier (auth.actor_uuid = \"true\"),\n    )\n\n    // testNestedMethod's arg traverses three struct hops down to the\n    // annotated leaf. The generated args accessor must walk all the\n    // way down in a single chain:\n    // t.GetNested().GetMid().GetInner().GetInnerUUID().\n    string testNestedMethod(\n        1: OuterLevel nested,\n    )\n\n    // testTypedefStructMethod descends through a typedef-of-struct\n    // arg directly to the annotated leaf. thriftrw emits\n    // GetTopLevel() returning *AliasedInner, on which GetInnerUUID()\n    // does not exist; the generated body must cast through *Inner\n    // first: (*Inner)(t.GetTopLevel()).GetInnerUUID().\n    string testTypedefStructMethod(\n        1: AliasedInner topLevel,\n    )\n\n    // testNestedTypedefStructMethod descends through a struct that\n    // owns one typedef-of-struct hop. The cast wraps the partial\n    // chain so the next GetXxx() resolves on the underlying Inner\n    // type even though OuterWithAlias.inner is statically\n    // *AliasedInner.\n    string testNestedTypedefStructMethod(\n        1: OuterWithAlias outer,\n    )\n\n    // testDoubleTypedefStructMethod's arg is the two-hop typedef\n    // DoubleAliasedInner directly, with no struct hop in between.\n    // It pins the multi-hop case end-to-end: the walker resolves\n    // through both typedef layers and the chain emits a single\n    // (*Inner)(t.GetArg()) conversion. That single cast is legal\n    // even though the static return type of GetArg() is\n    // *DoubleAliasedInner, because Go's pointer-conversion rule is\n    // transitively closed for typedef chains that share the same\n    // underlying struct definition.\n    string testDoubleTypedefStructMethod(\n        1: DoubleAliasedInner arg,\n    )\n\n    // testImportedTypedef's arg imports a typedef from another package\n    string testImportedTypedef(\n        1: shared.GlobalRequestActorUUID req (auth.actor_uuid = \"true\")\n    )\n}\n"
+const rawIDL = "// Thrift file that exercises every code path of the auth.actor_uuid\n// annotation: optional and required struct fields, a flat method\n// argument, a struct-typed argument whose own field carries the\n// annotation, a typedef-of-string argument, and an arg whose path to\n// the annotation runs through several nested struct hops. Its sibling\n// NOSERVICES.thrift covers the no-service case; keeping this fixture\n// separate lets TestCodeIsUpToDate enforce drift on the service-arg\n// path too.\n\ninclude \"../random_pkg/shared.thrift\"\n\ntypedef string ActorIdentifier\n\nstruct Struct {\n    1: optional string baz\n    2: optional string UserIdentifier (auth.actor_uuid = \"true\")\n}\n\nstruct StructRequiredUUID {\n    1: optional string baz\n    2: required string UserIdentifier (auth.actor_uuid = \"true\")\n}\n\n// CycleA and CycleB form a mutually recursive struct cycle. ThriftRW\n// happily compiles cyclic struct references (the generated Go uses\n// pointer fields, e.g. `Peer *CycleB`, so the cycle is representable),\n// even though no value of the type can ever be encoded end to end.\n// They live here as a reference for the YARPC plugin's path walker.\nstruct CycleA {\n    1: required CycleB peer\n}\n\nstruct CycleB {\n    1: required CycleA peer\n}\n\n// InnerLevel, MidLevel and OuterLevel form a three-deep struct chain\n// used by testNestedMethod to exercise the arbitrary-depth walker:\n// only the leaf field carries the annotation.\nstruct InnerLevel {\n    1: optional string innerUUID (auth.actor_uuid = \"true\")\n}\n\nstruct MidLevel {\n    1: optional InnerLevel inner\n}\n\nstruct OuterLevel {\n    1: optional MidLevel mid\n}\n\n// AliasedInner / DoubleAliasedInner / OuterWithAlias exercise descent\n// through typedef-of-struct hops: thriftrw emits AliasedInner as a\n// distinct named Go type (`type AliasedInner Inner`), so the chain\n// must cast through Inner to reach GetXxx() accessors. OuterWithAlias\n// carries a single typedef-wrapped field.\nstruct Inner {\n    1: optional string innerUUID (auth.actor_uuid = \"true\")\n}\n\ntypedef Inner AliasedInner\ntypedef AliasedInner DoubleAliasedInner\n\nstruct OuterWithAlias {\n    1: optional AliasedInner inner\n}\n\n// PairedStructs holds two independent Struct fields, each of which\n// carries its own auth.actor_uuid-annotated UserIdentifier. The walker\n// treats primary and secondary as two distinct routes to an annotated\n// leaf (they hold different runtime values), so testTwoStructPathsMethod\n// below surfaces a two-element slice: one entry per field.\nstruct PairedStructs {\n    1: optional Struct primary\n    2: optional Struct secondary\n}\n\nservice TestService {\n    // testMethod carries the annotation directly on a primitive arg.\n    string testMethod(\n        1: string notInterested,\n        2: string interested (auth.actor_uuid = \"true\"),\n    )\n\n    // testStructMethod carries the annotation one struct hop away:\n    // the arg is a Struct whose UserIdentifier field is annotated.\n    // The generated args accessor must chain through\n    // GetRequest().GetUserIdentifier() to surface the UUID.\n    string testStructMethod(\n        1: Struct request,\n    )\n\n    // testTypedefMethod's arg is a `typedef string` whose getter\n    // returns ActorIdentifier rather than string; the generated body\n    // must wrap the call in string(...) to compile.\n    string testTypedefMethod(\n        1: ActorIdentifier identifier (auth.actor_uuid = \"true\"),\n    )\n\n    // testNestedMethod's arg traverses three struct hops down to the\n    // annotated leaf. The generated args accessor must walk all the\n    // way down in a single chain:\n    // t.GetNested().GetMid().GetInner().GetInnerUUID().\n    string testNestedMethod(\n        1: OuterLevel nested,\n    )\n\n    // testTypedefStructMethod descends through a typedef-of-struct\n    // arg directly to the annotated leaf. thriftrw emits\n    // GetTopLevel() returning *AliasedInner, on which GetInnerUUID()\n    // does not exist; the generated body must cast through *Inner\n    // first: (*Inner)(t.GetTopLevel()).GetInnerUUID().\n    string testTypedefStructMethod(\n        1: AliasedInner topLevel,\n    )\n\n    // testNestedTypedefStructMethod descends through a struct that\n    // owns one typedef-of-struct hop. The cast wraps the partial\n    // chain so the next GetXxx() resolves on the underlying Inner\n    // type even though OuterWithAlias.inner is statically\n    // *AliasedInner.\n    string testNestedTypedefStructMethod(\n        1: OuterWithAlias outer,\n    )\n\n    // testDoubleTypedefStructMethod's arg is the two-hop typedef\n    // DoubleAliasedInner directly, with no struct hop in between.\n    // It pins the multi-hop case end-to-end: the walker resolves\n    // through both typedef layers and the chain emits a single\n    // (*Inner)(t.GetArg()) conversion. That single cast is legal\n    // even though the static return type of GetArg() is\n    // *DoubleAliasedInner, because Go's pointer-conversion rule is\n    // transitively closed for typedef chains that share the same\n    // underlying struct definition.\n    string testDoubleTypedefStructMethod(\n        1: DoubleAliasedInner arg,\n    )\n\n    // testImportedTypedef's arg imports a typedef from another package\n    string testImportedTypedef(\n        1: shared.GlobalRequestActorUUID req (auth.actor_uuid = \"true\")\n    )\n\n    // testMultiAnnotatedArgsMethod annotates two separate flat args.\n    // Multiple annotations are allowed: the generated ActorUUID()\n    // returns one entry per reachable annotation, so this method's\n    // accessor yields []string{t.GetFirstActor(), t.GetSecondActor()}.\n    string testMultiAnnotatedArgsMethod(\n        1: string firstActor (auth.actor_uuid = \"true\"),\n        2: string secondActor (auth.actor_uuid = \"true\"),\n    )\n\n    // testTwoStructPathsMethod reaches the same annotated leaf\n    // (Struct.UserIdentifier) through two distinct sibling fields of\n    // PairedStructs. They are different runtime locations, so the\n    // walker emits both routes and the accessor yields a two-element\n    // slice: one for primary, one for secondary.\n    string testTwoStructPathsMethod(\n        1: PairedStructs pair,\n    )\n\n    // testMixedAnnotatedMethod mixes a directly-annotated flat arg with\n    // a struct-hop annotated arg, proving the slice collects\n    // annotations across heterogeneous argument shapes.\n    string testMixedAnnotatedMethod(\n        1: string directActor (auth.actor_uuid = \"true\"),\n        2: Struct request,\n    )\n}\n"
 
 // TestService_TestDoubleTypedefStructMethod_Args represents the arguments for the TestService.testDoubleTypedefStructMethod function.
 //
@@ -4050,6 +4328,1274 @@ func (v *TestService_TestMethod_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 
+// TestService_TestMixedAnnotatedMethod_Args represents the arguments for the TestService.testMixedAnnotatedMethod function.
+//
+// The arguments for testMixedAnnotatedMethod are sent and received over the wire as this struct.
+type TestService_TestMixedAnnotatedMethod_Args struct {
+	DirectActor *string `json:"directActor,omitempty"`
+	Request     *Struct `json:"request,omitempty"`
+}
+
+// ToWire translates a TestService_TestMixedAnnotatedMethod_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *TestService_TestMixedAnnotatedMethod_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.DirectActor != nil {
+		w, err = wire.NewValueString(*(v.DirectActor)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a TestService_TestMixedAnnotatedMethod_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TestService_TestMixedAnnotatedMethod_Args struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v TestService_TestMixedAnnotatedMethod_Args
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *TestService_TestMixedAnnotatedMethod_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.DirectActor = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _Struct_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a TestService_TestMixedAnnotatedMethod_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a TestService_TestMixedAnnotatedMethod_Args struct could not be encoded.
+func (v *TestService_TestMixedAnnotatedMethod_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.DirectActor != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.DirectActor)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a TestService_TestMixedAnnotatedMethod_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a TestService_TestMixedAnnotatedMethod_Args struct could not be generated from the wire
+// representation.
+func (v *TestService_TestMixedAnnotatedMethod_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.DirectActor = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 2 && fh.Type == wire.TStruct:
+			v.Request, err = _Struct_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TestService_TestMixedAnnotatedMethod_Args
+// struct.
+func (v *TestService_TestMixedAnnotatedMethod_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.DirectActor != nil {
+		fields[i] = fmt.Sprintf("DirectActor: %v", *(v.DirectActor))
+		i++
+	}
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("TestService_TestMixedAnnotatedMethod_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TestService_TestMixedAnnotatedMethod_Args match the
+// provided TestService_TestMixedAnnotatedMethod_Args.
+//
+// This function performs a deep comparison.
+func (v *TestService_TestMixedAnnotatedMethod_Args) Equals(rhs *TestService_TestMixedAnnotatedMethod_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.DirectActor, rhs.DirectActor) {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TestService_TestMixedAnnotatedMethod_Args.
+func (v *TestService_TestMixedAnnotatedMethod_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.DirectActor != nil {
+		enc.AddString("directActor", *v.DirectActor)
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetDirectActor returns the value of DirectActor if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestMixedAnnotatedMethod_Args) GetDirectActor() (o string) {
+	if v != nil && v.DirectActor != nil {
+		return *v.DirectActor
+	}
+
+	return
+}
+
+// IsSetDirectActor returns true if DirectActor is not nil.
+func (v *TestService_TestMixedAnnotatedMethod_Args) IsSetDirectActor() bool {
+	return v != nil && v.DirectActor != nil
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestMixedAnnotatedMethod_Args) GetRequest() (o *Struct) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *TestService_TestMixedAnnotatedMethod_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "testMixedAnnotatedMethod" for this struct.
+func (v *TestService_TestMixedAnnotatedMethod_Args) MethodName() string {
+	return "testMixedAnnotatedMethod"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *TestService_TestMixedAnnotatedMethod_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// TestService_TestMixedAnnotatedMethod_Helper provides functions that aid in handling the
+// parameters and return values of the TestService.testMixedAnnotatedMethod
+// function.
+var TestService_TestMixedAnnotatedMethod_Helper = struct {
+	// Args accepts the parameters of testMixedAnnotatedMethod in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		directActor *string,
+		request *Struct,
+	) *TestService_TestMixedAnnotatedMethod_Args
+
+	// IsException returns true if the given error can be thrown
+	// by testMixedAnnotatedMethod.
+	//
+	// An error can be thrown by testMixedAnnotatedMethod only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for testMixedAnnotatedMethod
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// testMixedAnnotatedMethod into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by testMixedAnnotatedMethod
+	//
+	//   value, err := testMixedAnnotatedMethod(args)
+	//   result, err := TestService_TestMixedAnnotatedMethod_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from testMixedAnnotatedMethod: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(string, error) (*TestService_TestMixedAnnotatedMethod_Result, error)
+
+	// UnwrapResponse takes the result struct for testMixedAnnotatedMethod
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if testMixedAnnotatedMethod threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := TestService_TestMixedAnnotatedMethod_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*TestService_TestMixedAnnotatedMethod_Result) (string, error)
+}{}
+
+func init() {
+	TestService_TestMixedAnnotatedMethod_Helper.Args = func(
+		directActor *string,
+		request *Struct,
+	) *TestService_TestMixedAnnotatedMethod_Args {
+		return &TestService_TestMixedAnnotatedMethod_Args{
+			DirectActor: directActor,
+			Request:     request,
+		}
+	}
+
+	TestService_TestMixedAnnotatedMethod_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		default:
+			return false
+		}
+	}
+
+	TestService_TestMixedAnnotatedMethod_Helper.WrapResponse = func(success string, err error) (*TestService_TestMixedAnnotatedMethod_Result, error) {
+		if err == nil {
+			return &TestService_TestMixedAnnotatedMethod_Result{Success: &success}, nil
+		}
+
+		return nil, err
+	}
+	TestService_TestMixedAnnotatedMethod_Helper.UnwrapResponse = func(result *TestService_TestMixedAnnotatedMethod_Result) (success string, err error) {
+
+		if result.Success != nil {
+			success = *result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// TestService_TestMixedAnnotatedMethod_Result represents the result of a TestService.testMixedAnnotatedMethod function call.
+//
+// The result of a testMixedAnnotatedMethod execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type TestService_TestMixedAnnotatedMethod_Result struct {
+	// Value returned by testMixedAnnotatedMethod after a successful execution.
+	Success *string `json:"success,omitempty"`
+}
+
+// ToWire translates a TestService_TestMixedAnnotatedMethod_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *TestService_TestMixedAnnotatedMethod_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = wire.NewValueString(*(v.Success)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestService_TestMixedAnnotatedMethod_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a TestService_TestMixedAnnotatedMethod_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TestService_TestMixedAnnotatedMethod_Result struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v TestService_TestMixedAnnotatedMethod_Result
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *TestService_TestMixedAnnotatedMethod_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Success = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestService_TestMixedAnnotatedMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a TestService_TestMixedAnnotatedMethod_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a TestService_TestMixedAnnotatedMethod_Result struct could not be encoded.
+func (v *TestService_TestMixedAnnotatedMethod_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Success)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("TestService_TestMixedAnnotatedMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a TestService_TestMixedAnnotatedMethod_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a TestService_TestMixedAnnotatedMethod_Result struct could not be generated from the wire
+// representation.
+func (v *TestService_TestMixedAnnotatedMethod_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Success = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestService_TestMixedAnnotatedMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TestService_TestMixedAnnotatedMethod_Result
+// struct.
+func (v *TestService_TestMixedAnnotatedMethod_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", *(v.Success))
+		i++
+	}
+
+	return fmt.Sprintf("TestService_TestMixedAnnotatedMethod_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TestService_TestMixedAnnotatedMethod_Result match the
+// provided TestService_TestMixedAnnotatedMethod_Result.
+//
+// This function performs a deep comparison.
+func (v *TestService_TestMixedAnnotatedMethod_Result) Equals(rhs *TestService_TestMixedAnnotatedMethod_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Success, rhs.Success) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TestService_TestMixedAnnotatedMethod_Result.
+func (v *TestService_TestMixedAnnotatedMethod_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		enc.AddString("success", *v.Success)
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestMixedAnnotatedMethod_Result) GetSuccess() (o string) {
+	if v != nil && v.Success != nil {
+		return *v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *TestService_TestMixedAnnotatedMethod_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "testMixedAnnotatedMethod" for this struct.
+func (v *TestService_TestMixedAnnotatedMethod_Result) MethodName() string {
+	return "testMixedAnnotatedMethod"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *TestService_TestMixedAnnotatedMethod_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// TestService_TestMultiAnnotatedArgsMethod_Args represents the arguments for the TestService.testMultiAnnotatedArgsMethod function.
+//
+// The arguments for testMultiAnnotatedArgsMethod are sent and received over the wire as this struct.
+type TestService_TestMultiAnnotatedArgsMethod_Args struct {
+	FirstActor  *string `json:"firstActor,omitempty"`
+	SecondActor *string `json:"secondActor,omitempty"`
+}
+
+// ToWire translates a TestService_TestMultiAnnotatedArgsMethod_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.FirstActor != nil {
+		w, err = wire.NewValueString(*(v.FirstActor)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.SecondActor != nil {
+		w, err = wire.NewValueString(*(v.SecondActor)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a TestService_TestMultiAnnotatedArgsMethod_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TestService_TestMultiAnnotatedArgsMethod_Args struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v TestService_TestMultiAnnotatedArgsMethod_Args
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.FirstActor = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.SecondActor = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a TestService_TestMultiAnnotatedArgsMethod_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a TestService_TestMultiAnnotatedArgsMethod_Args struct could not be encoded.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.FirstActor != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.FirstActor)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.SecondActor != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.SecondActor)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a TestService_TestMultiAnnotatedArgsMethod_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a TestService_TestMultiAnnotatedArgsMethod_Args struct could not be generated from the wire
+// representation.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.FirstActor = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 2 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.SecondActor = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TestService_TestMultiAnnotatedArgsMethod_Args
+// struct.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.FirstActor != nil {
+		fields[i] = fmt.Sprintf("FirstActor: %v", *(v.FirstActor))
+		i++
+	}
+	if v.SecondActor != nil {
+		fields[i] = fmt.Sprintf("SecondActor: %v", *(v.SecondActor))
+		i++
+	}
+
+	return fmt.Sprintf("TestService_TestMultiAnnotatedArgsMethod_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TestService_TestMultiAnnotatedArgsMethod_Args match the
+// provided TestService_TestMultiAnnotatedArgsMethod_Args.
+//
+// This function performs a deep comparison.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) Equals(rhs *TestService_TestMultiAnnotatedArgsMethod_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.FirstActor, rhs.FirstActor) {
+		return false
+	}
+	if !_String_EqualsPtr(v.SecondActor, rhs.SecondActor) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TestService_TestMultiAnnotatedArgsMethod_Args.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.FirstActor != nil {
+		enc.AddString("firstActor", *v.FirstActor)
+	}
+	if v.SecondActor != nil {
+		enc.AddString("secondActor", *v.SecondActor)
+	}
+	return err
+}
+
+// GetFirstActor returns the value of FirstActor if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) GetFirstActor() (o string) {
+	if v != nil && v.FirstActor != nil {
+		return *v.FirstActor
+	}
+
+	return
+}
+
+// IsSetFirstActor returns true if FirstActor is not nil.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) IsSetFirstActor() bool {
+	return v != nil && v.FirstActor != nil
+}
+
+// GetSecondActor returns the value of SecondActor if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) GetSecondActor() (o string) {
+	if v != nil && v.SecondActor != nil {
+		return *v.SecondActor
+	}
+
+	return
+}
+
+// IsSetSecondActor returns true if SecondActor is not nil.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) IsSetSecondActor() bool {
+	return v != nil && v.SecondActor != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "testMultiAnnotatedArgsMethod" for this struct.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) MethodName() string {
+	return "testMultiAnnotatedArgsMethod"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// TestService_TestMultiAnnotatedArgsMethod_Helper provides functions that aid in handling the
+// parameters and return values of the TestService.testMultiAnnotatedArgsMethod
+// function.
+var TestService_TestMultiAnnotatedArgsMethod_Helper = struct {
+	// Args accepts the parameters of testMultiAnnotatedArgsMethod in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		firstActor *string,
+		secondActor *string,
+	) *TestService_TestMultiAnnotatedArgsMethod_Args
+
+	// IsException returns true if the given error can be thrown
+	// by testMultiAnnotatedArgsMethod.
+	//
+	// An error can be thrown by testMultiAnnotatedArgsMethod only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for testMultiAnnotatedArgsMethod
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// testMultiAnnotatedArgsMethod into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by testMultiAnnotatedArgsMethod
+	//
+	//   value, err := testMultiAnnotatedArgsMethod(args)
+	//   result, err := TestService_TestMultiAnnotatedArgsMethod_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from testMultiAnnotatedArgsMethod: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(string, error) (*TestService_TestMultiAnnotatedArgsMethod_Result, error)
+
+	// UnwrapResponse takes the result struct for testMultiAnnotatedArgsMethod
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if testMultiAnnotatedArgsMethod threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := TestService_TestMultiAnnotatedArgsMethod_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*TestService_TestMultiAnnotatedArgsMethod_Result) (string, error)
+}{}
+
+func init() {
+	TestService_TestMultiAnnotatedArgsMethod_Helper.Args = func(
+		firstActor *string,
+		secondActor *string,
+	) *TestService_TestMultiAnnotatedArgsMethod_Args {
+		return &TestService_TestMultiAnnotatedArgsMethod_Args{
+			FirstActor:  firstActor,
+			SecondActor: secondActor,
+		}
+	}
+
+	TestService_TestMultiAnnotatedArgsMethod_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		default:
+			return false
+		}
+	}
+
+	TestService_TestMultiAnnotatedArgsMethod_Helper.WrapResponse = func(success string, err error) (*TestService_TestMultiAnnotatedArgsMethod_Result, error) {
+		if err == nil {
+			return &TestService_TestMultiAnnotatedArgsMethod_Result{Success: &success}, nil
+		}
+
+		return nil, err
+	}
+	TestService_TestMultiAnnotatedArgsMethod_Helper.UnwrapResponse = func(result *TestService_TestMultiAnnotatedArgsMethod_Result) (success string, err error) {
+
+		if result.Success != nil {
+			success = *result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// TestService_TestMultiAnnotatedArgsMethod_Result represents the result of a TestService.testMultiAnnotatedArgsMethod function call.
+//
+// The result of a testMultiAnnotatedArgsMethod execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type TestService_TestMultiAnnotatedArgsMethod_Result struct {
+	// Value returned by testMultiAnnotatedArgsMethod after a successful execution.
+	Success *string `json:"success,omitempty"`
+}
+
+// ToWire translates a TestService_TestMultiAnnotatedArgsMethod_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = wire.NewValueString(*(v.Success)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestService_TestMultiAnnotatedArgsMethod_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a TestService_TestMultiAnnotatedArgsMethod_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TestService_TestMultiAnnotatedArgsMethod_Result struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v TestService_TestMultiAnnotatedArgsMethod_Result
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Success = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestService_TestMultiAnnotatedArgsMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a TestService_TestMultiAnnotatedArgsMethod_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a TestService_TestMultiAnnotatedArgsMethod_Result struct could not be encoded.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Success)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("TestService_TestMultiAnnotatedArgsMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a TestService_TestMultiAnnotatedArgsMethod_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a TestService_TestMultiAnnotatedArgsMethod_Result struct could not be generated from the wire
+// representation.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Success = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestService_TestMultiAnnotatedArgsMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TestService_TestMultiAnnotatedArgsMethod_Result
+// struct.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", *(v.Success))
+		i++
+	}
+
+	return fmt.Sprintf("TestService_TestMultiAnnotatedArgsMethod_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TestService_TestMultiAnnotatedArgsMethod_Result match the
+// provided TestService_TestMultiAnnotatedArgsMethod_Result.
+//
+// This function performs a deep comparison.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) Equals(rhs *TestService_TestMultiAnnotatedArgsMethod_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Success, rhs.Success) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TestService_TestMultiAnnotatedArgsMethod_Result.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		enc.AddString("success", *v.Success)
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) GetSuccess() (o string) {
+	if v != nil && v.Success != nil {
+		return *v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "testMultiAnnotatedArgsMethod" for this struct.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) MethodName() string {
+	return "testMultiAnnotatedArgsMethod"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *TestService_TestMultiAnnotatedArgsMethod_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
 // TestService_TestNestedMethod_Args represents the arguments for the TestService.testNestedMethod function.
 //
 // The arguments for testNestedMethod are sent and received over the wire as this struct.
@@ -5246,12 +6792,6 @@ func (v *TestService_TestStructMethod_Args) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Struct_Read(w wire.Value) (*Struct, error) {
-	var v Struct
-	err := v.FromWire(w)
-	return &v, err
-}
-
 // FromWire deserializes a TestService_TestStructMethod_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
@@ -5310,12 +6850,6 @@ func (v *TestService_TestStructMethod_Args) Encode(sw stream.Writer) error {
 	}
 
 	return sw.WriteStructEnd()
-}
-
-func _Struct_Decode(sr stream.Reader) (*Struct, error) {
-	var v Struct
-	err := v.Decode(sr)
-	return &v, err
 }
 
 // Decode deserializes a TestService_TestStructMethod_Args struct directly from its Thrift-level
@@ -5778,6 +7312,583 @@ func (v *TestService_TestStructMethod_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *TestService_TestStructMethod_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// TestService_TestTwoStructPathsMethod_Args represents the arguments for the TestService.testTwoStructPathsMethod function.
+//
+// The arguments for testTwoStructPathsMethod are sent and received over the wire as this struct.
+type TestService_TestTwoStructPathsMethod_Args struct {
+	Pair *PairedStructs `json:"pair,omitempty"`
+}
+
+// ToWire translates a TestService_TestTwoStructPathsMethod_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *TestService_TestTwoStructPathsMethod_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Pair != nil {
+		w, err = v.Pair.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _PairedStructs_Read(w wire.Value) (*PairedStructs, error) {
+	var v PairedStructs
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a TestService_TestTwoStructPathsMethod_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TestService_TestTwoStructPathsMethod_Args struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v TestService_TestTwoStructPathsMethod_Args
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *TestService_TestTwoStructPathsMethod_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Pair, err = _PairedStructs_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a TestService_TestTwoStructPathsMethod_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a TestService_TestTwoStructPathsMethod_Args struct could not be encoded.
+func (v *TestService_TestTwoStructPathsMethod_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Pair != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Pair.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _PairedStructs_Decode(sr stream.Reader) (*PairedStructs, error) {
+	var v PairedStructs
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a TestService_TestTwoStructPathsMethod_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a TestService_TestTwoStructPathsMethod_Args struct could not be generated from the wire
+// representation.
+func (v *TestService_TestTwoStructPathsMethod_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Pair, err = _PairedStructs_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TestService_TestTwoStructPathsMethod_Args
+// struct.
+func (v *TestService_TestTwoStructPathsMethod_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Pair != nil {
+		fields[i] = fmt.Sprintf("Pair: %v", v.Pair)
+		i++
+	}
+
+	return fmt.Sprintf("TestService_TestTwoStructPathsMethod_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TestService_TestTwoStructPathsMethod_Args match the
+// provided TestService_TestTwoStructPathsMethod_Args.
+//
+// This function performs a deep comparison.
+func (v *TestService_TestTwoStructPathsMethod_Args) Equals(rhs *TestService_TestTwoStructPathsMethod_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Pair == nil && rhs.Pair == nil) || (v.Pair != nil && rhs.Pair != nil && v.Pair.Equals(rhs.Pair))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TestService_TestTwoStructPathsMethod_Args.
+func (v *TestService_TestTwoStructPathsMethod_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Pair != nil {
+		err = multierr.Append(err, enc.AddObject("pair", v.Pair))
+	}
+	return err
+}
+
+// GetPair returns the value of Pair if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestTwoStructPathsMethod_Args) GetPair() (o *PairedStructs) {
+	if v != nil && v.Pair != nil {
+		return v.Pair
+	}
+
+	return
+}
+
+// IsSetPair returns true if Pair is not nil.
+func (v *TestService_TestTwoStructPathsMethod_Args) IsSetPair() bool {
+	return v != nil && v.Pair != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "testTwoStructPathsMethod" for this struct.
+func (v *TestService_TestTwoStructPathsMethod_Args) MethodName() string {
+	return "testTwoStructPathsMethod"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *TestService_TestTwoStructPathsMethod_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// TestService_TestTwoStructPathsMethod_Helper provides functions that aid in handling the
+// parameters and return values of the TestService.testTwoStructPathsMethod
+// function.
+var TestService_TestTwoStructPathsMethod_Helper = struct {
+	// Args accepts the parameters of testTwoStructPathsMethod in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		pair *PairedStructs,
+	) *TestService_TestTwoStructPathsMethod_Args
+
+	// IsException returns true if the given error can be thrown
+	// by testTwoStructPathsMethod.
+	//
+	// An error can be thrown by testTwoStructPathsMethod only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for testTwoStructPathsMethod
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// testTwoStructPathsMethod into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by testTwoStructPathsMethod
+	//
+	//   value, err := testTwoStructPathsMethod(args)
+	//   result, err := TestService_TestTwoStructPathsMethod_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from testTwoStructPathsMethod: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(string, error) (*TestService_TestTwoStructPathsMethod_Result, error)
+
+	// UnwrapResponse takes the result struct for testTwoStructPathsMethod
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if testTwoStructPathsMethod threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := TestService_TestTwoStructPathsMethod_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*TestService_TestTwoStructPathsMethod_Result) (string, error)
+}{}
+
+func init() {
+	TestService_TestTwoStructPathsMethod_Helper.Args = func(
+		pair *PairedStructs,
+	) *TestService_TestTwoStructPathsMethod_Args {
+		return &TestService_TestTwoStructPathsMethod_Args{
+			Pair: pair,
+		}
+	}
+
+	TestService_TestTwoStructPathsMethod_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		default:
+			return false
+		}
+	}
+
+	TestService_TestTwoStructPathsMethod_Helper.WrapResponse = func(success string, err error) (*TestService_TestTwoStructPathsMethod_Result, error) {
+		if err == nil {
+			return &TestService_TestTwoStructPathsMethod_Result{Success: &success}, nil
+		}
+
+		return nil, err
+	}
+	TestService_TestTwoStructPathsMethod_Helper.UnwrapResponse = func(result *TestService_TestTwoStructPathsMethod_Result) (success string, err error) {
+
+		if result.Success != nil {
+			success = *result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// TestService_TestTwoStructPathsMethod_Result represents the result of a TestService.testTwoStructPathsMethod function call.
+//
+// The result of a testTwoStructPathsMethod execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type TestService_TestTwoStructPathsMethod_Result struct {
+	// Value returned by testTwoStructPathsMethod after a successful execution.
+	Success *string `json:"success,omitempty"`
+}
+
+// ToWire translates a TestService_TestTwoStructPathsMethod_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *TestService_TestTwoStructPathsMethod_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = wire.NewValueString(*(v.Success)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestService_TestTwoStructPathsMethod_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a TestService_TestTwoStructPathsMethod_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TestService_TestTwoStructPathsMethod_Result struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v TestService_TestTwoStructPathsMethod_Result
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *TestService_TestTwoStructPathsMethod_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Success = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestService_TestTwoStructPathsMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a TestService_TestTwoStructPathsMethod_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a TestService_TestTwoStructPathsMethod_Result struct could not be encoded.
+func (v *TestService_TestTwoStructPathsMethod_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Success)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("TestService_TestTwoStructPathsMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a TestService_TestTwoStructPathsMethod_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a TestService_TestTwoStructPathsMethod_Result struct could not be generated from the wire
+// representation.
+func (v *TestService_TestTwoStructPathsMethod_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Success = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestService_TestTwoStructPathsMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TestService_TestTwoStructPathsMethod_Result
+// struct.
+func (v *TestService_TestTwoStructPathsMethod_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", *(v.Success))
+		i++
+	}
+
+	return fmt.Sprintf("TestService_TestTwoStructPathsMethod_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TestService_TestTwoStructPathsMethod_Result match the
+// provided TestService_TestTwoStructPathsMethod_Result.
+//
+// This function performs a deep comparison.
+func (v *TestService_TestTwoStructPathsMethod_Result) Equals(rhs *TestService_TestTwoStructPathsMethod_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Success, rhs.Success) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TestService_TestTwoStructPathsMethod_Result.
+func (v *TestService_TestTwoStructPathsMethod_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		enc.AddString("success", *v.Success)
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestTwoStructPathsMethod_Result) GetSuccess() (o string) {
+	if v != nil && v.Success != nil {
+		return *v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *TestService_TestTwoStructPathsMethod_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "testTwoStructPathsMethod" for this struct.
+func (v *TestService_TestTwoStructPathsMethod_Result) MethodName() string {
+	return "testTwoStructPathsMethod"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *TestService_TestTwoStructPathsMethod_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 

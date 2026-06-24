@@ -144,6 +144,76 @@ func (mr *_MockClientRecorder) TestMethod(
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestMethod", args...)
 }
 
+// TestMixedAnnotatedMethod responds to a TestMixedAnnotatedMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestMixedAnnotatedMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestMixedAnnotatedMethod(...)
+func (m *MockClient) TestMixedAnnotatedMethod(
+	ctx context.Context,
+	_DirectActor *string,
+	_Request *WITHSERVICES.Struct,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _DirectActor, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestMixedAnnotatedMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestMixedAnnotatedMethod(
+	ctx interface{},
+	_DirectActor interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _DirectActor, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestMixedAnnotatedMethod", args...)
+}
+
+// TestMultiAnnotatedArgsMethod responds to a TestMultiAnnotatedArgsMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestMultiAnnotatedArgsMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestMultiAnnotatedArgsMethod(...)
+func (m *MockClient) TestMultiAnnotatedArgsMethod(
+	ctx context.Context,
+	_FirstActor *string,
+	_SecondActor *string,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _FirstActor, _SecondActor}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestMultiAnnotatedArgsMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestMultiAnnotatedArgsMethod(
+	ctx interface{},
+	_FirstActor interface{},
+	_SecondActor interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _FirstActor, _SecondActor}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestMultiAnnotatedArgsMethod", args...)
+}
+
 // TestNestedMethod responds to a TestNestedMethod call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -241,6 +311,39 @@ func (mr *_MockClientRecorder) TestStructMethod(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Request}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestStructMethod", args...)
+}
+
+// TestTwoStructPathsMethod responds to a TestTwoStructPathsMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestTwoStructPathsMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestTwoStructPathsMethod(...)
+func (m *MockClient) TestTwoStructPathsMethod(
+	ctx context.Context,
+	_Pair *WITHSERVICES.PairedStructs,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _Pair}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestTwoStructPathsMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestTwoStructPathsMethod(
+	ctx interface{},
+	_Pair interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Pair}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestTwoStructPathsMethod", args...)
 }
 
 // TestTypedefMethod responds to a TestTypedefMethod call based on the mock expectations. This

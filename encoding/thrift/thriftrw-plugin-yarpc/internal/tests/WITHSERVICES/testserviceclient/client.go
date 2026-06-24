@@ -35,6 +35,20 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (string, error)
 
+	TestMixedAnnotatedMethod(
+		ctx context.Context,
+		DirectActor *string,
+		Request *WITHSERVICES.Struct,
+		opts ...yarpc.CallOption,
+	) (string, error)
+
+	TestMultiAnnotatedArgsMethod(
+		ctx context.Context,
+		FirstActor *string,
+		SecondActor *string,
+		opts ...yarpc.CallOption,
+	) (string, error)
+
 	TestNestedMethod(
 		ctx context.Context,
 		Nested *WITHSERVICES.OuterLevel,
@@ -50,6 +64,12 @@ type Interface interface {
 	TestStructMethod(
 		ctx context.Context,
 		Request *WITHSERVICES.Struct,
+		opts ...yarpc.CallOption,
+	) (string, error)
+
+	TestTwoStructPathsMethod(
+		ctx context.Context,
+		Pair *WITHSERVICES.PairedStructs,
 		opts ...yarpc.CallOption,
 	) (string, error)
 
@@ -180,6 +200,64 @@ func (c client) TestMethod(
 	return
 }
 
+func (c client) TestMixedAnnotatedMethod(
+	ctx context.Context,
+	_DirectActor *string,
+	_Request *WITHSERVICES.Struct,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	var result WITHSERVICES.TestService_TestMixedAnnotatedMethod_Result
+	args := WITHSERVICES.TestService_TestMixedAnnotatedMethod_Helper.Args(_DirectActor, _Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = WITHSERVICES.TestService_TestMixedAnnotatedMethod_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) TestMultiAnnotatedArgsMethod(
+	ctx context.Context,
+	_FirstActor *string,
+	_SecondActor *string,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	var result WITHSERVICES.TestService_TestMultiAnnotatedArgsMethod_Result
+	args := WITHSERVICES.TestService_TestMultiAnnotatedArgsMethod_Helper.Args(_FirstActor, _SecondActor)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = WITHSERVICES.TestService_TestMultiAnnotatedArgsMethod_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) TestNestedMethod(
 	ctx context.Context,
 	_Nested *WITHSERVICES.OuterLevel,
@@ -261,6 +339,34 @@ func (c client) TestStructMethod(
 	}
 
 	success, err = WITHSERVICES.TestService_TestStructMethod_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) TestTwoStructPathsMethod(
+	ctx context.Context,
+	_Pair *WITHSERVICES.PairedStructs,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	var result WITHSERVICES.TestService_TestTwoStructPathsMethod_Result
+	args := WITHSERVICES.TestService_TestTwoStructPathsMethod_Helper.Args(_Pair)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = WITHSERVICES.TestService_TestTwoStructPathsMethod_Helper.UnwrapResponse(&result)
 	return
 }
 

@@ -151,6 +151,35 @@ func (s *testServiceImpl) TestDoubleTypedefStructMethod(
 	return "ok", nil
 }
 
+func (s *testServiceImpl) TestMultiAnnotatedArgsMethod(
+	ctx context.Context,
+	firstActor *string,
+	secondActor *string,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestTwoStructPathsMethod(
+	ctx context.Context,
+	pair *withservices.PairedStructs,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestMixedAnnotatedMethod(
+	ctx context.Context,
+	directActor *string,
+	request *withservices.Struct,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	return "ok", nil
+}
+
 // argsEncoder is the slice of the thriftrw-generated _Args API the
 // drivers below need; both TestService_TestMethod_Args and the
 // struct-/typedef-arg variants satisfy it.
@@ -282,9 +311,9 @@ func TestActorUUIDValidator_Allow(t *testing.T) {
 		{name: "wire", useStream: false, extraOpts: []thrift.RegisterOption{thrift.NoWire(false)}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var seenUUID string
-			validator := func(_ context.Context, uuid string) error {
-				seenUUID = uuid
+			var seenUUIDs []string
+			validator := func(_ context.Context, uuids []string) error {
+				seenUUIDs = uuids
 				return nil
 			}
 
@@ -297,7 +326,7 @@ func TestActorUUIDValidator_Allow(t *testing.T) {
 			_, err := driveTestMethod(t, impl, tc.useStream, args, opts...)
 			require.NoError(t, err)
 			assert.True(t, impl.called, "user handler must run when validator returns nil")
-			assert.Equal(t, "expected-uuid", seenUUID, "validator should receive the decoded actorUUID")
+			assert.Equal(t, []string{"expected-uuid"}, seenUUIDs, "validator should receive the decoded actorUUID")
 			assert.Equal(t, "expected-uuid", impl.gotArg, "user handler should still see the original arg")
 		})
 	}
@@ -320,7 +349,7 @@ func TestActorUUIDValidator_Deny(t *testing.T) {
 		{name: "wire", useStream: false, extraOpts: []thrift.RegisterOption{thrift.NoWire(false)}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			validator := func(_ context.Context, _ string) error {
+			validator := func(_ context.Context, _ []string) error {
 				return denied
 			}
 
@@ -343,11 +372,11 @@ func TestActorUUIDValidator_Deny(t *testing.T) {
 // returns "" and that's what the validator sees. Policy on whether empty
 // is acceptable belongs to the validator, not the generated code.
 func TestActorUUIDValidator_EmptyActorUUID(t *testing.T) {
-	var seenUUID string
+	var seenUUIDs []string
 	var calls int
-	validator := func(_ context.Context, uuid string) error {
+	validator := func(_ context.Context, uuids []string) error {
 		calls++
-		seenUUID = uuid
+		seenUUIDs = uuids
 		return nil
 	}
 
@@ -356,7 +385,7 @@ func TestActorUUIDValidator_EmptyActorUUID(t *testing.T) {
 	_, err := driveTestMethod(t, impl, true, args, thrift.WithActorUUIDValidator(validator))
 	require.NoError(t, err)
 	assert.Equal(t, 1, calls, "validator should still fire even with empty actorUUID")
-	assert.Equal(t, "", seenUUID, "empty optional arg should surface as the empty string")
+	assert.Equal(t, []string{""}, seenUUIDs, "empty optional arg should surface as the empty string")
 	assert.True(t, impl.called, "validator returning nil should let the handler run")
 }
 
@@ -366,9 +395,9 @@ func TestActorUUIDValidator_EmptyActorUUID(t *testing.T) {
 // regression check for the "annotation lives on a field of a struct
 // passed as a method arg" bug.
 func TestActorUUIDValidator_StructArg(t *testing.T) {
-	var seenUUID string
-	validator := func(_ context.Context, uuid string) error {
-		seenUUID = uuid
+	var seenUUIDs []string
+	validator := func(_ context.Context, uuids []string) error {
+		seenUUIDs = uuids
 		return nil
 	}
 
@@ -382,7 +411,7 @@ func TestActorUUIDValidator_StructArg(t *testing.T) {
 		thrift.WithActorUUIDValidator(validator))
 	require.NoError(t, err)
 	assert.True(t, impl.called)
-	assert.Equal(t, "expected-struct-uuid", seenUUID,
+	assert.Equal(t, []string{"expected-struct-uuid"}, seenUUIDs,
 		"validator should receive the UUID chained through the struct arg")
 	assert.Equal(t, "expected-struct-uuid", impl.gotUUID)
 }
@@ -394,9 +423,9 @@ func TestActorUUIDValidator_StructArg(t *testing.T) {
 // the deep walk reach the leaf, and this test pins the runtime
 // behaviour end to end.
 func TestActorUUIDValidator_NestedStructArg(t *testing.T) {
-	var seenUUID string
-	validator := func(_ context.Context, uuid string) error {
-		seenUUID = uuid
+	var seenUUIDs []string
+	validator := func(_ context.Context, uuids []string) error {
+		seenUUIDs = uuids
 		return nil
 	}
 
@@ -414,7 +443,7 @@ func TestActorUUIDValidator_NestedStructArg(t *testing.T) {
 		thrift.WithActorUUIDValidator(validator))
 	require.NoError(t, err)
 	assert.True(t, impl.called)
-	assert.Equal(t, "expected-nested-uuid", seenUUID,
+	assert.Equal(t, []string{"expected-nested-uuid"}, seenUUIDs,
 		"validator should receive the UUID chained through every struct hop")
 	assert.Equal(t, "expected-nested-uuid", impl.gotUUID)
 }
@@ -424,9 +453,9 @@ func TestActorUUIDValidator_NestedStructArg(t *testing.T) {
 // the generator emits is what makes this compile end to end; this
 // test pins the runtime behaviour.
 func TestActorUUIDValidator_TypedefArg(t *testing.T) {
-	var seenUUID string
-	validator := func(_ context.Context, uuid string) error {
-		seenUUID = uuid
+	var seenUUIDs []string
+	validator := func(_ context.Context, uuids []string) error {
+		seenUUIDs = uuids
 		return nil
 	}
 
@@ -437,6 +466,6 @@ func TestActorUUIDValidator_TypedefArg(t *testing.T) {
 		thrift.WithActorUUIDValidator(validator))
 	require.NoError(t, err)
 	assert.True(t, impl.called)
-	assert.Equal(t, "expected-typedef-uuid", seenUUID)
+	assert.Equal(t, []string{"expected-typedef-uuid"}, seenUUIDs)
 	assert.Equal(t, "expected-typedef-uuid", impl.gotUUID)
 }

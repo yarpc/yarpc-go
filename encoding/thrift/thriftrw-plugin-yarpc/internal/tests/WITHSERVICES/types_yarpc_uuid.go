@@ -3,50 +3,88 @@
 
 package WITHSERVICES
 
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestDoubleTypedefStructMethod_Args) ActorUUID() string {
-	return (*Inner)(t.GetArg()).GetInnerUUID()
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestDoubleTypedefStructMethod_Args) ActorUUID() []string {
+	return []string{(*Inner)(t.GetArg()).GetInnerUUID()}
 }
 
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestImportedTypedef_Args) ActorUUID() string {
-	return string(t.GetReq())
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestImportedTypedef_Args) ActorUUID() []string {
+	return []string{string(t.GetReq())}
 }
 
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestMethod_Args) ActorUUID() string {
-	return t.GetInterested()
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestMethod_Args) ActorUUID() []string {
+	return []string{t.GetInterested()}
 }
 
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestNestedMethod_Args) ActorUUID() string {
-	return t.GetNested().GetMid().GetInner().GetInnerUUID()
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestMixedAnnotatedMethod_Args) ActorUUID() []string {
+	return []string{
+		t.GetDirectActor(),
+		t.GetRequest().GetUserIdentifier(),
+	}
 }
 
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestNestedTypedefStructMethod_Args) ActorUUID() string {
-	return (*Inner)(t.GetOuter().GetInner()).GetInnerUUID()
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestMultiAnnotatedArgsMethod_Args) ActorUUID() []string {
+	return []string{
+		t.GetFirstActor(),
+		t.GetSecondActor(),
+	}
 }
 
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestStructMethod_Args) ActorUUID() string {
-	return t.GetRequest().GetUserIdentifier()
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestNestedMethod_Args) ActorUUID() []string {
+	return []string{t.GetNested().GetMid().GetInner().GetInnerUUID()}
 }
 
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestTypedefMethod_Args) ActorUUID() string {
-	return string(t.GetIdentifier())
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestNestedTypedefStructMethod_Args) ActorUUID() []string {
+	return []string{(*Inner)(t.GetOuter().GetInner()).GetInnerUUID()}
 }
 
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestTypedefStructMethod_Args) ActorUUID() string {
-	return (*Inner)(t.GetTopLevel()).GetInnerUUID()
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestStructMethod_Args) ActorUUID() []string {
+	return []string{t.GetRequest().GetUserIdentifier()}
+}
+
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestTwoStructPathsMethod_Args) ActorUUID() []string {
+	return []string{
+		t.GetPair().GetPrimary().GetUserIdentifier(),
+		t.GetPair().GetSecondary().GetUserIdentifier(),
+	}
+}
+
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestTypedefMethod_Args) ActorUUID() []string {
+	return []string{string(t.GetIdentifier())}
+}
+
+// ActorUUID returns the UUID strings from every field annotated with
+// auth.actor_uuid that is reachable from the method arguments. A field
+// that is unset contributes its zero value ("").
+func (t *TestService_TestTypedefStructMethod_Args) ActorUUID() []string {
+	return []string{(*Inner)(t.GetTopLevel()).GetInnerUUID()}
 }
