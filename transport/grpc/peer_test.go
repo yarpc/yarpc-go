@@ -39,7 +39,6 @@ import (
 	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/peer/roundrobin"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -517,11 +516,7 @@ func TestMonitorConnWrapperMetrics(t *testing.T) {
 
 	root := metrics.New()
 	p := peerForPool(t)
-	p.metrics = newPeerPoolReporter(newConnPoolMetrics(connPoolMetricsParams{
-		Meter:       root.Scope(),
-		Logger:      zap.NewNop(),
-		ServiceName: "test-svc",
-	}))
+	p.metrics = newPeerPoolReporter(newConnPoolMetrics(testMetricsParams(root.Scope())))
 
 	cc := dialTestClientConn(t)
 	w := newConnWrapper(p.ctx, cc)
@@ -545,4 +540,5 @@ func TestMonitorConnWrapperMetrics(t *testing.T) {
 	// After removal the gauge must drop to zero.
 	g = gaugesFromSnapshot(root.Snapshot())
 	assert.Equal(t, int64(0), g["conn_pool_active_connections"])
+	assertConnPoolMetricTags(t, root.Snapshot(), testConnPoolServiceName)
 }

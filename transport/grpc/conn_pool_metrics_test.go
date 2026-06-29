@@ -21,8 +21,11 @@
 package grpc
 
 import (
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,11 +34,42 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
+const testConnPoolServiceName = "test-svc"
+
 func testMetricsParams(scope *metrics.Scope) connPoolMetricsParams {
 	return connPoolMetricsParams{
 		Meter:       scope,
 		Logger:      zap.NewNop(),
-		ServiceName: "test-svc",
+		ServiceName: testConnPoolServiceName,
+	}
+}
+
+func wantConnPoolMetricTags(serviceName string) map[string]string {
+	return map[string]string{
+		_componentTag: _componentTagValueYarpc,
+		_serviceTag:   serviceName,
+		_transportTag: _transportTagValueGrpc,
+	}
+}
+
+func assertConnPoolMetricTags(t *testing.T, snap *metrics.RootSnapshot, serviceName string) {
+	t.Helper()
+	want := wantConnPoolMetricTags(serviceName)
+	for _, g := range snap.Gauges {
+		if !strings.HasPrefix(g.Name, "conn_pool_") {
+			continue
+		}
+		for k, v := range want {
+			assert.Equal(t, v, g.Tags[k], "gauge %s: tag %q", g.Name, k)
+		}
+	}
+	for _, c := range snap.Counters {
+		if !strings.HasPrefix(c.Name, "conn_pool_") {
+			continue
+		}
+		for k, v := range want {
+			assert.Equal(t, v, c.Tags[k], "counter %s: tag %q", c.Name, k)
+		}
 	}
 }
 
@@ -170,11 +204,7 @@ func TestConnPoolMetrics_Tags(t *testing.T) {
 	m.incScaleUp()
 	m.addConnectionCount(1)
 
-	wantTags := map[string]string{
-		"component": "yarpc",
-		"service":   "test-svc",
-		"transport": "grpc",
-	}
+	wantTags := wantConnPoolMetricTags(testConnPoolServiceName)
 
 	snap := root.Snapshot()
 	for _, c := range snap.Counters {
@@ -268,4 +298,92 @@ func TestConnPoolMetrics_NilReceiver(t *testing.T) {
 		r.incScaleDown()
 		r.incIdleReactivation()
 	})
+}
+
+func testTransportWithConnPoolMetrics(t *testing.T, opts ...TransportOption) (*Transport, *metrics.Root) {
+	t.Helper()
+	root := metrics.New()
+	baseOpts := []TransportOption{
+		Meter(root.Scope()),
+		ServiceName(testConnPoolServiceName),
+		Logger(zap.NewNop()),
+	}
+	return NewTransport(append(baseOpts, opts...)...), root
+}
+
+func assertConnPoolGaugesZero(t *testing.T, root *metrics.Root) {
+	t.Helper()
+	g := gaugesFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(0), g["conn_pool_active_connections"])
+	assert.Equal(t, int64(0), g["conn_pool_draining_connections"])
+	assert.Equal(t, int64(0), g["conn_pool_idle_connections"])
+}
+
+// TestConnPoolMetrics_PeerTeardownZerosSharedGauges builds a peer with multiple
+// real connections and shared transport metrics, then verifies that stopping
+// the peer drives all conn-pool gauges back to zero.
+func TestConnPoolMetrics_PeerTeardownZerosSharedGauges(t *testing.T) {
+	t.Parallel()
+
+	tr, root := testTransportWithConnPoolMetrics(t)
+	p, err := tr.newPeer("127.0.0.1:1", emptyDialOpts)
+	require.NoError(t, err)
+
+	require.NoError(t, p.addConn())
+	require.NoError(t, p.addConn())
+
+	g := gaugesFromSnapshot(root.Snapshot())
+	require.Greater(t, g["conn_pool_active_connections"], int64(0))
+
+	p.stop()
+	p.wait()
+
+	assertConnPoolGaugesZero(t, root)
+	assertConnPoolMetricTags(t, root.Snapshot(), testConnPoolServiceName)
+}
+
+// TestConnPoolMetrics_DynamicScalingTeardownRace hammers scale-up and scale-down
+// paths while stopping a dynamically scaled peer and checks that shared gauges
+// return to zero. Run with -race -count=1000 to stress the teardown race.
+func TestConnPoolMetrics_DynamicScalingTeardownRace(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping teardown race stress test in short mode")
+	}
+
+	const iterations = 50
+
+	for i := 0; i < iterations; i++ {
+		tr, root := testTransportWithConnPoolMetrics(t,
+			WithDynamicConnectionScaling(true),
+			MinConnections(2),
+			MaxConnections(4),
+		)
+		p, err := tr.newPeer("127.0.0.1:1", emptyDialOpts)
+		require.NoError(t, err)
+
+		var wg sync.WaitGroup
+		for g := 0; g < 4; g++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for j := 0; j < 100; j++ {
+					conn := p.pickConn()
+					if conn == nil {
+						continue
+					}
+					p.tryScaleUp(conn)
+					p.evaluateScaling()
+					atomic.StoreInt32(&conn.streamCount, 85)
+				}
+			}()
+		}
+
+		time.Sleep(5 * time.Millisecond)
+		p.stop()
+		wg.Wait()
+		p.wait()
+
+		assertConnPoolGaugesZero(t, root)
+		assertConnPoolMetricTags(t, root.Snapshot(), testConnPoolServiceName)
+	}
 }
