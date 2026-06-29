@@ -65,6 +65,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"go.uber.org/thriftrw/compile"
@@ -165,6 +166,14 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 		}
 	}
 
+	allModules := make(map[string]*api.Module, len(req.Modules))
+	for _, m := range req.Modules {
+		if m == nil {
+			continue
+		}
+		allModules[filepath.Clean(m.GetThriftFilePath())] = m
+	}
+
 	for _, moduleID := range req.RootModules {
 		module := req.Modules[moduleID]
 		compiledModule, err := getCompiledModule(module.GetThriftFilePath())
@@ -175,6 +184,7 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 			Module:            module,
 			ContextImportPath: *_context,
 			CompiledModule:    compiledModule,
+			AllModules:        allModules,
 		}
 		for _, gen := range moduleGenerators {
 			if err := gen(&data, files); err != nil {

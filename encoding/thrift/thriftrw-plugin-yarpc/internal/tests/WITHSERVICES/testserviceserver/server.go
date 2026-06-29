@@ -9,16 +9,49 @@ import (
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+	shared "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/random_pkg/shared"
 	WITHSERVICES "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the TestService service.
 type Interface interface {
+	TestDoubleTypedefStructMethod(
+		ctx context.Context,
+		Arg *WITHSERVICES.DoubleAliasedInner,
+	) (string, error)
+
+	TestImportedTypedef(
+		ctx context.Context,
+		Req *shared.GlobalRequestActorUUID,
+	) (string, error)
+
 	TestMethod(
 		ctx context.Context,
 		NotInterested *string,
 		Interested *string,
+	) (string, error)
+
+	TestMixedAnnotatedMethod(
+		ctx context.Context,
+		DirectActor *string,
+		Request *WITHSERVICES.Struct,
+	) (string, error)
+
+	TestMultiAnnotatedArgsMethod(
+		ctx context.Context,
+		FirstActor *string,
+		SecondActor *string,
+	) (string, error)
+
+	TestNestedMethod(
+		ctx context.Context,
+		Nested *WITHSERVICES.OuterLevel,
+	) (string, error)
+
+	TestNestedTypedefStructMethod(
+		ctx context.Context,
+		Outer *WITHSERVICES.OuterWithAlias,
 	) (string, error)
 
 	TestStructMethod(
@@ -26,9 +59,19 @@ type Interface interface {
 		Request *WITHSERVICES.Struct,
 	) (string, error)
 
+	TestTwoStructPathsMethod(
+		ctx context.Context,
+		Pair *WITHSERVICES.PairedStructs,
+	) (string, error)
+
 	TestTypedefMethod(
 		ctx context.Context,
 		Identifier *WITHSERVICES.ActorIdentifier,
+	) (string, error)
+
+	TestTypedefStructMethod(
+		ctx context.Context,
+		TopLevel *WITHSERVICES.AliasedInner,
 	) (string, error)
 }
 
@@ -44,6 +87,32 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		Methods: []thrift.Method{
 
 			thrift.Method{
+				Name: "testDoubleTypedefStructMethod",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestDoubleTypedefStructMethod),
+					NoWire: testdoubletypedefstructmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
+				},
+				Signature:    "TestDoubleTypedefStructMethod(Arg *WITHSERVICES.DoubleAliasedInner) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "testImportedTypedef",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestImportedTypedef),
+					NoWire: testimportedtypedef_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
+				},
+				Signature:    "TestImportedTypedef(Req *shared.GlobalRequestActorUUID) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "testMethod",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -52,6 +121,58 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
 				},
 				Signature:    "TestMethod(NotInterested *string, Interested *string) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "testMixedAnnotatedMethod",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestMixedAnnotatedMethod),
+					NoWire: testmixedannotatedmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
+				},
+				Signature:    "TestMixedAnnotatedMethod(DirectActor *string, Request *WITHSERVICES.Struct) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "testMultiAnnotatedArgsMethod",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestMultiAnnotatedArgsMethod),
+					NoWire: testmultiannotatedargsmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
+				},
+				Signature:    "TestMultiAnnotatedArgsMethod(FirstActor *string, SecondActor *string) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "testNestedMethod",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestNestedMethod),
+					NoWire: testnestedmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
+				},
+				Signature:    "TestNestedMethod(Nested *WITHSERVICES.OuterLevel) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "testNestedTypedefStructMethod",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestNestedTypedefStructMethod),
+					NoWire: testnestedtypedefstructmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
+				},
+				Signature:    "TestNestedTypedefStructMethod(Outer *WITHSERVICES.OuterWithAlias) (string)",
 				Exceptions:   nil,
 				ThriftModule: WITHSERVICES.ThriftModule,
 			},
@@ -70,6 +191,19 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "testTwoStructPathsMethod",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestTwoStructPathsMethod),
+					NoWire: testtwostructpathsmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
+				},
+				Signature:    "TestTwoStructPathsMethod(Pair *WITHSERVICES.PairedStructs) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "testTypedefMethod",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -81,10 +215,23 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Exceptions:   nil,
 				ThriftModule: WITHSERVICES.ThriftModule,
 			},
+
+			thrift.Method{
+				Name: "testTypedefStructMethod",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestTypedefStructMethod),
+					NoWire: testtypedefstructmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
+				},
+				Signature:    "TestTypedefStructMethod(TopLevel *WITHSERVICES.AliasedInner) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 3)
+	procedures := make([]transport.Procedure, 0, 11)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -97,6 +244,80 @@ type handler struct {
 type yarpcErrorNamer interface{ YARPCErrorName() string }
 
 type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
+
+func (h handler) TestDoubleTypedefStructMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestDoubleTypedefStructMethod_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestDoubleTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestDoubleTypedefStructMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestDoubleTypedefStructMethod(ctx, args.Arg)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestDoubleTypedefStructMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) TestImportedTypedef(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestImportedTypedef_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestImportedTypedef': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestImportedTypedef': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestImportedTypedef(ctx, args.Req)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestImportedTypedef_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
 
 func (h handler) TestMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args WITHSERVICES.TestService_TestMethod_Args
@@ -116,6 +337,154 @@ func (h handler) TestMethod(ctx context.Context, body wire.Value) (thrift.Respon
 
 	hadError := appErr != nil
 	result, err := WITHSERVICES.TestService_TestMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) TestMixedAnnotatedMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestMixedAnnotatedMethod_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestMixedAnnotatedMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestMixedAnnotatedMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestMixedAnnotatedMethod(ctx, args.DirectActor, args.Request)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestMixedAnnotatedMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) TestMultiAnnotatedArgsMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestMultiAnnotatedArgsMethod_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestMultiAnnotatedArgsMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestMultiAnnotatedArgsMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestMultiAnnotatedArgsMethod(ctx, args.FirstActor, args.SecondActor)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestMultiAnnotatedArgsMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) TestNestedMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestNestedMethod_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestNestedMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestNestedMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestNestedMethod(ctx, args.Nested)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestNestedMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) TestNestedTypedefStructMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestNestedTypedefStructMethod_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestNestedTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestNestedTypedefStructMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestNestedTypedefStructMethod(ctx, args.Outer)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestNestedTypedefStructMethod_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -172,6 +541,43 @@ func (h handler) TestStructMethod(ctx context.Context, body wire.Value) (thrift.
 	return response, err
 }
 
+func (h handler) TestTwoStructPathsMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestTwoStructPathsMethod_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestTwoStructPathsMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestTwoStructPathsMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestTwoStructPathsMethod(ctx, args.Pair)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestTwoStructPathsMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
 func (h handler) TestTypedefMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args WITHSERVICES.TestService_TestTypedefMethod_Args
 	if err := args.FromWire(body); err != nil {
@@ -209,6 +615,137 @@ func (h handler) TestTypedefMethod(ctx context.Context, body wire.Value) (thrift
 	return response, err
 }
 
+func (h handler) TestTypedefStructMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestTypedefStructMethod_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestTypedefStructMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestTypedefStructMethod(ctx, args.TopLevel)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestTypedefStructMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+type testdoubletypedefstructmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
+
+func (h testdoubletypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestDoubleTypedefStructMethod_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestDoubleTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestDoubleTypedefStructMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestDoubleTypedefStructMethod(ctx, args.Arg)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestDoubleTypedefStructMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type testimportedtypedef_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
+
+func (h testimportedtypedef_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestImportedTypedef_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestImportedTypedef': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestImportedTypedef': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestImportedTypedef(ctx, args.Req)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestImportedTypedef_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
 type testmethod_NoWireHandler struct {
 	impl               Interface
 	actorUUIDValidator thrift.ActorUUIDValidator
@@ -238,6 +775,194 @@ func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	hadError := appErr != nil
 	result, err := WITHSERVICES.TestService_TestMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type testmixedannotatedmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
+
+func (h testmixedannotatedmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestMixedAnnotatedMethod_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestMixedAnnotatedMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestMixedAnnotatedMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestMixedAnnotatedMethod(ctx, args.DirectActor, args.Request)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestMixedAnnotatedMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type testmultiannotatedargsmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
+
+func (h testmultiannotatedargsmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestMultiAnnotatedArgsMethod_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestMultiAnnotatedArgsMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestMultiAnnotatedArgsMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestMultiAnnotatedArgsMethod(ctx, args.FirstActor, args.SecondActor)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestMultiAnnotatedArgsMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type testnestedmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
+
+func (h testnestedmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestNestedMethod_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestNestedMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestNestedMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestNestedMethod(ctx, args.Nested)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestNestedMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type testnestedtypedefstructmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
+
+func (h testnestedtypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestNestedTypedefStructMethod_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestNestedTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestNestedTypedefStructMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestNestedTypedefStructMethod(ctx, args.Outer)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestNestedTypedefStructMethod_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
@@ -303,6 +1028,53 @@ func (h teststructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *t
 
 }
 
+type testtwostructpathsmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
+
+func (h testtwostructpathsmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestTwoStructPathsMethod_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestTwoStructPathsMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestTwoStructPathsMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestTwoStructPathsMethod(ctx, args.Pair)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestTwoStructPathsMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
 type testtypedefmethod_NoWireHandler struct {
 	impl               Interface
 	actorUUIDValidator thrift.ActorUUIDValidator
@@ -332,6 +1104,53 @@ func (h testtypedefmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *
 
 	hadError := appErr != nil
 	result, err := WITHSERVICES.TestService_TestTypedefMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type testtypedefstructmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
+
+func (h testtypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestTypedefStructMethod_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestTypedefStructMethod': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestTypedefStructMethod(ctx, args.TopLevel)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestTypedefStructMethod_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
