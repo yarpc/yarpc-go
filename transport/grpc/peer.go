@@ -49,8 +49,13 @@ type grpcPeer struct {
 	// running.  This prevents multiple concurrent scale-up operations.
 	isScaling int32 // accessed atomically
 
-	// connWg tracks active monitorConnWrapper goroutines.
-	// stoppedC is closed once all goroutines finish after the peer is stopped.
+	// atMaxConnectionsLogged is set after logging the first scale-up attempt while
+	// at maxConnections; cleared when the pool drops below the cap.
+	atMaxConnectionsLogged atomic.Bool
+
+	// connWg tracks background pool goroutines: monitorConnWrapper,
+	// runScalingMonitor, and tryScaleUp workers. stoppedC closes once they have
+	// all finished and this peer's metric contribution has been zeroed.
 	connWg sync.WaitGroup
 
 	// metrics reports this peer's connection-state counts and scaling events
@@ -162,12 +167,13 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	}
 
 	if p.poolCfg.dynamicScalingEnabled {
+		p.connWg.Add(1)
 		go p.runScalingMonitor()
 	}
 
-	// Close stoppedC once all monitorConnWrapper goroutines have finished.
-	// shutdownStarted gates new connWg.Add(1) calls; addingCount ensures we
-	// wait for any addConn already past its ctx check before calling Wait.
+	// Close stoppedC once all pool goroutines have finished. shutdownStarted
+	// gates new connWg.Add(1) calls; addingCount ensures we wait for any addConn
+	// already past its ctx check before calling Wait.
 	go func() {
 		<-p.ctx.Done()
 		p.shutdownStarted.Store(true)
@@ -175,6 +181,12 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 			runtime.Gosched()
 		}
 		p.connWg.Wait()
+		// Zero this peer's contribution after every pool goroutine has stopped so
+		// a late refreshPoolMetrics snapshot cannot leave residual values on the
+		// transport-wide shared gauges.
+		if p.metrics != nil {
+			p.metrics.setCounts(0, 0, 0)
+		}
 		close(p.stoppedC)
 	}()
 

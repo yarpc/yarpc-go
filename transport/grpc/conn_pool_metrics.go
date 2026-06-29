@@ -197,9 +197,11 @@ func (m *connPoolMetrics) incIdleReactivation() {
 // shared, transport-wide gauges. Because the gauges are not tagged by peer,
 // every peer contributes to the same series; this reporter tracks the values it
 // last published and applies the difference so the gauges always reflect the
-// sum across all peers. Deltas telescope, so a peer's contribution naturally
-// returns to zero as its connections are removed during teardown — no explicit
-// cleanup is required. Counter events are pool-wide and forwarded directly.
+// sum across all peers. During normal operation, deltas telescope as
+// connections are added or removed. On peer shutdown, pool goroutines are
+// drained and setCounts(0, 0, 0) withdraws this peer's last published
+// contribution so a late refreshPoolMetrics snapshot cannot leave residual
+// values on the shared gauges. Counter events are pool-wide and forwarded directly.
 type peerPoolReporter struct {
 	shared *connPoolMetrics
 

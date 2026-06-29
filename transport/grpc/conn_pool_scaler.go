@@ -36,6 +36,8 @@ const _defaultScalingMonitorInterval = 30 * time.Second
 // peer.  It periodically evaluates whether connections should be removed
 // from the pool.  It exits when the peer's context is cancelled.
 func (p *grpcPeer) runScalingMonitor() {
+	defer p.connWg.Done()
+
 	interval := p.poolCfg.scalingMonitorInterval
 	switch {
 	case interval <= 0:
@@ -229,9 +231,21 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 	if !atomic.CompareAndSwapInt32(&p.isScaling, 0, 1) {
 		return
 	}
+	if p.shutdownStarted.Load() || p.ctx.Err() != nil {
+		atomic.StoreInt32(&p.isScaling, 0)
+		return
+	}
 
+	p.connWg.Add(1)
 	go func() {
-		defer atomic.StoreInt32(&p.isScaling, 0)
+		defer func() {
+			atomic.StoreInt32(&p.isScaling, 0)
+			p.connWg.Done()
+		}()
+
+		if p.ctx.Err() != nil {
+			return
+		}
 
 		// Prefer reactivating an idle connection over dialing a new one.
 		if p.reactivateIdleConn() {
@@ -250,10 +264,12 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 		// No idle connection available; dial a new one if below the cap.
 		// connCount is maintained atomically — no mutex needed for this check.
 		if int(p.connCount.Load()) >= p.poolCfg.maxConnections {
-			p.t.options.logger.Info("grpc: cannot scale up connection pool; at max connections",
-				zap.String("peer", p.HostPort()),
-				zap.Int32("total_connections", p.connCount.Load()),
-				zap.Int("max_connections", p.poolCfg.maxConnections))
+			if p.atMaxConnectionsLogged.CompareAndSwap(false, true) {
+				p.t.options.logger.Info("grpc: cannot scale up connection pool; at max connections",
+					zap.String("peer", p.HostPort()),
+					zap.Int32("total_connections", p.connCount.Load()),
+					zap.Int("max_connections", p.poolCfg.maxConnections))
+			}
 			return
 		}
 
@@ -327,4 +343,7 @@ func (p *grpcPeer) refreshPoolMetrics() {
 		}
 	}
 	p.metrics.setCounts(active, draining, idle)
+	if int(p.connCount.Load()) < p.poolCfg.maxConnections {
+		p.atMaxConnectionsLogged.Store(false)
+	}
 }
