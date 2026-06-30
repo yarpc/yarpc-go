@@ -35,10 +35,10 @@ var emptyDialOpts = &dialOptions{}
 // This currently does not have any additional functionality over creating
 // an Inbound or Outbound separately, but may in the future.
 type Transport struct {
-	lock          sync.Mutex
-	once          *lifecycle.Once
-	options       *transportOptions
-	addressToPeer map[string]*grpcPeer
+	lock    sync.Mutex
+	once    *lifecycle.Once
+	options *transportOptions
+	peers   map[peerKey]*grpcPeer
 	// metrics are the connection pool metrics shared by all peers of this
 	// transport. They are not tagged by peer: gauges hold the aggregate count
 	// across peers and counters accumulate pool-wide scaling events, keeping
@@ -51,6 +51,18 @@ type Transport struct {
 	releasedCleanupWg sync.WaitGroup
 }
 
+// peerKey identifies a peer in the transport's peer map.
+//
+// Peers are keyed by the address they dial. When the transport is configured
+// with ConnectionPerOutbound, the subscribing outbound is added to the key so
+// that each outbound dialing the same address gets its own peer — and therefore
+// its own connection (or connection pool, under dynamic scaling).
+type peerKey struct {
+	address string
+	// subscriber is the zero value unless ConnectionPerOutbound is set.
+	subscriber peer.Subscriber
+}
+
 // NewTransport returns a new Transport.
 func NewTransport(options ...TransportOption) *Transport {
 	return newTransport(newTransportOptions(options))
@@ -58,9 +70,9 @@ func NewTransport(options ...TransportOption) *Transport {
 
 func newTransport(transportOptions *transportOptions) *Transport {
 	return &Transport{
-		once:          lifecycle.NewOnce(),
-		options:       transportOptions,
-		addressToPeer: make(map[string]*grpcPeer),
+		once:    lifecycle.NewOnce(),
+		options: transportOptions,
+		peers:   make(map[peerKey]*grpcPeer),
 		metrics: newConnPoolMetrics(connPoolMetricsParams{
 			Meter:       transportOptions.meter,
 			Logger:      transportOptions.logger,
@@ -78,16 +90,16 @@ func (t *Transport) Start() error {
 func (t *Transport) Stop() error {
 	return t.once.Stop(func() error {
 		t.lock.Lock()
-		for _, grpcPeer := range t.addressToPeer {
+		for _, grpcPeer := range t.peers {
 			grpcPeer.stop()
 		}
-		peers := make([]*grpcPeer, 0, len(t.addressToPeer))
-		for _, p := range t.addressToPeer {
-			peers = append(peers, p)
+		toWait := make([]*grpcPeer, 0, len(t.peers))
+		for _, p := range t.peers {
+			toWait = append(toWait, p)
 		}
 		t.lock.Unlock()
 
-		for _, p := range peers {
+		for _, p := range toWait {
 			p.wait()
 		}
 		// Wait for peers released via ReleasePeer whose cleanup goroutines
@@ -131,17 +143,28 @@ func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps pee
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	address := pid.Identifier()
-	p, ok := t.addressToPeer[address]
+	key := t.peerKey(address, ps)
+	p, ok := t.peers[key]
 	if !ok {
 		var err error
 		p, err = t.newPeer(address, options)
 		if err != nil {
 			return nil, err
 		}
-		t.addressToPeer[address] = p
+		t.peers[key] = p
 	}
 	p.Subscribe(ps)
 	return p, nil
+}
+
+// peerKey builds the map key for a peer. When ConnectionPerOutbound is set, the
+// subscribing outbound is part of the key so each outbound dialing the same
+// address gets its own peer (and its own connection / pool).
+func (t *Transport) peerKey(address string, ps peer.Subscriber) peerKey {
+	if t.options.connectionPerOutbound {
+		return peerKey{address: address, subscriber: ps}
+	}
+	return peerKey{address: address}
 }
 
 // ReleasePeer releases the peer.
@@ -153,7 +176,8 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	address := pid.Identifier()
-	p, ok := t.addressToPeer[address]
+	key := t.peerKey(address, ps)
+	p, ok := t.peers[key]
 	if !ok {
 		return peer.ErrTransportHasNoReferenceToPeer{
 			TransportName:  "grpc.Transport",
@@ -164,7 +188,7 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 		return err
 	}
 	if p.NumSubscribers() == 0 {
-		delete(t.addressToPeer, address)
+		delete(t.peers, key)
 		p.stop()
 		// Do not call p.wait() here: abstractlist.stop() holds list.lock while
 		// calling ReleasePeer, and monitorConnWrapper needs list.lock to exit.
