@@ -57,7 +57,7 @@ func TestRetainReleasePeerSuccess(t *testing.T) {
 
 	peer, err := transport.RetainPeer(testIdentifier{address}, peerSubscriber)
 	assert.NoError(t, err)
-	assert.Equal(t, peer, transport.addressToPeer[address])
+	assert.Equal(t, peer, transport.peers[peerKey{address: address}])
 	assert.NoError(t, transport.ReleasePeer(testIdentifier{address}, peerSubscriber))
 }
 
@@ -169,10 +169,114 @@ type testPeerSubscriber struct{}
 
 func (testPeerSubscriber) NotifyStatusChanged(peer.Identifier) {}
 
+// idSubscriber is a comparable subscriber with a distinct identity, used to
+// model distinct outbounds in tests.
+type idSubscriber struct{ id int }
+
+func (idSubscriber) NotifyStatusChanged(peer.Identifier) {}
+
 type testIdentifier struct {
 	id string
 }
 
 func (i testIdentifier) Identifier() string {
 	return i.id
+}
+
+// countingListener counts accepted connections and signals each on acceptedC.
+type countingListener struct {
+	net.Listener
+	acceptedC chan struct{}
+}
+
+func (l *countingListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err == nil {
+		l.acceptedC <- struct{}{}
+	}
+	return c, err
+}
+
+func waitAccepts(t *testing.T, ch <-chan struct{}, n int) {
+	t.Helper()
+	timeout := time.After(5 * time.Second)
+	for range n {
+		select {
+		case <-ch:
+		case <-timeout:
+			t.Fatalf("timed out waiting for %d connection(s)", n)
+		}
+	}
+}
+
+// TestRetainPeerConnectionPerOutbound verifies that, with ConnectionPerOutbound,
+// distinct outbounds (subscribers) dialing the same address each get their own
+// peer and connection, while reusing the same subscriber dedups.
+func TestRetainPeerConnectionPerOutbound(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	cl := &countingListener{Listener: listener, acceptedC: make(chan struct{}, 8)}
+
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(cl)
+	defer grpcServer.Stop()
+
+	address := listener.Addr().String()
+
+	transport := NewTransport(ConnectionPerOutbound())
+	require.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	id := testIdentifier{address}
+	// Distinct subscribers model distinct outbounds. Use a type with identity:
+	// pointers to the zero-size testPeerSubscriber can compare equal.
+	sub1, sub2 := idSubscriber{1}, idSubscriber{2}
+
+	p1, err := transport.RetainPeer(id, sub1)
+	require.NoError(t, err)
+	p2, err := transport.RetainPeer(id, sub2)
+	require.NoError(t, err)
+
+	// Two outbounds to the same address get two peers and two connections.
+	assert.NotSame(t, p1, p2)
+	assert.Len(t, transport.peers, 2)
+	waitAccepts(t, cl.acceptedC, 2)
+
+	// Reusing the same subscriber dedups: no new peer, no new connection.
+	p1Again, err := transport.RetainPeer(id, sub1)
+	require.NoError(t, err)
+	assert.Same(t, p1, p1Again)
+	assert.Len(t, transport.peers, 2)
+
+	// Releasing one outbound leaves the other's connection intact.
+	require.NoError(t, transport.ReleasePeer(id, sub1))
+	assert.Len(t, transport.peers, 1)
+}
+
+// TestRetainPeerSharedByDefault verifies that without ConnectionPerOutbound,
+// outbounds dialing the same address share a single peer and connection.
+func TestRetainPeerSharedByDefault(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(listener)
+	defer grpcServer.Stop()
+
+	address := listener.Addr().String()
+
+	transport := NewTransport()
+	require.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	id := testIdentifier{address}
+	sub1, sub2 := idSubscriber{1}, idSubscriber{2}
+
+	p1, err := transport.RetainPeer(id, sub1)
+	require.NoError(t, err)
+	p2, err := transport.RetainPeer(id, sub2)
+	require.NoError(t, err)
+
+	assert.Same(t, p1, p2)
+	assert.Len(t, transport.peers, 1)
 }
