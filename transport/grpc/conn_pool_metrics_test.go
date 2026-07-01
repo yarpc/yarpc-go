@@ -193,7 +193,7 @@ func TestConnPoolMetrics_ConcurrentAccess(t *testing.T) {
 func TestNewConnPoolMetrics_LogsRegistrationErrors(t *testing.T) {
 	root := metrics.New()
 	scope := root.Scope()
-	core, logs := observer.New(zap.ErrorLevel)
+	core, logs := observer.New(zap.WarnLevel)
 	logger := zap.New(core)
 
 	params := connPoolMetricsParams{
