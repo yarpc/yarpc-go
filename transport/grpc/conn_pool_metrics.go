@@ -87,7 +87,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Error("failed to create active connections gauge", zap.Error(err))
+		p.Logger.Warn("failed to create active connections gauge", zap.Error(err))
 	}
 
 	m.drainingConnectionCount, err = p.Meter.Gauge(metrics.Spec{
@@ -96,7 +96,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Error("failed to create draining connections gauge", zap.Error(err))
+		p.Logger.Warn("failed to create draining connections gauge", zap.Error(err))
 	}
 
 	m.idleConnectionCount, err = p.Meter.Gauge(metrics.Spec{
@@ -105,7 +105,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Error("failed to create idle connections gauge", zap.Error(err))
+		p.Logger.Warn("failed to create idle connections gauge", zap.Error(err))
 	}
 
 	m.scaleUpTotal, err = p.Meter.Counter(metrics.Spec{
@@ -114,7 +114,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Error("failed to create scale up counter", zap.Error(err))
+		p.Logger.Warn("failed to create scale up counter", zap.Error(err))
 	}
 
 	m.scaleDownTotal, err = p.Meter.Counter(metrics.Spec{
@@ -123,7 +123,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Error("failed to create scale down counter", zap.Error(err))
+		p.Logger.Warn("failed to create scale down counter", zap.Error(err))
 	}
 
 	m.idleReactivationTotal, err = p.Meter.Counter(metrics.Spec{
@@ -132,7 +132,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Error("failed to create idle reactivation counter", zap.Error(err))
+		p.Logger.Warn("failed to create idle reactivation counter", zap.Error(err))
 	}
 
 	return m
