@@ -209,6 +209,18 @@ func waitAccepts(t *testing.T, ch <-chan struct{}, n int) {
 	}
 }
 
+// startTestServer starts a gRPC server on an ephemeral local port and returns
+// its address. The server is stopped via tb.Cleanup.
+func startTestServer(tb testing.TB) string {
+	tb.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(tb, err)
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(listener)
+	tb.Cleanup(grpcServer.Stop)
+	return listener.Addr().String()
+}
+
 // TestRetainPeerConnectionPerOutbound verifies that, with ConnectionPerOutbound,
 // distinct outbounds (subscribers) dialing the same address each get their own
 // peer and connection, while reusing the same subscriber dedups.
@@ -279,4 +291,106 @@ func TestRetainPeerSharedByDefault(t *testing.T) {
 
 	assert.Same(t, p1, p2)
 	assert.Len(t, transport.peers, 1)
+}
+
+// TestRetainReleasePeerConcurrent hammers RetainPeer/ReleasePeer from many
+// goroutines with ConnectionPerOutbound enabled. Each goroutine uses a distinct
+// subscriber, so each retains and releases its own peer independently — this
+// exercises concurrent creation/deletion of distinct peers against the shared
+// t.peers map and the transport-wide shared metrics reporter. Run with -race to
+// detect data races on that shared state.
+func TestRetainReleasePeerConcurrent(t *testing.T) {
+	address := startTestServer(t)
+
+	transport := NewTransport(ConnectionPerOutbound())
+	require.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	id := testIdentifier{address}
+
+	const (
+		goroutines = 16
+		iterations = 50
+	)
+	var wg sync.WaitGroup
+	for g := range goroutines {
+		wg.Add(1)
+		go func(g int) {
+			defer wg.Done()
+			// Distinct subscriber per goroutine: refcounting is by subscriber
+			// set (not a counter), so a shared subscriber across goroutines that
+			// independently release would race at the API level. Keeping each
+			// goroutine's subscriber unique keeps retain/release well-defined.
+			sub := idSubscriber{g}
+			for range iterations {
+				if _, err := transport.RetainPeer(id, sub); !assert.NoError(t, err) {
+					return
+				}
+				assert.NoError(t, transport.ReleasePeer(id, sub))
+			}
+		}(g)
+	}
+	wg.Wait()
+}
+
+// benchRetainPeer measures the retain hot path (lock + peerKey + map lookup +
+// Subscribe) on an already-created peer, isolating the cost of the peerKey change
+// from connection dialing. With ConnectionPerOutbound the map key carries a
+// non-nil subscriber interface; without it the subscriber is the zero value.
+func benchRetainPeer(b *testing.B, opts ...TransportOption) {
+	address := startTestServer(b)
+
+	transport := NewTransport(opts...)
+	require.NoError(b, transport.Start())
+	defer func() { assert.NoError(b, transport.Stop()) }()
+
+	id := testIdentifier{address}
+	sub := idSubscriber{1}
+
+	// Warm up: create the peer once so the loop measures cache hits only.
+	_, err := transport.RetainPeer(id, sub)
+	require.NoError(b, err)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		if _, err := transport.RetainPeer(id, sub); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkRetainPeerShared(b *testing.B) {
+	benchRetainPeer(b)
+}
+
+func BenchmarkRetainPeerConnectionPerOutbound(b *testing.B) {
+	benchRetainPeer(b, ConnectionPerOutbound())
+}
+
+// BenchmarkRetainPeerParallel measures the retain hot path under lock contention
+// with ConnectionPerOutbound enabled: all goroutines retain the same peer (a
+// cache hit), contending on t.lock and hashing the interface-bearing peerKey.
+func BenchmarkRetainPeerParallel(b *testing.B) {
+	address := startTestServer(b)
+
+	transport := NewTransport(ConnectionPerOutbound())
+	require.NoError(b, transport.Start())
+	defer func() { assert.NoError(b, transport.Stop()) }()
+
+	id := testIdentifier{address}
+	sub := idSubscriber{1}
+	_, err := transport.RetainPeer(id, sub)
+	require.NoError(b, err)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if _, err := transport.RetainPeer(id, sub); err != nil {
+				b.Error(err)
+				return
+			}
+		}
+	})
 }
