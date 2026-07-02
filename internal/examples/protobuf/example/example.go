@@ -80,7 +80,7 @@ func (k *KeyValueYARPCServer) GetValue(ctx context.Context, request *examplepb.G
 		return &examplepb.GetValueResponse{Value: value}, nextError
 	}
 	k.RUnlock()
-	return nil, yarpcerrors.Newf(yarpcerrors.CodeNotFound, request.Key)
+	return nil, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "%s", request.Key)
 }
 
 // SetValue implements SetValue.

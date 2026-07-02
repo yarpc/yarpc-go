@@ -223,7 +223,7 @@ func toYARPCStreamError(err error) error {
 	if !ok {
 		code = yarpcerrors.CodeUnknown
 	}
-	yarpcerr := yarpcerrors.Newf(code, status.Message())
+	yarpcerr := yarpcerrors.Newf(code, "%s", status.Message())
 	details, err := marshalError(status)
 	if err != nil {
 		return yarpcerrors.FromError(err)

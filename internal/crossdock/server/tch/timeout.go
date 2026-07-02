@@ -41,7 +41,7 @@ func (handlerTimeoutRawHandler) Handle(ctx context.Context, args *raw.Args) (*ra
 		yarpcerrors.CodeDeadlineExceeded,
 		"call to procedure %q of service %q from caller %q timed out after %v",
 		"caller", "service", "handlertimeout/raw", time.Since(start))
-	return nil, tchannel.NewSystemError(tchannel.ErrCodeTimeout, err.Error())
+	return nil, tchannel.NewSystemError(tchannel.ErrCodeTimeout, "%s", err.Error())
 }
 
 func (handlerTimeoutRawHandler) OnError(ctx context.Context, err error) {
