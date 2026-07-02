@@ -28,7 +28,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/grpc"
 )
 
@@ -166,6 +169,78 @@ func TestStopReleasesLockBeforeWait(t *testing.T) {
 }
 
 type testPeerSubscriber struct{}
+
+// TestPeerReRetainReusesMetrics verifies that releasing and re-retaining the
+// same peer address does not cause duplicate metric registration errors.
+// Peer churn (downstream deploys, health-check flaps) triggers this path in
+// production — without the peerMetrics cache every re-creation logs an error
+// and fires healthline alerts.
+func TestPeerReRetainReusesMetrics(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(listener)
+	defer grpcServer.Stop()
+
+	root := metrics.New()
+	scope := root.Scope()
+	core, logs := observer.New(zap.WarnLevel)
+	logger := zap.New(core)
+
+	transport := NewTransport(
+		Meter(scope),
+		Logger(logger),
+	)
+	require.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	address := listener.Addr().String()
+	sub := testPeerSubscriber{}
+
+	// First retain — registers metrics for this peer address.
+	_, err = transport.RetainPeer(testIdentifier{address}, sub)
+	require.NoError(t, err)
+
+	// Release — peer is removed from addressToPeer but metrics stay in peerMetrics.
+	require.NoError(t, transport.ReleasePeer(testIdentifier{address}, sub))
+
+	// Re-retain the same address — must reuse cached metrics, not re-register.
+	_, err = transport.RetainPeer(testIdentifier{address}, sub)
+	require.NoError(t, err)
+
+	assert.Zero(t, logs.Len(), "re-retaining a peer must not produce duplicate metric registration warnings")
+}
+
+// TestPeerMetricsNotRegisteredWhenScalingDisabled verifies that no metrics are
+// registered when dynamic scaling is off — the pool always has one connection,
+// making the gauges meaningless, and skipping registration avoids duplicate
+// registration errors on peer churn for the vast majority of services.
+func TestPeerMetricsNotRegisteredWhenScalingDisabled(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(listener)
+	defer grpcServer.Stop()
+
+	root := metrics.New()
+	scope := root.Scope()
+
+	transport := NewTransport(Meter(scope)) // dynamic scaling not enabled
+	require.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	address := listener.Addr().String()
+	sub := testPeerSubscriber{}
+
+	_, err = transport.RetainPeer(testIdentifier{address}, sub)
+	require.NoError(t, err)
+
+	snap := root.Snapshot()
+	assert.Empty(t, snap.Gauges, "conn pool gauges must not be registered when dynamic scaling is disabled")
+	assert.Empty(t, snap.Counters, "conn pool counters must not be registered when dynamic scaling is disabled")
+}
 
 func (testPeerSubscriber) NotifyStatusChanged(peer.Identifier) {}
 
