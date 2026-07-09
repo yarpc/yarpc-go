@@ -25,10 +25,12 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -42,6 +44,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc"
+	yarpcpeer "go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/encoding/protobuf"
@@ -53,6 +56,7 @@ import (
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/roundrobin"
 	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -1003,6 +1007,526 @@ func (r *testRouter) Choose(_ context.Context, request *transport.Request) (tran
 		}
 	}
 	return transport.HandlerSpec{}, yarpcerrors.UnimplementedErrorf("no procedure for name %s", request.Procedure)
+}
+
+// TestPeerChurnCallsSucceedAfterChurn verifies that after a full peer churn
+// cycle (retain → release → re-retain the same address), YARPC calls to the
+// downstream service succeed without errors. This is the integration-level
+// reproduction of the yarpc-go v1.88.6 incident: same-address peer churn must
+// not break the outbound or produce error-level logs.
+//
+// Peer churn is simulated via roundrobin.List.Update(), which mirrors real
+// service discovery: the server is removed from the peer list (transport
+// releases the peer, subscriber count → 0) then re-added (peer re-created
+// for the same address).
+func TestPeerChurnCallsSucceedAfterChurn(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	trans := NewTransport(Logger(zaptest.NewLogger(t)), Meter(root.Scope()), WithDynamicConnectionScaling(true))
+	inbound := trans.NewInbound(listener)
+	inbound.SetRouter(newTestRouter(procedures))
+
+	serverID := hostport.Identify(listener.Addr().String())
+	list := roundrobin.New(trans.NewDialer())
+	outbound := trans.NewOutbound(list)
+
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+	require.NoError(t, inbound.Start())
+	defer func() { assert.NoError(t, inbound.Stop()) }()
+	require.NoError(t, outbound.Start())
+	defer func() { assert.NoError(t, outbound.Stop()) }()
+
+	// Peer is initially present in the peer list.
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+
+	clientConfig := clientconfig.MultiOutbound("example-client", "example",
+		transport.Outbounds{ServiceName: "example-client", Unary: outbound},
+	)
+	client := examplepb.NewKeyValueYARPCClient(clientConfig)
+
+	set := func(key, val string) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		defer cancel()
+		_, err := client.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: val})
+		require.NoError(t, err)
+	}
+	get := func(key string) string {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		defer cancel()
+		resp, err := client.GetValue(ctx, &examplepb.GetValueRequest{Key: key})
+		require.NoError(t, err)
+		return resp.Value
+	}
+
+	// Baseline: calls succeed before any churn.
+	set("key1", "value1")
+	assert.Equal(t, "value1", get("key1"))
+
+	// Simulate peer churn: remove the peer (transport releases it, subscriber
+	// count drops to 0) then immediately re-add it (peer re-created for the
+	// same address). With transport-level metric registration, re-creation
+	// cannot produce duplicate registration errors.
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}}))
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+
+	// Calls succeed after churn; data written before churn is preserved.
+	set("key2", "value2")
+	assert.Equal(t, "value2", get("key2"))
+	assert.Equal(t, "value1", get("key1"))
+
+	// Second churn cycle confirms idempotence.
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}}))
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+	set("key3", "value3")
+	assert.Equal(t, "value3", get("key3"))
+}
+
+// TestMultiOutboundSamePeerCalls verifies a multi-outbound topology where two
+// outbounds route to the same downstream address. Both outbounds must be able
+// to make successful YARPC calls independently, and the underlying transport
+// must share a single grpcPeer for the address (not create two separate peers
+// to the same host).
+func TestMultiOutboundSamePeerCalls(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+
+	env, err := newTestEnv(t,
+		[]TransportOption{Meter(root.Scope()), WithDynamicConnectionScaling(true)},
+		nil, nil, nil,
+	)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, env.Close()) }()
+
+	serverAddr := env.Inbound.Addr().String()
+
+	// Second outbound to the same address, sharing env.Transport.
+	chooser2 := peer.NewSingle(hostport.Identify(serverAddr), env.Transport.NewDialer())
+	outbound2 := env.Transport.NewOutbound(chooser2)
+	require.NoError(t, outbound2.Start())
+	defer func() { assert.NoError(t, outbound2.Stop()) }()
+
+	client2 := examplepb.NewKeyValueYARPCClient(
+		clientconfig.MultiOutbound("example-client", "example",
+			transport.Outbounds{ServiceName: "example-client", Unary: outbound2},
+		),
+	)
+
+	ctx := context.Background()
+
+	// Both outbounds write and read successfully.
+	require.NoError(t, env.SetValueYARPC(ctx, "from-outbound1", "value1"))
+
+	ctx2, cancel2 := context.WithTimeout(ctx, testtime.Second)
+	defer cancel2()
+	_, err = client2.SetValue(ctx2, &examplepb.SetValueRequest{Key: "from-outbound2", Value: "value2"})
+	require.NoError(t, err)
+
+	// Cross-read: data written via outbound1 is visible via outbound2 (same server).
+	ctx3, cancel3 := context.WithTimeout(ctx, testtime.Second)
+	defer cancel3()
+	resp, err := client2.GetValue(ctx3, &examplepb.GetValueRequest{Key: "from-outbound1"})
+	require.NoError(t, err)
+	assert.Equal(t, "value1", resp.Value)
+
+	got, err := env.GetValueYARPC(ctx, "from-outbound2")
+	require.NoError(t, err)
+	assert.Equal(t, "value2", got)
+
+	// Both outbounds share a single grpcPeer: only one entry in addressToPeer.
+	env.Transport.lock.Lock()
+	peerCount := len(env.Transport.addressToPeer)
+	env.Transport.lock.Unlock()
+	assert.Equal(t, 1, peerCount,
+		"two outbounds to the same address must share one grpcPeer, got %d peers", peerCount)
+}
+
+// TestMultiOutboundPeerChurnRemainingOutboundStaysHealthy verifies that in a
+// multi-outbound topology, removing the peer from one peer list (releasing one
+// subscriber) leaves the peer alive while the other outbound still holds it —
+// and after all subscribers release the peer and then re-add it (full churn),
+// calls through both outbounds succeed.
+func TestMultiOutboundPeerChurnRemainingOutboundStaysHealthy(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	trans := NewTransport(Logger(zaptest.NewLogger(t)), Meter(root.Scope()), WithDynamicConnectionScaling(true))
+	inbound := trans.NewInbound(listener)
+	inbound.SetRouter(newTestRouter(procedures))
+
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+	require.NoError(t, inbound.Start())
+	defer func() { assert.NoError(t, inbound.Stop()) }()
+
+	serverAddr := listener.Addr().String()
+	serverID := hostport.Identify(serverAddr)
+
+	// Two independent peer lists, each holding the same server address.
+	list1 := roundrobin.New(trans.NewDialer())
+	list2 := roundrobin.New(trans.NewDialer())
+	ob1 := trans.NewOutbound(list1)
+	ob2 := trans.NewOutbound(list2)
+
+	require.NoError(t, ob1.Start())
+	defer func() { assert.NoError(t, ob1.Stop()) }()
+	require.NoError(t, ob2.Start())
+	defer func() { assert.NoError(t, ob2.Stop()) }()
+
+	require.NoError(t, list1.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+	require.NoError(t, list2.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+
+	makeClient := func(ob *Outbound) examplepb.KeyValueYARPCClient {
+		return examplepb.NewKeyValueYARPCClient(
+			clientconfig.MultiOutbound("example-client", "example",
+				transport.Outbounds{ServiceName: "example-client", Unary: ob},
+			),
+		)
+	}
+	client1 := makeClient(ob1)
+	client2 := makeClient(ob2)
+
+	call := func(client examplepb.KeyValueYARPCClient, key, val string) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		defer cancel()
+		_, err := client.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: val})
+		require.NoError(t, err)
+	}
+
+	// Baseline: both clients work.
+	call(client1, "k1", "v1")
+	call(client2, "k2", "v2")
+
+	// Remove peer from list2 only (subscriber count drops from 2 → 1).
+	// The peer must survive because list1 still holds a subscriber.
+	require.NoError(t, list2.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}}))
+
+	trans.lock.Lock()
+	_, peerAlive := trans.addressToPeer[serverAddr]
+	trans.lock.Unlock()
+	assert.True(t, peerAlive, "peer must remain when one of two subscribers releases it")
+
+	// Client1 (list1) still works while client2 (list2) has no peer.
+	call(client1, "k3", "v3")
+
+	// Remove from list1 too — peer fully released, deleted from transport map.
+	require.NoError(t, list1.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}}))
+
+	trans.lock.Lock()
+	_, peerGone := trans.addressToPeer[serverAddr]
+	trans.lock.Unlock()
+	assert.False(t, peerGone, "peer must be removed when all subscribers release it")
+
+	// Re-add to both lists — peer is re-created for same address (full churn).
+	// With transport-level metrics, no duplicate registration errors occur.
+	require.NoError(t, list1.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+	require.NoError(t, list2.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+
+	// Both clients work again after churn.
+	call(client1, "k4", "v4")
+	call(client2, "k5", "v5")
+}
+
+// TestPeerChurnInFlightRequests verifies that requests already in flight when
+// peer churn fires are not silently dropped or hung. In-flight requests on the
+// connection that is being torn down will receive an error; the test asserts no
+// deadlocks or panics, and that new requests succeed once the peer is re-added.
+func TestPeerChurnInFlightRequests(t *testing.T) {
+	t.Parallel()
+
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	trans := NewTransport(Logger(zaptest.NewLogger(t)), WithDynamicConnectionScaling(true))
+	inbound := trans.NewInbound(listener)
+	inbound.SetRouter(newTestRouter(procedures))
+
+	serverID := hostport.Identify(listener.Addr().String())
+	list := roundrobin.New(trans.NewDialer())
+	outbound := trans.NewOutbound(list)
+
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+	require.NoError(t, inbound.Start())
+	defer func() { assert.NoError(t, inbound.Stop()) }()
+	require.NoError(t, outbound.Start())
+	defer func() { assert.NoError(t, outbound.Stop()) }()
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+
+	client := examplepb.NewKeyValueYARPCClient(
+		clientconfig.MultiOutbound("example-client", "example",
+			transport.Outbounds{ServiceName: "example-client", Unary: outbound},
+		),
+	)
+
+	// Seed a value so gets have something to return.
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	_, err = client.SetValue(ctx, &examplepb.SetValueRequest{Key: "k", Value: "v"})
+	require.NoError(t, err)
+
+	// Launch concurrent requests and churn the peer simultaneously.
+	const workers = 10
+	errCh := make(chan error, workers)
+	for i := 0; i < workers; i++ {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+			defer cancel()
+			_, err := client.GetValue(ctx, &examplepb.GetValueRequest{Key: "k"})
+			errCh <- err
+		}()
+	}
+
+	// Churn while workers are in flight.
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}}))
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+
+	// Drain all worker results. Each either succeeded or got a transport/context
+	// error — neither outcome is a panic or deadlock.
+	for i := 0; i < workers; i++ {
+		<-errCh // just drain; some may error during churn, that is acceptable
+	}
+
+	// After churn settles, new requests must succeed.
+	ctx2, cancel2 := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel2()
+	resp, err := client.GetValue(ctx2, &examplepb.GetValueRequest{Key: "k"})
+	require.NoError(t, err)
+	assert.Equal(t, "v", resp.Value)
+}
+
+// TestPeerChurnConcurrentCallsNoRace verifies there are no data races when
+// multiple goroutines make YARPC calls concurrently while another goroutine
+// continuously churns the peer list. Run with -race.
+func TestPeerChurnConcurrentCallsNoRace(t *testing.T) {
+	t.Parallel()
+
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	trans := NewTransport(Logger(zaptest.NewLogger(t)), WithDynamicConnectionScaling(true))
+	inbound := trans.NewInbound(listener)
+	inbound.SetRouter(newTestRouter(procedures))
+
+	serverID := hostport.Identify(listener.Addr().String())
+	list := roundrobin.New(trans.NewDialer())
+	outbound := trans.NewOutbound(list)
+
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+	require.NoError(t, inbound.Start())
+	defer func() { assert.NoError(t, inbound.Stop()) }()
+	require.NoError(t, outbound.Start())
+	defer func() { assert.NoError(t, outbound.Stop()) }()
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+
+	client := examplepb.NewKeyValueYARPCClient(
+		clientconfig.MultiOutbound("example-client", "example",
+			transport.Outbounds{ServiceName: "example-client", Unary: outbound},
+		),
+	)
+
+	const (
+		callers     = 5
+		churnCycles = 3
+	)
+
+	done := make(chan struct{})
+
+	// Churn goroutine: remove and re-add the peer repeatedly.
+	go func() {
+		defer close(done)
+		for i := 0; i < churnCycles; i++ {
+			_ = list.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}})
+			_ = list.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}})
+		}
+	}()
+
+	// Caller goroutines: make calls concurrently with churn.
+	var wg sync.WaitGroup
+	wg.Add(callers)
+	for i := 0; i < callers; i++ {
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < 5; j++ {
+				ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+				key := fmt.Sprintf("k%d-%d", i, j)
+				_, _ = client.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: "v"})
+				cancel()
+			}
+		}(i)
+	}
+
+	<-done
+	wg.Wait()
+}
+
+// TestPeerChurnGaugesZeroAfterPeerRemoval verifies that transport-level
+// connection pool gauges (active, draining, idle connections) return to zero
+// after a peer is removed via churn. This ensures PR #2511's aggregate gauge
+// approach leaves no stale residue when a peer is torn down in production.
+func TestPeerChurnGaugesZeroAfterPeerRemoval(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	trans := NewTransport(
+		Logger(zaptest.NewLogger(t)),
+		Meter(root.Scope()),
+		WithDynamicConnectionScaling(true),
+		MinConnections(1),
+	)
+	inbound := trans.NewInbound(listener)
+	inbound.SetRouter(newTestRouter(procedures))
+
+	serverID := hostport.Identify(listener.Addr().String())
+	list := roundrobin.New(trans.NewDialer())
+	outbound := trans.NewOutbound(list)
+
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+	require.NoError(t, inbound.Start())
+	defer func() { assert.NoError(t, inbound.Stop()) }()
+	require.NoError(t, outbound.Start())
+	defer func() { assert.NoError(t, outbound.Stop()) }()
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+
+	client := examplepb.NewKeyValueYARPCClient(
+		clientconfig.MultiOutbound("example-client", "example",
+			transport.Outbounds{ServiceName: "example-client", Unary: outbound},
+		),
+	)
+
+	// Make a call to ensure the peer is connected and gauges are populated.
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	_, err = client.SetValue(ctx, &examplepb.SetValueRequest{Key: "k", Value: "v"})
+	require.NoError(t, err)
+
+	// Active connections gauge must be non-zero (at least 1 connection up).
+	gauges, _ := poolMetricSnapshot(root)
+	assert.Greater(t, gauges["conn_pool_active_connections"], int64(0),
+		"active connections must be non-zero while peer is retained")
+
+	// Remove peer (subscriber count → 0, peer stopped). The peer's contribution
+	// to the aggregate gauges must drain to zero.
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}}))
+
+	// Wait for the async cleanup goroutine and peer stop to complete.
+	require.Eventually(t, func() bool {
+		gauges, _ := poolMetricSnapshot(root)
+		return gauges["conn_pool_active_connections"] == 0 &&
+			gauges["conn_pool_draining_connections"] == 0 &&
+			gauges["conn_pool_idle_connections"] == 0
+	}, 5*time.Second, 10*time.Millisecond,
+		"all connection pool gauges must return to zero after peer removal")
+
+	// Re-add peer — gauges must recover.
+	require.NoError(t, list.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+
+	ctx2, cancel2 := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel2()
+	_, err = client.GetValue(ctx2, &examplepb.GetValueRequest{Key: "k"})
+	require.NoError(t, err)
+
+	gauges, _ = poolMetricSnapshot(root)
+	assert.Greater(t, gauges["conn_pool_active_connections"], int64(0),
+		"active connections must recover after peer is re-added")
+}
+
+// TestDispatcherRestartSameTransport simulates the production scenario where a
+// service's YARPC dispatcher is torn down and a new one is brought up using the
+// same underlying transport (same process, same metric registry). The new
+// outbound re-retains the same peer addresses that the old one held. With
+// transport-level metric registration this must produce no errors.
+//
+// This covers the uf-load / adaptive-authn-gateway staging failure mode: the
+// service's fx app was rebuilt (e.g. during a BITS deploy) with the same metric
+// scope, causing the old per-peer metric registration (pre-PR #2511) to fail on
+// the second RetainPeer for each address.
+func TestDispatcherRestartSameTransport(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	// Transport lives for the entire test — same object, same metric registry.
+	trans := NewTransport(Logger(zaptest.NewLogger(t)), Meter(root.Scope()), WithDynamicConnectionScaling(true))
+	inbound := trans.NewInbound(listener)
+	inbound.SetRouter(newTestRouter(procedures))
+
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+	require.NoError(t, inbound.Start())
+	defer func() { assert.NoError(t, inbound.Stop()) }()
+
+	serverID := hostport.Identify(listener.Addr().String())
+
+	makeClientViaOutbound := func() (examplepb.KeyValueYARPCClient, *roundrobin.List, *Outbound) {
+		l := roundrobin.New(trans.NewDialer())
+		ob := trans.NewOutbound(l)
+		require.NoError(t, ob.Start())
+		require.NoError(t, l.Update(yarpcpeer.ListUpdates{Additions: []yarpcpeer.Identifier{serverID}}))
+		cc := clientconfig.MultiOutbound("example-client", "example",
+			transport.Outbounds{ServiceName: "example-client", Unary: ob},
+		)
+		return examplepb.NewKeyValueYARPCClient(cc), l, ob
+	}
+
+	// First "dispatcher" instance: start, make calls, stop.
+	client1, list1, ob1 := makeClientViaOutbound()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	_, err = client1.SetValue(ctx, &examplepb.SetValueRequest{Key: "k", Value: "v"})
+	require.NoError(t, err)
+
+	// Tear down the first dispatcher: release all peers from the transport.
+	require.NoError(t, list1.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}}))
+	require.NoError(t, ob1.Stop())
+
+	// Second "dispatcher" instance: same transport re-retains the same addresses.
+	// With old per-peer metric registration this would fail (duplicate registration).
+	// With transport-level registration this must succeed without any errors.
+	client2, _, ob2 := makeClientViaOutbound()
+	defer func() { assert.NoError(t, ob2.Stop()) }()
+
+	ctx2, cancel2 := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel2()
+	resp, err := client2.GetValue(ctx2, &examplepb.GetValueRequest{Key: "k"})
+	require.NoError(t, err)
+	assert.Equal(t, "v", resp.Value)
 }
 
 func TestYARPCErrorsConverted(t *testing.T) {
