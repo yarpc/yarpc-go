@@ -413,6 +413,7 @@ func TestRunScalingMonitorExitsOnContextCancel(t *testing.T) {
 	p := newTestPeer(ctx, cancel)
 
 	done := make(chan struct{})
+	p.connWg.Add(1)
 	go func() {
 		p.runScalingMonitor()
 		close(done)
@@ -442,6 +443,7 @@ func TestRunScalingMonitorTicksEvaluateScaling(t *testing.T) {
 
 	// runScalingMonitor blocks until the context expires; run it inline so the
 	// test waits for it naturally.
+	p.connWg.Add(1)
 	p.runScalingMonitor()
 
 	// If we reach here the monitor exited cleanly on context cancellation – success.
@@ -514,6 +516,28 @@ func TestTryScaleUp(t *testing.T) {
 
 		n := len(p.loadConns())
 		assert.Equal(t, p.poolCfg.maxConnections, n, "pool should not grow beyond max")
+	})
+
+	t.Run("at max connections - logs once per saturation", func(t *testing.T) {
+		t.Parallel()
+		core, logs := observer.New(zap.InfoLevel)
+		p := peerForPool(t)
+		p.t.options.logger = zap.New(core)
+		conns := make([]*grpcClientConnWrapper, p.poolCfg.maxConnections)
+		for i := range conns {
+			conns[i] = makeConn(connStateActive, 85)
+		}
+		p.storeConns(conns)
+
+		for i := 0; i < 10; i++ {
+			p.tryScaleUp(overBudget)
+			assert.Eventually(t, func() bool {
+				return atomic.LoadInt32(&p.isScaling) == 0
+			}, 2*time.Second, 10*time.Millisecond)
+		}
+
+		maxConnLogs := logs.FilterMessage("grpc: cannot scale up connection pool; at max connections")
+		assert.Equal(t, 1, maxConnLogs.Len(), "at-max log should fire once per saturation episode")
 	})
 
 	t.Run("already scaling - no second goroutine launched", func(t *testing.T) {
@@ -664,12 +688,7 @@ func peerWithMetrics(t *testing.T) (*grpcPeer, *metrics.Root) {
 	t.Helper()
 	root := metrics.New()
 	p := peerForPool(t)
-	p.metrics = newConnPoolMetrics(connPoolMetricsParams{
-		Meter:       root.Scope(),
-		Logger:      zap.NewNop(),
-		ServiceName: "test-svc",
-		Peer:        p.Peer.Identifier(),
-	})
+	p.metrics = newPeerPoolReporter(newConnPoolMetrics(testMetricsParams(root.Scope())))
 	return p, root
 }
 
@@ -887,6 +906,7 @@ func TestRunScalingMonitorUsesConfiguredInterval(t *testing.T) {
 	p.poolCfg.scalingMonitorInterval = 5 * time.Second
 
 	done := make(chan struct{})
+	p.connWg.Add(1)
 	go func() {
 		p.runScalingMonitor()
 		close(done)
@@ -909,6 +929,7 @@ func TestRunScalingMonitorValidCustomInterval(t *testing.T) {
 	p.poolCfg.scalingMonitorInterval = 60 * time.Second // valid, above minimum
 
 	done := make(chan struct{})
+	p.connWg.Add(1)
 	go func() {
 		p.runScalingMonitor()
 		close(done)
@@ -942,6 +963,7 @@ func TestRunScalingMonitorClampsAndWarns(t *testing.T) {
 	t.Cleanup(cancel)
 
 	done := make(chan struct{})
+	p.connWg.Add(1)
 	go func() {
 		p.runScalingMonitor()
 		close(done)

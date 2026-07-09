@@ -39,6 +39,11 @@ type Transport struct {
 	once          *lifecycle.Once
 	options       *transportOptions
 	addressToPeer map[string]*grpcPeer
+	// metrics are the connection pool metrics shared by all peers of this
+	// transport. They are not tagged by peer: gauges hold the aggregate count
+	// across peers and counters accumulate pool-wide scaling events, keeping
+	// metric cardinality bounded regardless of fleet size or peer churn.
+	metrics *connPoolMetrics
 	// releasedCleanupWg tracks peers released via ReleasePeer. We cannot call
 	// p.wait() inside ReleasePeer because abstractlist.stop() holds list.lock
 	// while calling it, and monitorConnWrapper needs list.lock to exit cleanly
@@ -56,6 +61,11 @@ func newTransport(transportOptions *transportOptions) *Transport {
 		once:          lifecycle.NewOnce(),
 		options:       transportOptions,
 		addressToPeer: make(map[string]*grpcPeer),
+		metrics: newConnPoolMetrics(connPoolMetricsParams{
+			Meter:       transportOptions.meter,
+			Logger:      transportOptions.logger,
+			ServiceName: transportOptions.serviceName,
+		}),
 	}
 }
 
