@@ -21,4 +21,4 @@
 package yarpc // import "go.uber.org/yarpc"
 
 // Version is the current version of YARPC.
-const Version = "1.88.5"
+const Version = "1.89.0"
