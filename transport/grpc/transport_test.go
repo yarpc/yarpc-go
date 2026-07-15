@@ -202,7 +202,7 @@ func TestPeerChurnNoDuplicateMetricRegistration(t *testing.T) {
 	_, err = transport.RetainPeer(testIdentifier{address}, sub)
 	require.NoError(t, err)
 
-	// Release drops subscriber count to 0, deleting the peer from addressToPeer.
+	// Release drops subscriber count to 0, deleting the peer from the peers map.
 	require.NoError(t, transport.ReleasePeer(testIdentifier{address}, sub))
 
 	// Second retain: peer object is recreated for the same address. With the
@@ -253,7 +253,7 @@ func TestMultiSubscriberPeerChurnNoDuplicateMetricRegistration(t *testing.T) {
 	// sub1 releases: subscriber count drops to 1, peer stays alive.
 	require.NoError(t, transport.ReleasePeer(testIdentifier{address}, sub1))
 
-	// sub2 releases: subscriber count drops to 0, peer deleted from addressToPeer.
+	// sub2 releases: subscriber count drops to 0, peer deleted from the peers map.
 	require.NoError(t, transport.ReleasePeer(testIdentifier{address}, sub2))
 
 	// Re-retain: same address comes back (e.g. health-check recovery).
