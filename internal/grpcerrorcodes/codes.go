@@ -45,6 +45,9 @@ var (
 		yarpcerrors.CodeUnavailable:        codes.Unavailable,
 		yarpcerrors.CodeDataLoss:           codes.DataLoss,
 		yarpcerrors.CodeUnauthenticated:    codes.Unauthenticated,
+		// gRPC has no equivalent status code for a transport-level GOAWAY;
+		// Unavailable is the closest match (transient, safe to retry).
+		yarpcerrors.CodeGoAway: codes.Unavailable,
 	}
 
 	// GRPCCodeToYARPCCode maps all gRPC Codes to their corresponding Code.

@@ -48,6 +48,7 @@ var (
 		CodeUnavailable:        UnavailableErrorf,
 		CodeDataLoss:           DataLossErrorf,
 		CodeUnauthenticated:    UnauthenticatedErrorf,
+		CodeGoAway:             GoAwayErrorf,
 	}
 	_codeToIsErrorWithCode = map[Code]func(error) bool{
 		CodeCancelled:          IsCancelled,
@@ -66,6 +67,7 @@ var (
 		CodeUnavailable:        IsUnavailable,
 		CodeDataLoss:           IsDataLoss,
 		CodeUnauthenticated:    IsUnauthenticated,
+		CodeGoAway:             IsGoAway,
 	}
 )
 

@@ -57,7 +57,8 @@ func GetFaultTypeFromCode(code Code) Fault {
 		CodeDeadlineExceeded,
 		CodeInternal,
 		CodeUnavailable,
-		CodeDataLoss:
+		CodeDataLoss,
+		CodeGoAway:
 		return ServerFault
 	}
 

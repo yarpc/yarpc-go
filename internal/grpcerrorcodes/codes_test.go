@@ -24,7 +24,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/yarpcerrors"
 )
+
+// codesWithoutGRPCEquivalent lists YARPC codes that have no dedicated gRPC
+// status code and are therefore intentionally mapped many-to-one: they round
+// trip to a different (but compatible) YARPC code when sent over gRPC.
+var codesWithoutGRPCEquivalent = map[yarpcerrors.Code]bool{
+	yarpcerrors.CodeGoAway: true,
+}
 
 func TestCodes(t *testing.T) {
 	for code, grpcCode := range YARPCCodeToGRPCCode {
@@ -34,6 +42,9 @@ func TestCodes(t *testing.T) {
 			require.Equal(t, grpcCode, getGRPCCode)
 			getCode, ok := GRPCCodeToYARPCCode[grpcCode]
 			require.True(t, ok)
+			if codesWithoutGRPCEquivalent[code] {
+				return
+			}
 			require.Equal(t, code, getCode)
 		})
 	}

@@ -25,6 +25,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1128,4 +1129,75 @@ func TestCreateRequestSetsGetBody(t *testing.T) {
 	data, err := io.ReadAll(rc)
 	require.NoError(t, err)
 	assert.Equal(t, "hello", string(data))
+}
+
+func TestIsGoAwayError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "typed GoAwayError",
+			err:  http2.GoAwayError{ErrCode: http2.ErrCodeNo},
+			want: true,
+		},
+		{
+			name: "wrapped typed GoAwayError",
+			err:  fmt.Errorf("wrapped: %w", http2.GoAwayError{ErrCode: http2.ErrCodeNo}),
+			want: true,
+		},
+		{
+			name: "unretryable GOAWAY after body written",
+			err:  errors.New(`http2: Transport: cannot retry err [http2: Transport received Server's graceful shutdown GOAWAY] after Request.Body was written; define Request.GetBody to avoid this error`),
+			want: true,
+		},
+		{
+			name: "unrelated error",
+			err:  errors.New("connection reset by peer"),
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isGoAwayError(tt.err))
+		})
+	}
+}
+
+func TestDoWithPeerGoAwayError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer server.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+
+	o := httpTransport.NewSingleOutbound(server.URL)
+	require.NoError(t, o.Start())
+	defer o.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+
+	treq := &transport.Request{Service: "service", Procedure: "procedure", Body: bytes.NewReader(nil)}
+	hreq, err := o.createRequest(treq)
+	require.NoError(t, err)
+
+	p, onFinish, err := o.getPeerForRequest(ctx, treq)
+	require.NoError(t, err)
+	defer onFinish(nil)
+
+	goAwaySender := senderFunc(func(_ *http.Request) (*http.Response, error) {
+		return nil, errors.New(`http2: Transport: cannot retry err [http2: Transport received Server's graceful shutdown GOAWAY] after Request.Body was written; define Request.GetBody to avoid this error`)
+	})
+
+	_, err = o.doWithPeer(ctx, hreq, treq, time.Now(), testtime.Second, p, goAwaySender)
+	require.Error(t, err)
+	assert.True(t, yarpcerrors.IsGoAway(err), "expected CodeGoAway, got: %v", err)
+}
+
+type senderFunc func(*http.Request) (*http.Response, error)
+
+func (f senderFunc) Do(req *http.Request) (*http.Response, error) {
+	return f(req)
 }

@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -49,6 +50,7 @@ import (
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/net/http2"
 )
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
@@ -754,10 +756,33 @@ func (o *Outbound) doWithPeer(
 		// maintenance loop resumes probing for availability.
 		p.onDisconnected()
 
+		if isGoAwayError(err) {
+			return nil, yarpcerrors.Newf(
+				yarpcerrors.CodeGoAway,
+				"server sent HTTP/2 GOAWAY for procedure %q of service %q: %s",
+				treq.Procedure, treq.Service, err.Error())
+		}
+
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}
 
 	return response, nil
+}
+
+// isGoAwayError reports whether err was caused by the underlying HTTP/2
+// connection receiving a server GOAWAY frame, either because the connection
+// was closed after GOAWAY (golang.org/x/net/http2.GoAwayError, returned once
+// response headers were already being read) or because the request could
+// not be safely retried after a GOAWAY since Request.GetBody was unset
+// (golang.org/x/net/http2 does not export a typed error for this case, so
+// this falls back to matching on the well-known error text).
+func isGoAwayError(err error) bool {
+	var goAwayErr http2.GoAwayError
+	if errors.As(err, &goAwayErr) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "GOAWAY") && strings.Contains(msg, "http2")
 }
 
 // Introspect returns basic status about this outbound.

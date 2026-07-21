@@ -322,6 +322,12 @@ func UnauthenticatedErrorf(format string, args ...interface{}) error {
 	return Newf(CodeUnauthenticated, format, args...)
 }
 
+// GoAwayErrorf returns a new Status with code CodeGoAway
+// by calling Newf(CodeGoAway, format, args...).
+func GoAwayErrorf(format string, args ...interface{}) error {
+	return Newf(CodeGoAway, format, args...)
+}
+
 // IsCancelled returns true if FromError(err).Code() == CodeCancelled.
 func IsCancelled(err error) bool {
 	return FromError(err).Code() == CodeCancelled
@@ -400,6 +406,11 @@ func IsDataLoss(err error) bool {
 // IsUnauthenticated returns true if FromError(err).Code() == CodeUnauthenticated.
 func IsUnauthenticated(err error) bool {
 	return FromError(err).Code() == CodeUnauthenticated
+}
+
+// IsGoAway returns true if FromError(err).Code() == CodeGoAway.
+func IsGoAway(err error) bool {
+	return FromError(err).Code() == CodeGoAway
 }
 
 // IsYARPCError returns whether the provided error is a YARPC error.

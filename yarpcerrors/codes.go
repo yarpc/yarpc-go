@@ -152,6 +152,17 @@ const (
 	// credentials for the operation.
 	// This is considered as a client error.
 	CodeUnauthenticated Code = 16
+
+	// CodeGoAway means the underlying transport connection received a GOAWAY
+	// frame (e.g. an HTTP/2 graceful shutdown) while the request was in
+	// flight. This is a distinct, well-understood failure mode: unlike a
+	// generic `Unknown` error, a `GoAway` is safe to retry as long as the
+	// request body can be regenerated (see Request.GetBody).
+	// This is considered as a server error.
+	//
+	// This code does not have a gRPC status code equivalent; it is mapped to
+	// `codes.Unavailable` when propagated over gRPC.
+	CodeGoAway Code = 17
 )
 
 var (
@@ -173,6 +184,7 @@ var (
 		CodeUnavailable:        "unavailable",
 		CodeDataLoss:           "data-loss",
 		CodeUnauthenticated:    "unauthenticated",
+		CodeGoAway:             "go-away",
 	}
 	_stringToCode = map[string]Code{
 		"ok":                  CodeOK,
@@ -192,6 +204,7 @@ var (
 		"unavailable":         CodeUnavailable,
 		"data-loss":           CodeDataLoss,
 		"unauthenticated":     CodeUnauthenticated,
+		"go-away":             CodeGoAway,
 	}
 )
 

@@ -108,6 +108,10 @@ func TestGetFaultTypeFromErrorForServerErrors(t *testing.T) {
 			name: "data loss",
 			err:  DataLossErrorf("test"),
 		},
+		{
+			name: "go away",
+			err:  GoAwayErrorf("test"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
