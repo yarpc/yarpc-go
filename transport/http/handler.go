@@ -333,8 +333,17 @@ func (rw *responseWriter) SetApplicationErrorMeta(meta *transport.ApplicationErr
 		return
 	}
 	rw.appErrorMeta = meta
-	if meta.Code != nil {
+	switch {
+	case meta.Code != nil:
 		rw.w.Header().Set(_applicationErrorCodeHeader, strconv.Itoa(int(*meta.Code)))
+	case rw.isApplicationError:
+		// Application errors without an explicit code (e.g. unannotated Thrift
+		// exceptions) still need an on-the-wire failure signal. TChannel conveys
+		// this via the application-error frame bit; HTTP has no equivalent, so
+		// downstream relays rely on the Rpc-Application-Error-Code header to
+		// classify success vs. failure. Default to CodeUnknown so unannotated
+		// errors are still classified as failures.
+		rw.w.Header().Set(_applicationErrorCodeHeader, strconv.Itoa(int(yarpcerrors.CodeUnknown)))
 	}
 	if meta.Name != "" {
 		rw.w.Header().Set(_applicationErrorNameHeader, meta.Name)
