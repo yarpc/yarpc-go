@@ -21,9 +21,11 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -451,6 +453,18 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	if err != nil {
 		return nil, err
 	}
+	// Explicitly ensure GetBody is populated for request bodies that are
+	// known to be fully buffered in memory, so that net/http's HTTP/2
+	// transport can safely retry the request after a server GOAWAY. This is
+	// made explicit here rather than relying on the equivalent behavior that
+	// net/http.NewRequest applies internally for the same concrete types, so
+	// this guarantee doesn't silently regress if the body types produced by
+	// YARPC's encodings change.
+	if hreq.GetBody == nil {
+		if getBody, ok := newGetBody(treq.Body); ok {
+			hreq.GetBody = getBody
+		}
+	}
 	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
 	// was propagated from a YARPC transport middleware to a HTTP/1 service.
 	// It should be noted that net/http will return an error if a pseudo
@@ -459,6 +473,35 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
 	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
 	return hreq, nil
+}
+
+// newGetBody returns a function that produces a fresh, independent copy of
+// body, for the concrete body types produced by YARPC's encodings that are
+// known to already be fully buffered in memory. It reports false if body is
+// not one of those types, in which case it cannot be safely re-read (e.g. a
+// streaming body) and no GetBody should be set.
+func newGetBody(body io.Reader) (func() (io.ReadCloser, error), bool) {
+	switch b := body.(type) {
+	case *bytes.Reader:
+		snapshot := *b
+		return func() (io.ReadCloser, error) {
+			r := snapshot
+			return io.NopCloser(&r), nil
+		}, true
+	case *bytes.Buffer:
+		buf := b.Bytes()
+		return func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(buf)), nil
+		}, true
+	case *strings.Reader:
+		snapshot := *b
+		return func() (io.ReadCloser, error) {
+			r := snapshot
+			return io.NopCloser(&r), nil
+		}, true
+	default:
+		return nil, false
+	}
 }
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {

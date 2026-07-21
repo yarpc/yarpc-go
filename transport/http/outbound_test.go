@@ -21,6 +21,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -32,6 +33,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"golang.org/x/net/http2"
@@ -1078,4 +1080,52 @@ func TestIsolatedSchemaChange(t *testing.T) {
 	assert.NotEqual(t, plainOutbound.urlTemplate, tlsOutbound.urlTemplate)
 	assert.Equal(t, "http", plainOutbound.urlTemplate.Scheme)
 	assert.Equal(t, "https", tlsOutbound.urlTemplate.Scheme)
+}
+
+func TestNewGetBody(t *testing.T) {
+	tests := []struct {
+		name string
+		body io.Reader
+		ok   bool
+	}{
+		{name: "bytes.Reader", body: bytes.NewReader([]byte("hello")), ok: true},
+		{name: "bytes.Buffer", body: bytes.NewBufferString("hello"), ok: true},
+		{name: "strings.Reader", body: strings.NewReader("hello"), ok: true},
+		{name: "unsupported reader", body: iotest.OneByteReader(bytes.NewReader([]byte("hello"))), ok: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			getBody, ok := newGetBody(tt.body)
+			require.Equal(t, tt.ok, ok)
+			if !tt.ok {
+				require.Nil(t, getBody)
+				return
+			}
+
+			// GetBody must be callable more than once (e.g. multiple GOAWAY
+			// retries), each time yielding an independent, fully rewound
+			// copy of the original body.
+			for i := 0; i < 2; i++ {
+				rc, err := getBody()
+				require.NoError(t, err)
+				data, err := io.ReadAll(rc)
+				require.NoError(t, err)
+				assert.Equal(t, "hello", string(data))
+				require.NoError(t, rc.Close())
+			}
+		})
+	}
+}
+
+func TestCreateRequestSetsGetBody(t *testing.T) {
+	o := NewOutbound(nil)
+	hreq, err := o.createRequest(&transport.Request{Body: bytes.NewReader([]byte("hello"))})
+	require.NoError(t, err)
+	require.NotNil(t, hreq.GetBody)
+
+	rc, err := hreq.GetBody()
+	require.NoError(t, err)
+	data, err := io.ReadAll(rc)
+	require.NoError(t, err)
+	assert.Equal(t, "hello", string(data))
 }
