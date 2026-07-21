@@ -21,9 +21,11 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -451,6 +453,22 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	if err != nil {
 		return nil, err
 	}
+	// Ensure GetBody is populated so net/http's HTTP/2 transport can safely
+	// retry the request after a server GOAWAY - on the first attempt and on
+	// any subsequent one. This is made explicit here, rather than relying on
+	// the equivalent behavior net/http.NewRequest applies internally for a
+	// few specific concrete types, because this outbound is not necessarily
+	// the only place treq.Body's concrete type is decided: a retry
+	// middleware (e.g. RetryFX) sitting above this outbound may substitute
+	// its own reader on a retried call, and that type is unlikely to be one
+	// net/http recognizes. Falling back to buffering the body ourselves
+	// means YARPC's retry-safety guarantee doesn't depend on what concrete
+	// type upstream code happens to hand it.
+	if hreq.GetBody == nil {
+		if err := ensureGetBody(hreq, treq.Body); err != nil {
+			return nil, err
+		}
+	}
 	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
 	// was propagated from a YARPC transport middleware to a HTTP/1 service.
 	// It should be noted that net/http will return an error if a pseudo
@@ -459,6 +477,63 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
 	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
 	return hreq, nil
+}
+
+// ensureGetBody makes sure hreq.GetBody is populated, given the original
+// body io.Reader that was passed to construct it. For the concrete types
+// produced by YARPC's own encodings (already fully buffered in memory),
+// this reuses the same bytes without an extra copy. For any other type it
+// reads the body into memory once - unary YARPC request bodies are expected
+// to be bounded in size - and rewrites hreq.Body to a fresh reader over the
+// buffered copy so the first send is unaffected, then builds GetBody from
+// that same copy so it can be reproduced for as many retries as needed.
+func ensureGetBody(hreq *http.Request, body io.Reader) error {
+	if getBody, ok := newGetBody(body); ok {
+		hreq.GetBody = getBody
+		return nil
+	}
+	if body == nil || body == http.NoBody {
+		return nil
+	}
+	buf, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	hreq.ContentLength = int64(len(buf))
+	hreq.Body = io.NopCloser(bytes.NewReader(buf))
+	hreq.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(buf)), nil
+	}
+	return nil
+}
+
+// newGetBody returns a function that produces a fresh, independent copy of
+// body, for the concrete body types produced by YARPC's encodings that are
+// known to already be fully buffered in memory. It reports false if body is
+// not one of those types, in which case the caller should fall back to
+// buffering it explicitly (see ensureGetBody).
+func newGetBody(body io.Reader) (func() (io.ReadCloser, error), bool) {
+	switch b := body.(type) {
+	case *bytes.Reader:
+		snapshot := *b
+		return func() (io.ReadCloser, error) {
+			r := snapshot
+			return io.NopCloser(&r), nil
+		}, true
+	case *bytes.Buffer:
+		buf := b.Bytes()
+		return func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(buf)), nil
+		}, true
+	case *strings.Reader:
+		snapshot := *b
+		return func() (io.ReadCloser, error) {
+			r := snapshot
+			return io.NopCloser(&r), nil
+		}, true
+	default:
+		return nil, false
+	}
 }
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {

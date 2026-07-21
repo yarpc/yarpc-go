@@ -21,6 +21,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -32,6 +33,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"golang.org/x/net/http2"
@@ -1078,4 +1080,86 @@ func TestIsolatedSchemaChange(t *testing.T) {
 	assert.NotEqual(t, plainOutbound.urlTemplate, tlsOutbound.urlTemplate)
 	assert.Equal(t, "http", plainOutbound.urlTemplate.Scheme)
 	assert.Equal(t, "https", tlsOutbound.urlTemplate.Scheme)
+}
+
+func TestNewGetBody(t *testing.T) {
+	tests := []struct {
+		name string
+		body io.Reader
+		ok   bool
+	}{
+		{name: "bytes.Reader", body: bytes.NewReader([]byte("hello")), ok: true},
+		{name: "bytes.Buffer", body: bytes.NewBufferString("hello"), ok: true},
+		{name: "strings.Reader", body: strings.NewReader("hello"), ok: true},
+		{name: "unsupported reader", body: iotest.OneByteReader(bytes.NewReader([]byte("hello"))), ok: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			getBody, ok := newGetBody(tt.body)
+			require.Equal(t, tt.ok, ok)
+			if !tt.ok {
+				require.Nil(t, getBody)
+				return
+			}
+
+			// GetBody must be callable more than once (e.g. multiple GOAWAY
+			// retries), each time yielding an independent, fully rewound
+			// copy of the original body.
+			for i := 0; i < 2; i++ {
+				rc, err := getBody()
+				require.NoError(t, err)
+				data, err := io.ReadAll(rc)
+				require.NoError(t, err)
+				assert.Equal(t, "hello", string(data))
+				require.NoError(t, rc.Close())
+			}
+		})
+	}
+}
+
+func TestCreateRequestSetsGetBody(t *testing.T) {
+	o := NewOutbound(nil)
+	hreq, err := o.createRequest(&transport.Request{Body: bytes.NewReader([]byte("hello"))})
+	require.NoError(t, err)
+	require.NotNil(t, hreq.GetBody)
+
+	rc, err := hreq.GetBody()
+	require.NoError(t, err)
+	data, err := io.ReadAll(rc)
+	require.NoError(t, err)
+	assert.Equal(t, "hello", string(data))
+}
+
+// TestCreateRequestBuffersUnsupportedBody covers the case where treq.Body's
+// concrete type is not one of the 3 types net/http and newGetBody recognize
+// - for example, a retry middleware sitting above this outbound (such as
+// RetryFX) substituting its own reader type on a retried call. createRequest
+// must still produce a working GetBody by buffering the body itself, and
+// the first read of the request must still see the original content.
+func TestCreateRequestBuffersUnsupportedBody(t *testing.T) {
+	o := NewOutbound(nil)
+	body := iotest.OneByteReader(bytes.NewReader([]byte("hello")))
+	require.NotNil(t, body)
+	_, ok := newGetBody(body)
+	require.False(t, ok, "test setup: body must be a type newGetBody does not recognize")
+
+	hreq, err := o.createRequest(&transport.Request{Body: body})
+	require.NoError(t, err)
+	require.NotNil(t, hreq.GetBody)
+	assert.EqualValues(t, len("hello"), hreq.ContentLength)
+
+	// The first send must still observe the original content.
+	firstRead, err := io.ReadAll(hreq.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "hello", string(firstRead))
+
+	// GetBody must be callable more than once, each time replaying the full
+	// original content, regardless of the original reader's concrete type.
+	for i := 0; i < 2; i++ {
+		rc, err := hreq.GetBody()
+		require.NoError(t, err)
+		data, err := io.ReadAll(rc)
+		require.NoError(t, err)
+		assert.Equal(t, "hello", string(data))
+	}
 }
