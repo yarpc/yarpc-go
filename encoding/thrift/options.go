@@ -181,15 +181,18 @@ func (nw noWireOption) applyRegisterOption(c *registerConfig) {
 	c.NoWire = nw.Enable
 }
 
-// ActorUUIDValidator validates the actor UUID extracted from a Thrift
-// request's auth.actor_uuid-annotated argument. It is invoked by generated
+// ActorUUIDValidator validates the actor UUIDs extracted from a Thrift
+// request's auth.actor_uuid-annotated arguments. It is invoked by generated
 // server code after the request arguments are decoded but before the user's
 // handler runs. A non-nil error short-circuits the request and is returned
 // to the caller as the handler's response error.
 //
-// Callers that want to support unannotated handlers should treat an empty
-// actorUUID as "not provided" rather than as a failure.
-type ActorUUIDValidator func(ctx context.Context, actorUUID string) error
+// A method may annotate more than one field, so the validator receives one
+// value per reachable annotation (in declaration order). Fields that are
+// unset surface as the empty string; callers that want to support
+// unannotated handlers should treat an empty actorUUID as "not provided"
+// rather than as a failure.
+type ActorUUIDValidator func(ctx context.Context, actorUUIDs []string) error
 
 type actorUUIDValidatorOption struct{ Validator ActorUUIDValidator }
 
