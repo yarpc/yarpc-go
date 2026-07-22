@@ -495,6 +495,44 @@ func TestResponseWriter(t *testing.T) {
 	assert.Equal(t, strconv.Itoa(int(appErrCode)), recorder.Header().Get(_applicationErrorCodeHeader))
 }
 
+func TestResponseWriterUnannotatedApplicationError(t *testing.T) {
+	// Thrift exceptions without an rpc.code annotation reach the transport as
+	// an application error whose meta has a nil Code. HTTP must still emit the
+	// Rpc-Application-Error-Code header so downstream relays classify the call
+	// as a failure, matching TChannel's frame-bit behavior. Defaults to
+	// CodeUnknown.
+	recorder := httptest.NewRecorder()
+	writer := newResponseWriter(recorder)
+
+	writer.SetApplicationError()
+	writer.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
+		Name:    "UnannotatedException",
+		Details: "boom",
+		Code:    nil,
+	})
+	writer.Close(http.StatusOK)
+
+	assert.Equal(t, ApplicationErrorStatus, recorder.Header().Get(ApplicationStatusHeader))
+	assert.Equal(t,
+		strconv.Itoa(int(yarpcerrors.CodeUnknown)),
+		recorder.Header().Get(_applicationErrorCodeHeader),
+		"unannotated application errors must default to CodeUnknown")
+	assert.Equal(t, "UnannotatedException", recorder.Header().Get(_applicationErrorNameHeader))
+}
+
+func TestResponseWriterNoApplicationErrorNoCodeHeader(t *testing.T) {
+	// A meta with a nil Code that is not part of an application error must not
+	// spuriously emit an error-code header on an otherwise successful response.
+	recorder := httptest.NewRecorder()
+	writer := newResponseWriter(recorder)
+
+	writer.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{Name: "name"})
+	writer.Close(http.StatusOK)
+
+	assert.Equal(t, ApplicationSuccessStatus, recorder.Header().Get(ApplicationStatusHeader))
+	assert.Empty(t, recorder.Header().Get(_applicationErrorCodeHeader))
+}
+
 func TestTruncatedHeader(t *testing.T) {
 	tests := []struct {
 		name         string
