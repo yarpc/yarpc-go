@@ -26,13 +26,19 @@ GOGO_PROTO_DIR=$(go mod download -json github.com/gogo/protobuf | jq -r .Dir)
 # Run protoc
 #
 # $1: plugin
-# $2: file
-# $3: other options
+# $2: other options
+#
+# Set EXTRA_PROTOC_M in the environment to append additional M-mappings
+# (proto import path => Go import path) for protos that are imported by
+# the file being generated but whose go_package is a bare name. Without
+# this, gogo derives the importer's reference from the proto path and
+# emits an unqualified Go import that does not resolve under the module.
+# $3+: file
 protoc_with_imports() {
   protoc \
     -I "$GOGO_PROTO_DIR/protobuf" \
     -I . \
-    "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types:." \
+    "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types${EXTRA_PROTOC_M:+,${EXTRA_PROTOC_M}}:." \
   "${@:3}"
 }
 
@@ -140,6 +146,19 @@ generate_with_protoc_all() {
   protoc_all internal/crossdock/crossdockpb/crossdock.proto
   protoc_all internal/examples/streaming/stream.proto
   protoc_all internal/prototest/examplepb/example.proto
+
+  # Test fixtures for the yarpc-go plugin's (uber.auth.annotations.actor_uuid)
+  # support. annotations.proto only defines the extension and so does not need
+  # the yarpc-go plugin run on it; withuuid.proto exercises emission of the
+  # ActorUUID() accessor on annotated messages.
+  #
+  # withuuid.proto imports annotations.proto, whose go_package is the bare
+  # name "annotations"; map it to its full module import path so the
+  # generated withuuid.pb.go references it as
+  # go.uber.org/yarpc/.../annotations rather than an unqualified path.
+  protoc_go encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto
+  EXTRA_PROTOC_M="Mencoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto=go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations" \
+    protoc_all encoding/protobuf/protoc-gen-yarpc-go/internal/tests/withuuid/withuuid.proto
 }
 
 generate_with_protoc_all_v2() {
