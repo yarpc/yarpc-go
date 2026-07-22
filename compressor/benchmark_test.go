@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	yarpcgzip "go.uber.org/yarpc/compressor/gzip"
+	yarpcklauspostgzip "go.uber.org/yarpc/compressor/klauspostgzip"
 	yarpczstd "go.uber.org/yarpc/compressor/zstd"
 )
 
@@ -41,6 +42,7 @@ type compressorFactory struct {
 
 var compressors = []compressorFactory{
 	{"gzip", func() transport.Compressor { return yarpcgzip.New() }},
+	{"klauspostgzip", func() transport.Compressor { return yarpcklauspostgzip.New() }},
 	{"zstd", func() transport.Compressor { return yarpczstd.New() }},
 }
 
