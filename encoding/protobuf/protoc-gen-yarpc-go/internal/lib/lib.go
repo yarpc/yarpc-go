@@ -593,6 +593,36 @@ var (
 )
 {{end}}
 
+{{range $entry := actorUUIDMethods .}}
+// ActorUUID returns the UUID strings from every field annotated with
+// uber.auth.annotations.actor_uuid reachable from this request, in
+// declaration order. An unset scalar field contributes its zero value
+// (""); container fields (repeated / map) contribute every element or
+// value they hold, so an empty container contributes nothing. Values
+// surfaced from a map appear in non-deterministic order.
+func (t *{{$entry.GoTypeName}}) ActorUUID() []string {
+{{- if eq $entry.Mode "slice"}}
+	return {{$entry.SliceExpr}}
+{{- else if eq $entry.Mode "literal"}}
+	return []string{ {{- range $i, $e := $entry.Exprs}}{{if $i}}, {{end}}{{$e}}{{end}} }
+{{- else}}
+	var out []string
+{{- range $s := $entry.Stmts}}
+{{- if eq $s.Kind "rangeOpen"}}
+	for _, {{$s.Var}} := range {{$s.Expr}} {
+{{- else if eq $s.Kind "append"}}
+	out = append(out, {{$s.Expr}})
+{{- else if eq $s.Kind "appendSpread"}}
+	out = append(out, {{$s.Expr}}...)
+{{- else}}
+	}
+{{- end}}
+{{- end}}
+	return out
+{{- end}}
+}
+{{end}}
+
 var {{ fileDescriptorClosureVarName .File }} = [][]byte{
 	// {{ .Name }}
 	{{ encodedFileDescriptor .File }},{{range $dependency := .TransitiveDependencies }}
@@ -621,8 +651,9 @@ var Runner = protoplugin.NewRunner(
 			"encodedFileDescriptor":        encodedFileDescriptor,
 			"fileDescriptorClosureVarName": fileDescriptorClosureVarName,
 			"trimPrefixPeriod":             trimPrefixPeriod,
+			"actorUUIDMethods":             actorUUIDMethods,
 		}).Parse(tmpl)),
-	checkTemplateInfo,
+	nil,
 	[]string{
 		"context",
 		"io/ioutil",
@@ -644,10 +675,6 @@ var Runner = protoplugin.NewRunner(
 		return nil
 	},
 )
-
-func checkTemplateInfo(templateInfo *protoplugin.TemplateInfo) error {
-	return nil
-}
 
 func unaryMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) {
 	methods := make([]*protoplugin.Method, 0, len(service.Methods))
