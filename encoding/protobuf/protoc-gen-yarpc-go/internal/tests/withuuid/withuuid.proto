@@ -1,0 +1,187 @@
+// Test fixture for protoc-gen-yarpc-go's actor_uuid annotation support.
+//
+// Mirrors the cases in
+// encoding/thrift/thriftrw-plugin-yarpc/internal/uuid_test/, adapted to
+// protobuf. Every message that appears as a request type of a service
+// method exercises a different shape the generator must handle:
+//
+//   - DeleteUserRequest, GetUserRequest, ListUsersRequest carry the
+//     annotation directly on a string field.
+//   - NestedRequest reaches the annotation through three levels of
+//     message hops; the generator must surface the full chain.
+//   - CycleRequest self-references through a struct hop and additionally
+//     carries an annotated sibling; the walker must skip the cyclic
+//     field via visited-set tracking and surface the sibling.
+//   - MultiAnnotatedRequest declares multiple annotated fields; the
+//     walker collects all of them, in declaration order, and the
+//     accessor returns one value per field without erroring.
+//   - RepeatedActorsRequest annotates a `repeated string`; the accessor
+//     appends every element.
+//   - MapActorsRequest annotates a `map<string,string>`; the accessor
+//     appends every value (map order is non-deterministic).
+//   - RepeatedMessageRequest reaches the annotation through a
+//     `repeated Msg` hop; the accessor ranges the slice and recurses.
+//   - MapMessageRequest reaches the annotation through a
+//     `map<string,Msg>` hop; the accessor ranges the values and recurses.
+//   - IgnoredAnnotationsRequest has annotations on shapes that must be
+//     ignored (a non-string scalar, and a message-typed field whose
+//     subtree holds no string leaf); the generator must NOT emit an
+//     accessor for it.
+//   - UnannotatedRequest has no annotated field anywhere; same expected
+//     non-emission.
+syntax = "proto3";
+
+package uber.yarpc.tests.protouuid;
+
+option go_package = "withuuid";
+
+import "encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto";
+
+message DeleteUserRequest {
+  string actor = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string user_id = 2;
+}
+
+message DeleteUserResponse {
+  bool ok = 1;
+}
+
+message GetUserRequest {
+  string requester_id = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string target_id = 2;
+}
+
+message GetUserResponse {
+  string user_id = 1;
+  string display_name = 2;
+}
+
+message ListUsersRequest {
+  string caller_actor_id = 1 [(uber.auth.annotations.actor_uuid) = true];
+  int32 page_size = 2;
+}
+
+message ListUsersResponse {
+  repeated string user_ids = 1;
+}
+
+// InnerLevel through OuterLevel form a three-hop chain. Only the bottom
+// field is annotated; the walker must descend through every hop and
+// surface a multi-step path ending at innerUUID.
+message InnerLevel {
+  string inner_uuid = 1 [(uber.auth.annotations.actor_uuid) = true];
+}
+
+message MidLevel {
+  InnerLevel inner = 1;
+}
+
+message OuterLevel {
+  MidLevel mid = 1;
+}
+
+message NestedRequest {
+  OuterLevel nested = 1;
+  string trace_id = 2;
+}
+
+// CycleNode self-references through `loop` and carries an annotated
+// sibling `id`. The walker must mark CycleNode as visited before
+// descending, recognise the cycle, and pick `id` instead of looping.
+message CycleNode {
+  CycleNode loop = 1;
+  string id = 2 [(uber.auth.annotations.actor_uuid) = true];
+}
+
+message CycleRequest {
+  CycleNode root = 1;
+}
+
+// MultiAnnotatedRequest declares two annotated string fields; the walker
+// collects both, in declaration order, so the accessor returns
+// [first_actor, second_actor]. No error is raised.
+message MultiAnnotatedRequest {
+  string first_actor = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string second_actor = 2 [(uber.auth.annotations.actor_uuid) = true];
+}
+
+// RepeatedActorsRequest annotates a `repeated string`. The accessor must
+// append every element of the slice, so a request with N actors yields N
+// values.
+message RepeatedActorsRequest {
+  repeated string actors = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string trace_id = 2;
+}
+
+// MapActorsRequest annotates a `map<string,string>`. The accessor must
+// append every value of the map. Go map iteration order is
+// non-deterministic, so the relative order of the surfaced values is
+// unspecified.
+message MapActorsRequest {
+  map<string, string> actors_by_role = 1 [(uber.auth.annotations.actor_uuid) = true];
+}
+
+// ActorItem is the element type behind the repeated- and map-message
+// requests below; its annotated string is reached by descending through
+// the container hop.
+message ActorItem {
+  string actor_uuid = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string label = 2;
+}
+
+// RepeatedMessageRequest reaches the annotation through a `repeated Msg`
+// hop. The accessor must range the slice and recurse into each element.
+message RepeatedMessageRequest {
+  repeated ActorItem items = 1;
+}
+
+// MapMessageRequest reaches the annotation through a `map<string,Msg>`
+// hop. The accessor must range the values and recurse into each one.
+message MapMessageRequest {
+  map<string, ActorItem> items_by_id = 1;
+}
+
+// IgnoredAnnotationsRequest carries annotations only on shapes that must
+// be ignored: a non-string scalar (timestamp), and a message-typed field
+// (creds) whose subtree holds no string leaf. None of these are valid
+// leaves, so the generator must NOT emit an ActorUUID() method for this
+// request type.
+message IgnoredAnnotationsRequest {
+  int64 timestamp = 1 [(uber.auth.annotations.actor_uuid) = true];
+  // The annotation on a message-typed field is ignored. The walker does
+  // still descend into creds looking for a string leaf - and finds none,
+  // since IgnoredCredsContainer holds only a non-string scalar.
+  IgnoredCredsContainer creds = 2 [(uber.auth.annotations.actor_uuid) = true];
+}
+
+// IgnoredCredsContainer's only field is a non-string scalar, so there is
+// no string leaf to surface. Used by IgnoredAnnotationsRequest to confirm
+// the walker descends into a message field but finds nothing collectable.
+message IgnoredCredsContainer {
+  int64 issued_at = 1 [(uber.auth.annotations.actor_uuid) = true];
+}
+
+// UnannotatedRequest has no annotated field; the plugin must not emit
+// an ActorUUID() accessor for it.
+message UnannotatedRequest {
+  string token = 1;
+}
+
+message UnannotatedResponse {
+  bool ok = 1;
+}
+
+service UserService {
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc ListUsers(ListUsersRequest) returns (stream ListUsersResponse);
+  rpc Ping(UnannotatedRequest) returns (UnannotatedResponse);
+  rpc CredentialedAction(NestedRequest) returns (DeleteUserResponse);
+  rpc CycleAction(CycleRequest) returns (DeleteUserResponse);
+  rpc MultipleAction(MultiAnnotatedRequest) returns (DeleteUserResponse);
+  rpc RepeatedActorsAction(RepeatedActorsRequest) returns (DeleteUserResponse);
+  rpc MapActorsAction(MapActorsRequest) returns (DeleteUserResponse);
+  rpc RepeatedMessageAction(RepeatedMessageRequest) returns (DeleteUserResponse);
+  rpc MapMessageAction(MapMessageRequest) returns (DeleteUserResponse);
+  rpc IgnoredAction(IgnoredAnnotationsRequest) returns (DeleteUserResponse);
+}

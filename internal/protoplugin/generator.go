@@ -126,8 +126,10 @@ func (g *generator) generate(file *File) (string, error) {
 		}
 	}
 	templateInfo := &TemplateInfo{file, imports}
-	if err := g.templateInfoChecker(templateInfo); err != nil {
-		return "", err
+	if g.templateInfoChecker != nil {
+		if err := g.templateInfoChecker(templateInfo); err != nil {
+			return "", err
+		}
 	}
 	buffer := bytes.NewBuffer(nil)
 	if err := g.tmpl.Execute(buffer, templateInfo); err != nil {
