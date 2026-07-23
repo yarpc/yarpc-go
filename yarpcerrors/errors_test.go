@@ -227,7 +227,7 @@ func (e customYARPCError) Error() string {
 	return e.err
 }
 func (e customYARPCError) YARPCError() *Status {
-	return FromError(DataLossErrorf(e.err))
+	return FromError(DataLossErrorf("%s", e.err))
 }
 
 func TestFromError(t *testing.T) {
@@ -283,7 +283,7 @@ func TestIsStatus(t *testing.T) {
 
 func TestErrorWithFmtVerbs(t *testing.T) {
 	err := errors.New(`http://foo%s: invalid URL escape "%s"`)
-	assert.EqualError(t, UnknownErrorf(err.Error()), FromError(err).Error())
+	assert.EqualError(t, UnknownErrorf("%s", err.Error()), FromError(err).Error())
 }
 
 func TestWrapError(t *testing.T) {

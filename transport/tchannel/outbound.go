@@ -285,7 +285,7 @@ func getResponseError(headers transport.Headers) error {
 	}
 	errorName, _ := headers.Get(ErrorNameHeaderKey)
 	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
-	return intyarpcerrors.NewWithNamef(errorCode, errorName, errorMessage)
+	return intyarpcerrors.NewWithNamef(errorCode, errorName, "%s", errorMessage)
 }
 
 func getApplicationErrorCodeFromHeaders(headers transport.Headers) *yarpcerrors.Code {
