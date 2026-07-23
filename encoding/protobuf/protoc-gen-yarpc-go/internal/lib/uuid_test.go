@@ -681,6 +681,64 @@ func TestActorUUIDMethods(t *testing.T) {
 	})
 }
 
+// TestServiceAndMethodHasActorUUID exercises the server-template gating
+// helpers: methodHasActorUUID reports per-method whether the request type
+// reaches an annotation, and serviceHasActorUUID is the service-wide OR of
+// that over every method. Both must stay in lockstep with actorUUIDMethods
+// so the generated validator call (request.ActorUUID()) only appears where
+// the accessor exists.
+func TestServiceAndMethodHasActorUUID(t *testing.T) {
+	annotatedReq := newMessage(t, "DeleteUserRequest", stringField(t, "actor", true))
+	plainReq := newMessage(t, "PingRequest", stringField(t, "token", false))
+	resp := newMessage(t, "Resp", stringField(t, "ok", false))
+
+	deleteMethod := method(t, "DeleteUser", annotatedReq, resp)
+	pingMethod := method(t, "Ping", plainReq, resp)
+
+	info := newTemplateInfoWithServices(t,
+		[]*protoplugin.Message{annotatedReq, plainReq, resp},
+		svc(t, "UserService", deleteMethod, pingMethod),
+	)
+
+	t.Run("methodHasActorUUID_true_for_annotated_request", func(t *testing.T) {
+		assert.True(t, methodHasActorUUID(info, deleteMethod))
+	})
+
+	t.Run("methodHasActorUUID_false_for_unannotated_request", func(t *testing.T) {
+		assert.False(t, methodHasActorUUID(info, pingMethod))
+	})
+
+	t.Run("serviceHasActorUUID_true_when_any_method_annotated", func(t *testing.T) {
+		assert.True(t, serviceHasActorUUID(info, info.File.Services[0]))
+	})
+
+	t.Run("serviceHasActorUUID_false_when_no_method_annotated", func(t *testing.T) {
+		plainOnly := newTemplateInfoWithServices(t,
+			[]*protoplugin.Message{plainReq, resp},
+			svc(t, "PingService", method(t, "Ping", plainReq, resp)),
+		)
+		assert.False(t, serviceHasActorUUID(plainOnly, plainOnly.File.Services[0]))
+	})
+
+	t.Run("false_when_extension_not_in_scope", func(t *testing.T) {
+		target := &protoplugin.File{
+			FileDescriptorProto: &descriptor.FileDescriptorProto{
+				Name:    proto.String("svc/foo.proto"),
+				Package: proto.String("svc"),
+			},
+			GoPackage: &protoplugin.GoPackage{Path: "svc/foopb"},
+		}
+		annotatedReq.File = target
+		s := svc(t, "S", method(t, "M", annotatedReq, resp))
+		s.File = target
+		target.Services = []*protoplugin.Service{s}
+		noExt := &protoplugin.TemplateInfo{File: target}
+		assert.False(t, serviceHasActorUUID(noExt, s),
+			"without the extension in scope there is nothing to validate")
+		assert.False(t, methodHasActorUUID(noExt, s.Methods[0]))
+	})
+}
+
 // --- helpers --------------------------------------------------------------
 
 // newOptionsFile builds a synthetic protoplugin.File that mirrors the shape

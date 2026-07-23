@@ -206,6 +206,53 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 	return out, nil
 }
 
+// serviceHasActorUUID reports whether any method of the given service has
+// a request type that reaches at least one actor_uuid-annotated leaf. The
+// server template uses it to gate the service-wide handler struct's
+// validator field and the validator extraction in the Build/Fx entry
+// points.
+func serviceHasActorUUID(info *protoplugin.TemplateInfo, service *protoplugin.Service) bool {
+	num := findActorUUIDFieldNumber(info.File)
+	if num == 0 {
+		return false
+	}
+	ctx := newUUIDContext(info.File)
+	for _, m := range service.Methods {
+		if methodHasActorUUIDNum(m, num, ctx) {
+			return true
+		}
+	}
+	return false
+}
+
+// methodHasActorUUID reports whether the given method's request type
+// reaches at least one actor_uuid-annotated leaf. The server template
+// uses it to gate the per-method validator call (which invokes
+// request.ActorUUID()), so it must stay in lockstep with the accessor
+// emission in actorUUIDMethods.
+func methodHasActorUUID(info *protoplugin.TemplateInfo, method *protoplugin.Method) bool {
+	num := findActorUUIDFieldNumber(info.File)
+	if num == 0 {
+		return false
+	}
+	return methodHasActorUUIDNum(method, num, newUUIDContext(info.File))
+}
+
+// methodHasActorUUIDNum is the shared core of serviceHasActorUUID and
+// methodHasActorUUID: it reports whether the method's request type has at
+// least one path to an annotated leaf, reusing an already-resolved field
+// number and context.
+func methodHasActorUUIDNum(method *protoplugin.Method, num int32, ctx *uuidContext) bool {
+	if method == nil {
+		return false
+	}
+	req := method.RequestType
+	if req == nil {
+		return false
+	}
+	return len(walkForUUID(req.Fields, num, ctx, map[*protoplugin.Message]bool{req: true})) > 0
+}
+
 // newActorUUIDMethod classifies the given non-empty set of paths into a
 // rendering mode and packages the data the template needs. It holds no Go
 // statement syntax: the actual `return`/`[]string{}`/`append`/`for` text

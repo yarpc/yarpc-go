@@ -63,6 +63,65 @@ func TestRunnerEmitsActorUUIDAccessor(t *testing.T) {
 		"sanity check: existing client/server emission still works")
 }
 
+// TestRunnerWiresActorUUIDValidator asserts the server template injects the
+// ActorUUID validator plumbing for a service with an annotated request
+// type: the handler carries a validator field, Build/registration accept
+// protobuf.RegisterOptions, and the per-method handler calls
+// protobuf.ValidateActorUUID with the request's ActorUUID() accessor.
+func TestRunnerWiresActorUUIDValidator(t *testing.T) {
+	req := &plugin_go.CodeGeneratorRequest{
+		FileToGenerate: []string{"svc/foo.proto"},
+		ProtoFile: []*descriptor.FileDescriptorProto{
+			optionsFileDescriptor(),
+			targetFileDescriptor(t),
+		},
+	}
+
+	resp := Runner.Run(req)
+	require.Nil(t, resp.Error, "plugin returned error: %v", resp.GetError())
+	require.Len(t, resp.File, 1)
+
+	out := resp.File[0].GetContent()
+	assert.Contains(t, out, "actorUUIDValidator protobuf.ActorUUIDValidator",
+		"handler struct must carry a validator field; output was:\n%s", out)
+	assert.Contains(t, out, "func BuildUserServiceYARPCProcedures(server UserServiceYARPCServer, options ...protobuf.RegisterOption)",
+		"Build entry point must accept register options; output was:\n%s", out)
+	assert.Contains(t, out, "protobuf.ActorUUIDValidatorFromOptions(options)",
+		"Build entry point must extract the validator from options; output was:\n%s", out)
+	assert.Contains(t, out, `protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "svc.UserService", "DeleteUser")`,
+		"the annotated method must call the validator with its ActorUUID(); output was:\n%s", out)
+}
+
+// TestRunnerSkipsValidatorForUnannotatedService asserts that a service
+// whose request types carry no annotation keeps its original, option-free
+// signature and gets no validator plumbing, preserving backwards
+// compatibility.
+func TestRunnerSkipsValidatorForUnannotatedService(t *testing.T) {
+	target := targetFileDescriptor(t)
+	// Drop the annotation from the request's first field.
+	target.MessageType[0].Field[0].Options = nil
+
+	req := &plugin_go.CodeGeneratorRequest{
+		FileToGenerate: []string{"svc/foo.proto"},
+		ProtoFile: []*descriptor.FileDescriptorProto{
+			optionsFileDescriptor(),
+			target,
+		},
+	}
+
+	resp := Runner.Run(req)
+	require.Nil(t, resp.Error, "plugin returned error: %v", resp.GetError())
+	require.Len(t, resp.File, 1)
+
+	out := resp.File[0].GetContent()
+	assert.NotContains(t, out, "actorUUIDValidator",
+		"an unannotated service must not get validator plumbing; output was:\n%s", out)
+	assert.NotContains(t, out, "ValidateActorUUID",
+		"an unannotated service must not call the validator; output was:\n%s", out)
+	assert.Contains(t, out, "func BuildUserServiceYARPCProcedures(server UserServiceYARPCServer) []transport.Procedure",
+		"an unannotated service keeps its original option-free signature; output was:\n%s", out)
+}
+
 // TestRunnerCollectsEveryAnnotationOnMultiplyAnnotatedRequest asserts the
 // "collect all" rule: a request type with two actor_uuid-annotated fields
 // generates exactly one ActorUUID() accessor whose []string body returns
