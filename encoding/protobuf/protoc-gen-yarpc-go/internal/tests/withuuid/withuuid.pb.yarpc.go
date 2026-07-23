@@ -82,12 +82,13 @@ type UserServiceServiceListUsersYARPCServer interface {
 }
 
 type buildUserServiceYARPCProceduresParams struct {
-	Server      UserServiceYARPCServer
-	AnyResolver jsonpb.AnyResolver
+	Server             UserServiceYARPCServer
+	AnyResolver        jsonpb.AnyResolver
+	ActorUUIDValidator protobuf.ActorUUIDValidator
 }
 
 func buildUserServiceYARPCProcedures(params buildUserServiceYARPCProceduresParams) []transport.Procedure {
-	handler := &_UserServiceYARPCHandler{params.Server}
+	handler := &_UserServiceYARPCHandler{server: params.Server, actorUUIDValidator: params.ActorUUIDValidator}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
 			ServiceName: "uber.yarpc.tests.protouuid.UserService",
@@ -220,8 +221,8 @@ func buildUserServiceYARPCProcedures(params buildUserServiceYARPCProceduresParam
 }
 
 // BuildUserServiceYARPCProcedures prepares an implementation of the UserService service for YARPC registration.
-func BuildUserServiceYARPCProcedures(server UserServiceYARPCServer) []transport.Procedure {
-	return buildUserServiceYARPCProcedures(buildUserServiceYARPCProceduresParams{Server: server})
+func BuildUserServiceYARPCProcedures(server UserServiceYARPCServer, options ...protobuf.RegisterOption) []transport.Procedure {
+	return buildUserServiceYARPCProcedures(buildUserServiceYARPCProceduresParams{Server: server, ActorUUIDValidator: protobuf.ActorUUIDValidatorFromOptions(options)})
 }
 
 // FxUserServiceYARPCClientParams defines the input
@@ -281,8 +282,9 @@ func NewFxUserServiceYARPCClient(name string, options ...protobuf.ClientOption) 
 type FxUserServiceYARPCProceduresParams struct {
 	fx.In
 
-	Server      UserServiceYARPCServer
-	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
+	Server             UserServiceYARPCServer
+	AnyResolver        jsonpb.AnyResolver          `name:"yarpcfx" optional:"true"`
+	ActorUUIDValidator protobuf.ActorUUIDValidator `optional:"true"`
 }
 
 // FxUserServiceYARPCProceduresResult defines the output
@@ -309,8 +311,9 @@ func NewFxUserServiceYARPCProcedures() interface{} {
 	return func(params FxUserServiceYARPCProceduresParams) FxUserServiceYARPCProceduresResult {
 		return FxUserServiceYARPCProceduresResult{
 			Procedures: buildUserServiceYARPCProcedures(buildUserServiceYARPCProceduresParams{
-				Server:      params.Server,
-				AnyResolver: params.AnyResolver,
+				Server:             params.Server,
+				AnyResolver:        params.AnyResolver,
+				ActorUUIDValidator: params.ActorUUIDValidator,
 			}),
 			ReflectionMeta: UserServiceReflectionMeta,
 		}
@@ -474,7 +477,8 @@ func (c *_UserServiceYARPCCaller) ListUsers(ctx context.Context, request *ListUs
 }
 
 type _UserServiceYARPCHandler struct {
-	server UserServiceYARPCServer
+	server             UserServiceYARPCServer
+	actorUUIDValidator protobuf.ActorUUIDValidator
 }
 
 func (h *_UserServiceYARPCHandler) DeleteUser(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
@@ -485,6 +489,9 @@ func (h *_UserServiceYARPCHandler) DeleteUser(ctx context.Context, requestMessag
 		if !ok {
 			return nil, protobuf.CastError(emptyUserServiceServiceDeleteUserYARPCRequest, requestMessage)
 		}
+	}
+	if err := protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "DeleteUser"); err != nil {
+		return nil, err
 	}
 	response, err := h.server.DeleteUser(ctx, request)
 	if response == nil {
@@ -501,6 +508,9 @@ func (h *_UserServiceYARPCHandler) GetUser(ctx context.Context, requestMessage p
 		if !ok {
 			return nil, protobuf.CastError(emptyUserServiceServiceGetUserYARPCRequest, requestMessage)
 		}
+	}
+	if err := protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "GetUser"); err != nil {
+		return nil, err
 	}
 	response, err := h.server.GetUser(ctx, request)
 	if response == nil {
@@ -534,6 +544,9 @@ func (h *_UserServiceYARPCHandler) CredentialedAction(ctx context.Context, reque
 			return nil, protobuf.CastError(emptyUserServiceServiceCredentialedActionYARPCRequest, requestMessage)
 		}
 	}
+	if err := protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "CredentialedAction"); err != nil {
+		return nil, err
+	}
 	response, err := h.server.CredentialedAction(ctx, request)
 	if response == nil {
 		return nil, err
@@ -549,6 +562,9 @@ func (h *_UserServiceYARPCHandler) CycleAction(ctx context.Context, requestMessa
 		if !ok {
 			return nil, protobuf.CastError(emptyUserServiceServiceCycleActionYARPCRequest, requestMessage)
 		}
+	}
+	if err := protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "CycleAction"); err != nil {
+		return nil, err
 	}
 	response, err := h.server.CycleAction(ctx, request)
 	if response == nil {
@@ -566,6 +582,9 @@ func (h *_UserServiceYARPCHandler) MultipleAction(ctx context.Context, requestMe
 			return nil, protobuf.CastError(emptyUserServiceServiceMultipleActionYARPCRequest, requestMessage)
 		}
 	}
+	if err := protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "MultipleAction"); err != nil {
+		return nil, err
+	}
 	response, err := h.server.MultipleAction(ctx, request)
 	if response == nil {
 		return nil, err
@@ -581,6 +600,9 @@ func (h *_UserServiceYARPCHandler) RepeatedActorsAction(ctx context.Context, req
 		if !ok {
 			return nil, protobuf.CastError(emptyUserServiceServiceRepeatedActorsActionYARPCRequest, requestMessage)
 		}
+	}
+	if err := protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "RepeatedActorsAction"); err != nil {
+		return nil, err
 	}
 	response, err := h.server.RepeatedActorsAction(ctx, request)
 	if response == nil {
@@ -598,6 +620,9 @@ func (h *_UserServiceYARPCHandler) MapActorsAction(ctx context.Context, requestM
 			return nil, protobuf.CastError(emptyUserServiceServiceMapActorsActionYARPCRequest, requestMessage)
 		}
 	}
+	if err := protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "MapActorsAction"); err != nil {
+		return nil, err
+	}
 	response, err := h.server.MapActorsAction(ctx, request)
 	if response == nil {
 		return nil, err
@@ -614,6 +639,9 @@ func (h *_UserServiceYARPCHandler) RepeatedMessageAction(ctx context.Context, re
 			return nil, protobuf.CastError(emptyUserServiceServiceRepeatedMessageActionYARPCRequest, requestMessage)
 		}
 	}
+	if err := protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "RepeatedMessageAction"); err != nil {
+		return nil, err
+	}
 	response, err := h.server.RepeatedMessageAction(ctx, request)
 	if response == nil {
 		return nil, err
@@ -629,6 +657,9 @@ func (h *_UserServiceYARPCHandler) MapMessageAction(ctx context.Context, request
 		if !ok {
 			return nil, protobuf.CastError(emptyUserServiceServiceMapMessageActionYARPCRequest, requestMessage)
 		}
+	}
+	if err := protobuf.ValidateActorUUID(ctx, h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "MapMessageAction"); err != nil {
+		return nil, err
 	}
 	response, err := h.server.MapMessageAction(ctx, request)
 	if response == nil {
@@ -662,6 +693,9 @@ func (h *_UserServiceYARPCHandler) ListUsers(serverStream *protobuf.ServerStream
 	request, ok := requestMessage.(*ListUsersRequest)
 	if !ok {
 		return protobuf.CastError(emptyUserServiceServiceListUsersYARPCRequest, requestMessage)
+	}
+	if err := protobuf.ValidateActorUUID(serverStream.Context(), h.actorUUIDValidator, request.ActorUUID(), "uber.yarpc.tests.protouuid.UserService", "ListUsers"); err != nil {
+		return err
 	}
 	return h.server.ListUsers(request, &_UserServiceServiceListUsersYARPCServer{serverStream: serverStream})
 }
