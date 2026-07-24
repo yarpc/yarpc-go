@@ -161,4 +161,26 @@ func TestPeerSubscriber(t *testing.T) {
 		}
 		wg.Wait()
 	})
+
+	t.Run("isolated grpc dialer shares peer across requests", func(t *testing.T) {
+		const addr = "foohost:barport"
+
+		grpcTransport := grpc.NewTransport()
+		require.NoError(t, grpcTransport.Start())
+		defer func() { require.NoError(t, grpcTransport.Stop()) }()
+
+		dialer := grpcTransport.NewDialer().WithConnectionIsolation()
+		chooser, err := New(Configuration{}, dialer)
+		require.NoError(t, err)
+
+		request := &transport.Request{ShardKey: addr}
+		p1, finish1, err := chooser.Choose(context.Background(), request)
+		require.NoError(t, err)
+		p2, finish2, err := chooser.Choose(context.Background(), request)
+		require.NoError(t, err)
+
+		assert.Same(t, p1, p2)
+		finish1(nil)
+		finish2(nil)
+	})
 }
