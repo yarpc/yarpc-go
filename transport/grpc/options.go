@@ -116,24 +116,6 @@ func TracingInterceptorEnabled(enabled bool) TransportOption {
 	}
 }
 
-// ConnectionPerOutbound makes the transport open a dedicated connection (or
-// connection pool, under dynamic scaling) for each outbound, even when several
-// outbounds dial the same address.
-//
-// By default the transport shares one peer — and thus one connection/pool —
-// among all outbounds that dial the same address. With this option, peers are
-// additionally keyed by the subscribing outbound, so each outbound gets its own
-// peer. This isolates each downstream at the connection level (HTTP/2
-// head-of-line blocking, flow-control window, and stream budget are no longer
-// shared across outbounds) and, when dialing a local sidecar/host-agent, spreads
-// connections across its worker threads. Outbounds dialing distinct addresses
-// are unaffected.
-func ConnectionPerOutbound() TransportOption {
-	return func(transportOptions *transportOptions) {
-		transportOptions.connectionPerOutbound = true
-	}
-}
-
 // Logger sets a logger to use for internal logging.
 //
 // The default is to not write any logs.
@@ -472,7 +454,6 @@ type transportOptions struct {
 	clientConnPoolIdleTimeout            time.Duration
 	clientConnPoolScalingMonitorInterval time.Duration
 	clientConnPoolDynamicScalingEnabled  bool
-	connectionPerOutbound                bool
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {

@@ -330,10 +330,10 @@ func startTestServer(tb testing.TB) string {
 	return listener.Addr().String()
 }
 
-// TestRetainPeerConnectionPerOutbound verifies that, with ConnectionPerOutbound,
-// distinct outbounds (subscribers) dialing the same address each get their own
-// peer and connection, while reusing the same subscriber dedups.
-func TestRetainPeerConnectionPerOutbound(t *testing.T) {
+// TestIsolatedDialersDoNotSharePeer verifies that isolated dialers get distinct
+// peers and connections, while subscribers using the same dialer continue to
+// share a peer.
+func TestIsolatedDialersDoNotSharePeer(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	cl := &countingListener{Listener: listener, acceptedC: make(chan struct{}, 8)}
@@ -344,39 +344,46 @@ func TestRetainPeerConnectionPerOutbound(t *testing.T) {
 
 	address := listener.Addr().String()
 
-	transport := NewTransport(ConnectionPerOutbound())
+	transport := NewTransport()
 	require.NoError(t, transport.Start())
 	defer func() { assert.NoError(t, transport.Stop()) }()
 
 	id := testIdentifier{address}
-	// Distinct subscribers model distinct outbounds. Use a type with identity:
-	// pointers to the zero-size testPeerSubscriber can compare equal.
-	sub1, sub2 := idSubscriber{1}, idSubscriber{2}
+	baseDialer := transport.NewDialer()
+	dialer1 := baseDialer.WithConnectionIsolation()
+	dialer2 := baseDialer.WithConnectionIsolation()
+	sub1, sub2, sub3 := idSubscriber{1}, idSubscriber{2}, idSubscriber{3}
 
-	p1, err := transport.RetainPeer(id, sub1)
+	p1, err := dialer1.RetainPeer(id, sub1)
 	require.NoError(t, err)
-	p2, err := transport.RetainPeer(id, sub2)
+	p1Again, err := dialer1.RetainPeer(id, sub2)
 	require.NoError(t, err)
 
-	// Two outbounds to the same address get two peers and two connections.
+	// Request-scoped subscribers within one outbound share its peer. This is
+	// required by the direct chooser, which creates a subscriber per request.
+	assert.Same(t, p1, p1Again)
+	assert.Len(t, transport.peers, 1)
+
+	p2, err := dialer2.RetainPeer(id, sub3)
+	require.NoError(t, err)
+
+	// Two isolated dialers to the same address get separate connections.
 	assert.NotSame(t, p1, p2)
 	assert.Len(t, transport.peers, 2)
 	waitAccepts(t, cl.acceptedC, 2)
 
-	// Reusing the same subscriber dedups: no new peer, no new connection.
-	p1Again, err := transport.RetainPeer(id, sub1)
-	require.NoError(t, err)
-	assert.Same(t, p1, p1Again)
+	// Releasing one subscriber leaves the other subscriber and dialer's
+	// connection intact.
+	require.NoError(t, dialer1.ReleasePeer(id, sub1))
 	assert.Len(t, transport.peers, 2)
 
-	// Releasing one outbound leaves the other's connection intact.
-	require.NoError(t, transport.ReleasePeer(id, sub1))
+	require.NoError(t, dialer1.ReleasePeer(id, sub2))
 	assert.Len(t, transport.peers, 1)
 }
 
-// TestRetainPeerSharedByDefault verifies that without ConnectionPerOutbound,
-// outbounds dialing the same address share a single peer and connection.
-func TestRetainPeerSharedByDefault(t *testing.T) {
+// TestDialersSharePeerByDefault verifies that ordinary dialers retain the
+// existing address-based peer sharing behavior.
+func TestDialersSharePeerByDefault(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
@@ -391,27 +398,27 @@ func TestRetainPeerSharedByDefault(t *testing.T) {
 	defer func() { assert.NoError(t, transport.Stop()) }()
 
 	id := testIdentifier{address}
+	dialer1 := transport.NewDialer()
+	dialer2 := transport.NewDialer()
 	sub1, sub2 := idSubscriber{1}, idSubscriber{2}
 
-	p1, err := transport.RetainPeer(id, sub1)
+	p1, err := dialer1.RetainPeer(id, sub1)
 	require.NoError(t, err)
-	p2, err := transport.RetainPeer(id, sub2)
+	p2, err := dialer2.RetainPeer(id, sub2)
 	require.NoError(t, err)
 
 	assert.Same(t, p1, p2)
 	assert.Len(t, transport.peers, 1)
 }
 
-// TestRetainReleasePeerConcurrent hammers RetainPeer/ReleasePeer from many
-// goroutines with ConnectionPerOutbound enabled. Each goroutine uses a distinct
-// subscriber, so each retains and releases its own peer independently — this
-// exercises concurrent creation/deletion of distinct peers against the shared
-// t.peers map and the transport-wide shared metrics reporter. Run with -race to
-// detect data races on that shared state.
-func TestRetainReleasePeerConcurrent(t *testing.T) {
+// TestIsolatedDialersConcurrent hammers RetainPeer/ReleasePeer from many
+// independently isolated dialers. This exercises concurrent creation/deletion
+// of distinct peers against the shared map and transport-wide metrics reporter.
+// Run with -race to detect data races on that shared state.
+func TestIsolatedDialersConcurrent(t *testing.T) {
 	address := startTestServer(t)
 
-	transport := NewTransport(ConnectionPerOutbound())
+	transport := NewTransport()
 	require.NoError(t, transport.Start())
 	defer func() { assert.NoError(t, transport.Stop()) }()
 
@@ -426,77 +433,76 @@ func TestRetainReleasePeerConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func(g int) {
 			defer wg.Done()
-			// Distinct subscriber per goroutine: refcounting is by subscriber
-			// set (not a counter), so a shared subscriber across goroutines that
-			// independently release would race at the API level. Keeping each
-			// goroutine's subscriber unique keeps retain/release well-defined.
+			dialer := transport.NewDialer().WithConnectionIsolation()
 			sub := idSubscriber{g}
 			for range iterations {
-				if _, err := transport.RetainPeer(id, sub); !assert.NoError(t, err) {
+				if _, err := dialer.RetainPeer(id, sub); !assert.NoError(t, err) {
 					return
 				}
-				assert.NoError(t, transport.ReleasePeer(id, sub))
+				assert.NoError(t, dialer.ReleasePeer(id, sub))
 			}
 		}(g)
 	}
 	wg.Wait()
 }
 
-// benchRetainPeer measures the retain hot path (lock + peerKey + map lookup +
-// Subscribe) on an already-created peer, isolating the cost of the peerKey change
-// from connection dialing. With ConnectionPerOutbound the map key carries a
-// non-nil subscriber interface; without it the subscriber is the zero value.
-func benchRetainPeer(b *testing.B, opts ...TransportOption) {
+// benchRetainPeer measures the retain hot path on an already-created peer,
+// isolating the cost of a scoped peer key from connection dialing.
+func benchRetainPeer(b *testing.B, isolated bool) {
 	address := startTestServer(b)
 
-	transport := NewTransport(opts...)
+	transport := NewTransport()
 	require.NoError(b, transport.Start())
 	defer func() { assert.NoError(b, transport.Stop()) }()
 
 	id := testIdentifier{address}
 	sub := idSubscriber{1}
+	dialer := transport.NewDialer()
+	if isolated {
+		dialer = dialer.WithConnectionIsolation()
+	}
 
 	// Warm up: create the peer once so the loop measures cache hits only.
-	_, err := transport.RetainPeer(id, sub)
+	_, err := dialer.RetainPeer(id, sub)
 	require.NoError(b, err)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for range b.N {
-		if _, err := transport.RetainPeer(id, sub); err != nil {
+		if _, err := dialer.RetainPeer(id, sub); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
 func BenchmarkRetainPeerShared(b *testing.B) {
-	benchRetainPeer(b)
+	benchRetainPeer(b, false)
 }
 
-func BenchmarkRetainPeerConnectionPerOutbound(b *testing.B) {
-	benchRetainPeer(b, ConnectionPerOutbound())
+func BenchmarkRetainPeerIsolated(b *testing.B) {
+	benchRetainPeer(b, true)
 }
 
 // BenchmarkRetainPeerParallel measures the retain hot path under lock contention
-// with ConnectionPerOutbound enabled: all goroutines retain the same peer (a
-// cache hit), contending on t.lock and hashing the interface-bearing peerKey.
+// with connection isolation enabled: all goroutines retain the same peer.
 func BenchmarkRetainPeerParallel(b *testing.B) {
 	address := startTestServer(b)
 
-	transport := NewTransport(ConnectionPerOutbound())
+	transport := NewTransport()
 	require.NoError(b, transport.Start())
 	defer func() { assert.NoError(b, transport.Stop()) }()
 
 	id := testIdentifier{address}
 	sub := idSubscriber{1}
-	_, err := transport.RetainPeer(id, sub)
+	dialer := transport.NewDialer().WithConnectionIsolation()
+	_, err := dialer.RetainPeer(id, sub)
 	require.NoError(b, err)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if _, err := transport.RetainPeer(id, sub); err != nil {
+			if _, err := dialer.RetainPeer(id, sub); err != nil {
 				b.Error(err)
 				return
 			}

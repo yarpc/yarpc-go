@@ -53,14 +53,12 @@ type Transport struct {
 
 // peerKey identifies a peer in the transport's peer map.
 //
-// Peers are keyed by the address they dial. When the transport is configured
-// with ConnectionPerOutbound, the subscribing outbound is added to the key so
-// that each outbound dialing the same address gets its own peer — and therefore
-// its own connection (or connection pool, under dynamic scaling).
+// Peers are keyed by the address they dial. Dialers that opt into connection
+// isolation add a stable scope to the key so they do not share peers,
+// connections, or connection pools with other dialers.
 type peerKey struct {
-	address string
-	// subscriber is the zero value unless ConnectionPerOutbound is set.
-	subscriber peer.Subscriber
+	address         string
+	connectionScope *connectionScope
 }
 
 // NewTransport returns a new Transport.
@@ -136,14 +134,19 @@ func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOpt
 // peer.Transport that supports custom DialOptions instead of using the
 // grpc.Transport as a peer.Transport.
 func (t *Transport) RetainPeer(pid peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
-	return t.retainPeer(pid, emptyDialOpts, ps)
+	return t.retainPeer(pid, emptyDialOpts, nil, ps)
 }
 
-func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps peer.Subscriber) (peer.Peer, error) {
+func (t *Transport) retainPeer(
+	pid peer.Identifier,
+	options *dialOptions,
+	connectionScope *connectionScope,
+	ps peer.Subscriber,
+) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	address := pid.Identifier()
-	key := t.peerKey(address, ps)
+	key := peerKey{address: address, connectionScope: connectionScope}
 	p, ok := t.peers[key]
 	if !ok {
 		var err error
@@ -157,26 +160,24 @@ func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps pee
 	return p, nil
 }
 
-// peerKey builds the map key for a peer. When ConnectionPerOutbound is set, the
-// subscribing outbound is part of the key so each outbound dialing the same
-// address gets its own peer (and its own connection / pool).
-func (t *Transport) peerKey(address string, ps peer.Subscriber) peerKey {
-	if t.options.connectionPerOutbound {
-		return peerKey{address: address, subscriber: ps}
-	}
-	return peerKey{address: address}
-}
-
 // ReleasePeer releases the peer.
 //
 // Deprecated: use grpcTransport.NewDialer(...grpc.DialOption) to create a
 // peer.Transport that supports custom DialOptions instead of using the
 // grpc.Transport as a peer.Transport.
 func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
+	return t.releasePeer(pid, nil, ps)
+}
+
+func (t *Transport) releasePeer(
+	pid peer.Identifier,
+	connectionScope *connectionScope,
+	ps peer.Subscriber,
+) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	address := pid.Identifier()
-	key := t.peerKey(address, ps)
+	key := peerKey{address: address, connectionScope: connectionScope}
 	p, ok := t.peers[key]
 	if !ok {
 		return peer.ErrTransportHasNoReferenceToPeer{
