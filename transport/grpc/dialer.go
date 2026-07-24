@@ -31,10 +31,9 @@ func (t *Transport) NewDialer(options ...DialOption) *Dialer {
 }
 
 // connectionScope identifies a set of peers that must not be shared with
-// other dialers. The marker makes each allocated scope have a distinct address.
-type connectionScope struct {
-	marker byte
-}
+// other dialers. The non-zero-sized type gives each allocation a distinct
+// address.
+type connectionScope byte
 
 // Dialer is a decorator for a gRPC transport that threads dial options for
 // every retained peer.
@@ -54,7 +53,7 @@ var _ peer.Transport = (*Dialer)(nil)
 // within that outbound continue to share peers normally.
 func (d *Dialer) WithConnectionIsolation() *Dialer {
 	isolated := *d
-	isolated.connectionScope = &connectionScope{}
+	isolated.connectionScope = new(connectionScope)
 	return &isolated
 }
 
