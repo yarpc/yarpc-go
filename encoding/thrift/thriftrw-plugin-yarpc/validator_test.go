@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/random_pkg/shared"
 	withservices "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES/testserviceserver"
 )
@@ -87,6 +88,95 @@ func (s *testServiceImpl) TestTypedefMethod(
 	if identifier != nil {
 		s.gotUUID = string(*identifier)
 	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestNestedMethod(
+	ctx context.Context,
+	nested *withservices.OuterLevel,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if nested != nil && nested.Mid != nil && nested.Mid.Inner != nil && nested.Mid.Inner.InnerUUID != nil {
+		s.gotUUID = *nested.Mid.Inner.InnerUUID
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestTypedefStructMethod(
+	ctx context.Context,
+	topLevel *withservices.AliasedInner,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if topLevel != nil && topLevel.InnerUUID != nil {
+		s.gotUUID = *topLevel.InnerUUID
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestImportedTypedef(
+	ctx context.Context,
+	req *shared.GlobalRequestActorUUID,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if req != nil {
+		s.gotUUID = string(*req)
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestNestedTypedefStructMethod(
+	ctx context.Context,
+	outer *withservices.OuterWithAlias,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if outer != nil && outer.Inner != nil && outer.Inner.InnerUUID != nil {
+		s.gotUUID = *outer.Inner.InnerUUID
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestDoubleTypedefStructMethod(
+	ctx context.Context,
+	arg *withservices.DoubleAliasedInner,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if arg != nil && arg.InnerUUID != nil {
+		s.gotUUID = *arg.InnerUUID
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestMultiAnnotatedArgsMethod(
+	ctx context.Context,
+	firstActor *string,
+	secondActor *string,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestTwoStructPathsMethod(
+	ctx context.Context,
+	pair *withservices.PairedStructs,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestMixedAnnotatedMethod(
+	ctx context.Context,
+	directActor *string,
+	request *withservices.Struct,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
 	return "ok", nil
 }
 
@@ -221,9 +311,9 @@ func TestActorUUIDValidator_Allow(t *testing.T) {
 		{name: "wire", useStream: false, extraOpts: []thrift.RegisterOption{thrift.NoWire(false)}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var seenUUID string
-			validator := func(_ context.Context, uuid string) error {
-				seenUUID = uuid
+			var seenUUIDs []string
+			validator := func(_ context.Context, uuids []string) error {
+				seenUUIDs = uuids
 				return nil
 			}
 
@@ -236,7 +326,7 @@ func TestActorUUIDValidator_Allow(t *testing.T) {
 			_, err := driveTestMethod(t, impl, tc.useStream, args, opts...)
 			require.NoError(t, err)
 			assert.True(t, impl.called, "user handler must run when validator returns nil")
-			assert.Equal(t, "expected-uuid", seenUUID, "validator should receive the decoded actorUUID")
+			assert.Equal(t, []string{"expected-uuid"}, seenUUIDs, "validator should receive the decoded actorUUID")
 			assert.Equal(t, "expected-uuid", impl.gotArg, "user handler should still see the original arg")
 		})
 	}
@@ -259,7 +349,7 @@ func TestActorUUIDValidator_Deny(t *testing.T) {
 		{name: "wire", useStream: false, extraOpts: []thrift.RegisterOption{thrift.NoWire(false)}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			validator := func(_ context.Context, _ string) error {
+			validator := func(_ context.Context, _ []string) error {
 				return denied
 			}
 
@@ -282,11 +372,11 @@ func TestActorUUIDValidator_Deny(t *testing.T) {
 // returns "" and that's what the validator sees. Policy on whether empty
 // is acceptable belongs to the validator, not the generated code.
 func TestActorUUIDValidator_EmptyActorUUID(t *testing.T) {
-	var seenUUID string
+	var seenUUIDs []string
 	var calls int
-	validator := func(_ context.Context, uuid string) error {
+	validator := func(_ context.Context, uuids []string) error {
 		calls++
-		seenUUID = uuid
+		seenUUIDs = uuids
 		return nil
 	}
 
@@ -295,7 +385,7 @@ func TestActorUUIDValidator_EmptyActorUUID(t *testing.T) {
 	_, err := driveTestMethod(t, impl, true, args, thrift.WithActorUUIDValidator(validator))
 	require.NoError(t, err)
 	assert.Equal(t, 1, calls, "validator should still fire even with empty actorUUID")
-	assert.Equal(t, "", seenUUID, "empty optional arg should surface as the empty string")
+	assert.Equal(t, []string{""}, seenUUIDs, "empty optional arg should surface as the empty string")
 	assert.True(t, impl.called, "validator returning nil should let the handler run")
 }
 
@@ -305,9 +395,9 @@ func TestActorUUIDValidator_EmptyActorUUID(t *testing.T) {
 // regression check for the "annotation lives on a field of a struct
 // passed as a method arg" bug.
 func TestActorUUIDValidator_StructArg(t *testing.T) {
-	var seenUUID string
-	validator := func(_ context.Context, uuid string) error {
-		seenUUID = uuid
+	var seenUUIDs []string
+	validator := func(_ context.Context, uuids []string) error {
+		seenUUIDs = uuids
 		return nil
 	}
 
@@ -321,9 +411,41 @@ func TestActorUUIDValidator_StructArg(t *testing.T) {
 		thrift.WithActorUUIDValidator(validator))
 	require.NoError(t, err)
 	assert.True(t, impl.called)
-	assert.Equal(t, "expected-struct-uuid", seenUUID,
+	assert.Equal(t, []string{"expected-struct-uuid"}, seenUUIDs,
 		"validator should receive the UUID chained through the struct arg")
 	assert.Equal(t, "expected-struct-uuid", impl.gotUUID)
+}
+
+// TestActorUUIDValidator_NestedStructArg proves the validator fires
+// for an arg whose path to the annotated field runs through several
+// nested struct hops. The generated chain
+// (t.GetNested().GetMid().GetInner().GetInnerUUID()) is what makes
+// the deep walk reach the leaf, and this test pins the runtime
+// behaviour end to end.
+func TestActorUUIDValidator_NestedStructArg(t *testing.T) {
+	var seenUUIDs []string
+	validator := func(_ context.Context, uuids []string) error {
+		seenUUIDs = uuids
+		return nil
+	}
+
+	impl := &testServiceImpl{}
+	args := &withservices.TestService_TestNestedMethod_Args{
+		Nested: &withservices.OuterLevel{
+			Mid: &withservices.MidLevel{
+				Inner: &withservices.InnerLevel{
+					InnerUUID: ptr.String("expected-nested-uuid"),
+				},
+			},
+		},
+	}
+	_, err := driveMethod(t, impl, "testNestedMethod", true, args,
+		thrift.WithActorUUIDValidator(validator))
+	require.NoError(t, err)
+	assert.True(t, impl.called)
+	assert.Equal(t, []string{"expected-nested-uuid"}, seenUUIDs,
+		"validator should receive the UUID chained through every struct hop")
+	assert.Equal(t, "expected-nested-uuid", impl.gotUUID)
 }
 
 // TestActorUUIDValidator_TypedefArg proves the validator fires for an
@@ -331,9 +453,9 @@ func TestActorUUIDValidator_StructArg(t *testing.T) {
 // the generator emits is what makes this compile end to end; this
 // test pins the runtime behaviour.
 func TestActorUUIDValidator_TypedefArg(t *testing.T) {
-	var seenUUID string
-	validator := func(_ context.Context, uuid string) error {
-		seenUUID = uuid
+	var seenUUIDs []string
+	validator := func(_ context.Context, uuids []string) error {
+		seenUUIDs = uuids
 		return nil
 	}
 
@@ -344,6 +466,6 @@ func TestActorUUIDValidator_TypedefArg(t *testing.T) {
 		thrift.WithActorUUIDValidator(validator))
 	require.NoError(t, err)
 	assert.True(t, impl.called)
-	assert.Equal(t, "expected-typedef-uuid", seenUUID)
+	assert.Equal(t, []string{"expected-typedef-uuid"}, seenUUIDs)
 	assert.Equal(t, "expected-typedef-uuid", impl.gotUUID)
 }

@@ -676,7 +676,7 @@ func (v *Struct) IsSetBaz() bool {
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "NOSERVICES",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES",
-	FilePath: "NOSERVICES.thrift",
+	FilePath: "tests/NOSERVICES.thrift",
 	SHA1:     "bc28a223c8e87e320722bf77136e0eec1f1d18d6",
 	Raw:      rawIDL,
 }

@@ -17,7 +17,7 @@ import (
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "weather",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather",
-	FilePath: "weather.thrift",
+	FilePath: "tests/weather.thrift",
 	SHA1:     "d3aa37c676e2a2ce79387886687297c5d8176bbe",
 	Raw:      rawIDL,
 }

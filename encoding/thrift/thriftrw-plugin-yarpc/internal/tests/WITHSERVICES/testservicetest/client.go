@@ -7,6 +7,7 @@ import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
 	yarpc "go.uber.org/yarpc"
+	shared "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/random_pkg/shared"
 	WITHSERVICES "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	testserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES/testserviceclient"
 )
@@ -40,6 +41,72 @@ func NewMockClient(ctrl *gomock.Controller) *MockClient {
 // TestService mock client.
 func (m *MockClient) EXPECT() *_MockClientRecorder {
 	return m.recorder
+}
+
+// TestDoubleTypedefStructMethod responds to a TestDoubleTypedefStructMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestDoubleTypedefStructMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestDoubleTypedefStructMethod(...)
+func (m *MockClient) TestDoubleTypedefStructMethod(
+	ctx context.Context,
+	_Arg *WITHSERVICES.DoubleAliasedInner,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _Arg}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestDoubleTypedefStructMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestDoubleTypedefStructMethod(
+	ctx interface{},
+	_Arg interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Arg}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestDoubleTypedefStructMethod", args...)
+}
+
+// TestImportedTypedef responds to a TestImportedTypedef call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestImportedTypedef(gomock.Any(), ...).Return(...)
+//	... := client.TestImportedTypedef(...)
+func (m *MockClient) TestImportedTypedef(
+	ctx context.Context,
+	_Req *shared.GlobalRequestActorUUID,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _Req}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestImportedTypedef", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestImportedTypedef(
+	ctx interface{},
+	_Req interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Req}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestImportedTypedef", args...)
 }
 
 // TestMethod responds to a TestMethod call based on the mock expectations. This
@@ -77,6 +144,142 @@ func (mr *_MockClientRecorder) TestMethod(
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestMethod", args...)
 }
 
+// TestMixedAnnotatedMethod responds to a TestMixedAnnotatedMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestMixedAnnotatedMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestMixedAnnotatedMethod(...)
+func (m *MockClient) TestMixedAnnotatedMethod(
+	ctx context.Context,
+	_DirectActor *string,
+	_Request *WITHSERVICES.Struct,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _DirectActor, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestMixedAnnotatedMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestMixedAnnotatedMethod(
+	ctx interface{},
+	_DirectActor interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _DirectActor, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestMixedAnnotatedMethod", args...)
+}
+
+// TestMultiAnnotatedArgsMethod responds to a TestMultiAnnotatedArgsMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestMultiAnnotatedArgsMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestMultiAnnotatedArgsMethod(...)
+func (m *MockClient) TestMultiAnnotatedArgsMethod(
+	ctx context.Context,
+	_FirstActor *string,
+	_SecondActor *string,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _FirstActor, _SecondActor}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestMultiAnnotatedArgsMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestMultiAnnotatedArgsMethod(
+	ctx interface{},
+	_FirstActor interface{},
+	_SecondActor interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _FirstActor, _SecondActor}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestMultiAnnotatedArgsMethod", args...)
+}
+
+// TestNestedMethod responds to a TestNestedMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestNestedMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestNestedMethod(...)
+func (m *MockClient) TestNestedMethod(
+	ctx context.Context,
+	_Nested *WITHSERVICES.OuterLevel,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _Nested}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestNestedMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestNestedMethod(
+	ctx interface{},
+	_Nested interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Nested}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestNestedMethod", args...)
+}
+
+// TestNestedTypedefStructMethod responds to a TestNestedTypedefStructMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestNestedTypedefStructMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestNestedTypedefStructMethod(...)
+func (m *MockClient) TestNestedTypedefStructMethod(
+	ctx context.Context,
+	_Outer *WITHSERVICES.OuterWithAlias,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _Outer}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestNestedTypedefStructMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestNestedTypedefStructMethod(
+	ctx interface{},
+	_Outer interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Outer}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestNestedTypedefStructMethod", args...)
+}
+
 // TestStructMethod responds to a TestStructMethod call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -110,6 +313,39 @@ func (mr *_MockClientRecorder) TestStructMethod(
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestStructMethod", args...)
 }
 
+// TestTwoStructPathsMethod responds to a TestTwoStructPathsMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestTwoStructPathsMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestTwoStructPathsMethod(...)
+func (m *MockClient) TestTwoStructPathsMethod(
+	ctx context.Context,
+	_Pair *WITHSERVICES.PairedStructs,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _Pair}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestTwoStructPathsMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestTwoStructPathsMethod(
+	ctx interface{},
+	_Pair interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Pair}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestTwoStructPathsMethod", args...)
+}
+
 // TestTypedefMethod responds to a TestTypedefMethod call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -141,4 +377,37 @@ func (mr *_MockClientRecorder) TestTypedefMethod(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Identifier}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestTypedefMethod", args...)
+}
+
+// TestTypedefStructMethod responds to a TestTypedefStructMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestTypedefStructMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestTypedefStructMethod(...)
+func (m *MockClient) TestTypedefStructMethod(
+	ctx context.Context,
+	_TopLevel *WITHSERVICES.AliasedInner,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _TopLevel}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestTypedefStructMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestTypedefStructMethod(
+	ctx interface{},
+	_TopLevel interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _TopLevel}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestTypedefStructMethod", args...)
 }

@@ -17,7 +17,7 @@ import (
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "extends",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends",
-	FilePath: "extends.thrift",
+	FilePath: "tests/extends.thrift",
 	SHA1:     "5dc89427890e0f8f94285fc648815882150591b9",
 	Raw:      rawIDL,
 }
