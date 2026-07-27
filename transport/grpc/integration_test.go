@@ -1142,9 +1142,9 @@ func TestMultiOutboundSamePeerCalls(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "value2", got)
 
-	// Both outbounds share a single grpcPeer: only one entry in addressToPeer.
+	// Both outbounds share a single grpcPeer: only one entry in the peers map.
 	env.Transport.lock.Lock()
-	peerCount := len(env.Transport.addressToPeer)
+	peerCount := len(env.Transport.peers)
 	env.Transport.lock.Unlock()
 	assert.Equal(t, 1, peerCount,
 		"two outbounds to the same address must share one grpcPeer, got %d peers", peerCount)
@@ -1218,7 +1218,7 @@ func TestMultiOutboundPeerChurnRemainingOutboundStaysHealthy(t *testing.T) {
 	require.NoError(t, list2.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}}))
 
 	trans.lock.Lock()
-	_, peerAlive := trans.addressToPeer[serverAddr]
+	_, peerAlive := trans.peers[peerKey{address: serverAddr}]
 	trans.lock.Unlock()
 	assert.True(t, peerAlive, "peer must remain when one of two subscribers releases it")
 
@@ -1229,7 +1229,7 @@ func TestMultiOutboundPeerChurnRemainingOutboundStaysHealthy(t *testing.T) {
 	require.NoError(t, list1.Update(yarpcpeer.ListUpdates{Removals: []yarpcpeer.Identifier{serverID}}))
 
 	trans.lock.Lock()
-	_, peerGone := trans.addressToPeer[serverAddr]
+	_, peerGone := trans.peers[peerKey{address: serverAddr}]
 	trans.lock.Unlock()
 	assert.False(t, peerGone, "peer must be removed when all subscribers release it")
 

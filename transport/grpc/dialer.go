@@ -30,21 +30,39 @@ func (t *Transport) NewDialer(options ...DialOption) *Dialer {
 	return &Dialer{trans: t, options: newDialOptions(options)}
 }
 
+// connectionScope identifies a set of peers that must not be shared with
+// other dialers. The non-zero-sized type gives each allocation a distinct
+// address.
+type connectionScope byte
+
 // Dialer is a decorator for a gRPC transport that threads dial options for
 // every retained peer.
 type Dialer struct {
-	trans   *Transport
-	options *dialOptions
+	trans           *Transport
+	options         *dialOptions
+	connectionScope *connectionScope
 }
 
 var _ peer.Transport = (*Dialer)(nil)
 
+// WithConnectionIsolation returns a copy of the Dialer whose peers, and
+// therefore connections or connection pools, are not shared with other
+// dialers retaining the same address.
+//
+// Callers should create one isolated Dialer per logical outbound. Requests
+// within that outbound continue to share peers normally.
+func (d *Dialer) WithConnectionIsolation() *Dialer {
+	isolated := *d
+	isolated.connectionScope = new(connectionScope)
+	return &isolated
+}
+
 // RetainPeer retains the identified peer, passing dial options.
 func (d *Dialer) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
-	return d.trans.retainPeer(id, d.options, ps)
+	return d.trans.retainPeer(id, d.options, d.connectionScope, ps)
 }
 
 // ReleasePeer releases the identified peer.
 func (d *Dialer) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
-	return d.trans.ReleasePeer(id, ps)
+	return d.trans.releasePeer(id, d.connectionScope, ps)
 }
