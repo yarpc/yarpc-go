@@ -39,6 +39,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer/peertest"
@@ -117,6 +118,111 @@ func TestCreateRequest(t *testing.T) {
 			for k, v := range appHeader {
 				assert.Equal(t, v, hreq.Header.Get(ApplicationHeaderPrefix+k), "header value mismatch")
 			}
+		})
+	}
+}
+
+func TestCreateRequestPreservesOriginalHeaderCasing(t *testing.T) {
+	// Direct (non-canonical) header insertion is gated on HTTP/2.
+	o := &Outbound{urlTemplate: defaultURLTemplate, useHTTP2: true}
+	hreq, err := o.createRequest(&transport.Request{
+		Headers: transport.NewHeaders().With("X-CuStOm", "value"),
+	})
+	require.NoError(t, err)
+
+	originalCaseKey := ApplicationHeaderPrefix + "X-CuStOm"
+	canonicalCaseKey := ApplicationHeaderPrefix + "X-Custom"
+
+	assert.Equal(t, []string{"value"}, hreq.Header[originalCaseKey])
+	assert.NotContains(t, hreq.Header, canonicalCaseKey)
+}
+
+func TestCreateRequestCanonicalizesHeadersOnHTTP1(t *testing.T) {
+	// HTTP/1.1 path must continue to canonicalize header names for backward
+	// compatibility with peers that do exact-string header matching.
+	o := &Outbound{urlTemplate: defaultURLTemplate}
+	hreq, err := o.createRequest(&transport.Request{
+		Headers: transport.NewHeaders().With("X-CuStOm", "value"),
+	})
+	require.NoError(t, err)
+
+	canonicalCaseKey := ApplicationHeaderPrefix + "X-Custom"
+	originalCaseKey := ApplicationHeaderPrefix + "X-CuStOm"
+
+	assert.Equal(t, []string{"value"}, hreq.Header[canonicalCaseKey])
+	assert.NotContains(t, hreq.Header, originalCaseKey)
+}
+
+func TestWithCoreHeadersStoresLiteralKeyOnHTTP2(t *testing.T) {
+	// On HTTP/2 we bypass net/http canonicalization, so the underlying map
+	// stores keys with the exact casing of the constants. This locks in the
+	// invariant: should a constant ever be redefined with non-canonical
+	// casing, HTTP/1.1 peers would see canonicalized keys but HTTP/2 peers
+	// would see the literal — this test ensures we notice.
+	o := &Outbound{
+		urlTemplate:       defaultURLTemplate,
+		bothResponseError: true,
+		useHTTP2:          true,
+	}
+	hreq, err := o.createRequest(&transport.Request{})
+	require.NoError(t, err)
+	o.withCoreHeaders(hreq, &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Procedure: "Procedure",
+		Encoding:  "raw",
+	}, time.Second)
+
+	for _, k := range []string{
+		CallerHeader, ServiceHeader, ProcedureHeader, EncodingHeader,
+		TTLMSHeader, AcceptsBothResponseErrorHeader,
+	} {
+		assert.Contains(t, hreq.Header, k, "expected literal key %q in map", k)
+	}
+}
+
+func TestTracingCarrierCasing(t *testing.T) {
+	tests := []struct {
+		name             string
+		useHTTP2         bool
+		assertHeaderCase func(t *testing.T, h http.Header, key string)
+	}{
+		{
+			name:     "http1 canonicalizes",
+			useHTTP2: false,
+			assertHeaderCase: func(t *testing.T, h http.Header, key string) {
+				assert.Contains(t, h, http.CanonicalHeaderKey(key), "expected canonical key")
+			},
+		},
+		{
+			name:     "http2 preserves lowercase",
+			useHTTP2: true,
+			assertHeaderCase: func(t *testing.T, h http.Header, key string) {
+				assert.Contains(t, h, key, "expected literal (lowercase) key")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tracer := mocktracer.New()
+			o := &Outbound{
+				urlTemplate: defaultURLTemplate,
+				tracer:      tracer,
+				useHTTP2:    tt.useHTTP2,
+			}
+			hreq, err := o.createRequest(&transport.Request{})
+			require.NoError(t, err)
+
+			_, _, span, err := o.withOpentracingSpan(
+				context.Background(), hreq, &transport.Request{
+					Caller: "c", Service: "s", Procedure: "p",
+				}, time.Now())
+			require.NoError(t, err)
+			defer span.Finish()
+
+			// mocktracer injects "mockpfx-ids-traceid" / "mockpfx-ids-spanid".
+			tt.assertHeaderCase(t, hreq.Header, "mockpfx-ids-traceid")
 		})
 	}
 }

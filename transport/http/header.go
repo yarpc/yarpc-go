@@ -54,6 +54,30 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 	return to
 }
 
+// ToHTTPHeadersPreserveCase converts application headers into HTTP headers,
+// writing keys directly into the destination map.
+//
+// Unlike ToHTTPHeaders, this method does not use net/http Header.Set/Add and
+// therefore skips textproto.CanonicalMIMEHeaderKey, avoiding its per-key
+// allocation in hot paths. Keys are written with the original casing supplied
+// by the caller (via transport.Headers.With or HeaderMapping). This is
+// intended for use on the HTTP/2 outbound path, where the wire format
+// mandates lowercase header names regardless of map casing.
+func (hm headerMapper) ToHTTPHeadersPreserveCase(from transport.Headers, to http.Header) http.Header {
+	if to == nil {
+		to = make(http.Header, from.OriginalItemsLen())
+	}
+	for key, val := range from.OriginalItems() {
+		if isTracingHeader(key) || isRoutingHeader(key) {
+			to[key] = append(to[key], val)
+		} else {
+			prefixedKey := hm.Prefix + key
+			to[prefixedKey] = append(to[prefixedKey], val)
+		}
+	}
+	return to
+}
+
 // fromHTTPHeaders converts HTTP headers to application headers.
 //
 // Headers are read from 'from' and written to 'to'. The final header collection
