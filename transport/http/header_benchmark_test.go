@@ -33,12 +33,17 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 		name    string
 		prepare func(transport.Headers) transport.Headers
 	}
+	type capacityMode struct {
+		name     string
+		capacity func() int
+	}
 	type scenario struct {
 		name                string
 		applicationHeaders  int
 		tracingHeaders      int
 		ignoredHeaders      int
 		poppedSystemHeaders int
+		useCapacityHint     bool
 		modes               []headerMode
 	}
 
@@ -78,6 +83,7 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 			applicationHeaders:  25,
 			tracingHeaders:      8,
 			poppedSystemHeaders: 6,
+			useCapacityHint:     true,
 			modes:               []headerMode{defaultMode},
 		},
 		{
@@ -101,10 +107,7 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 		for _, mode := range scenario.modes {
 			mode := mode
 			b.Run(scenario.name+"/"+mode.name, func(b *testing.B) {
-				benchmarks := []struct {
-					name     string
-					capacity func() int
-				}{
+				benchmarks := []capacityMode{
 					{
 						name:     "zero",
 						capacity: func() int { return 0 },
@@ -123,6 +126,14 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 						name:     "estimated",
 						capacity: func() int { return inboundHeaderCapacity(from) },
 					},
+				}
+				if scenario.useCapacityHint {
+					benchmarks = append(benchmarks, capacityMode{
+						name: "hinted",
+						capacity: func() int {
+							return inboundHeaderCapacityWithHint(from, eligibleHeaders)
+						},
+					})
 				}
 
 				for _, benchmark := range benchmarks {
