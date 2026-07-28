@@ -156,6 +156,24 @@ func HeaderCaseMapping(mapping map[string][]string) InboundOption {
 	}
 }
 
+// InboundHeaderCapacityHint returns an InboundOption that sets the initial
+// capacity of the two transport header maps built for each inbound request.
+//
+// The value should represent a high percentile of the unique canonical headers
+// exposed by YARPC's Headers API, including GrabHeaders. It is only a capacity
+// hint; requests with more headers continue to work and grow the maps as
+// needed.
+//
+// A positive value overrides automatic capacity estimation. Zero uses the
+// automatic estimator. A negative value causes the Inbound to fail at Start.
+// Because the capacity is applied to two maps for every request, callers should
+// avoid setting it substantially higher than their observed header count.
+func InboundHeaderCapacityHint(capacity int) InboundOption {
+	return func(i *Inbound) {
+		i.headerCapacityHint = capacity
+	}
+}
+
 // ReadHeaderTimeout returns an InboundOption that sets the http.Server ReadHeaderTimeout
 func ReadHeaderTimeout(timeout time.Duration) InboundOption {
 	return func(i *Inbound) {
@@ -235,6 +253,7 @@ type Inbound struct {
 	disableHTTP2                             bool
 	overrideOriginalItemWithCanonicalizedKey bool
 	headerCaseMapping                        map[string][]string
+	headerCapacityHint                       int
 }
 
 // Tracer configures a tracer on this inbound.
@@ -264,6 +283,13 @@ func (i *Inbound) Start() error {
 func (i *Inbound) start() error {
 	if i.router == nil {
 		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "no router configured for transport inbound")
+	}
+	if i.headerCapacityHint < 0 {
+		return yarpcerrors.Newf(
+			yarpcerrors.CodeInvalidArgument,
+			"header capacity hint must not be negative, got %d",
+			i.headerCapacityHint,
+		)
 	}
 	for header := range i.grabHeaders {
 		if !strings.HasPrefix(header, "x-") {
@@ -297,6 +323,7 @@ func (i *Inbound) start() error {
 		logger:                                   i.logger,
 		overrideOriginalItemWithCanonicalizedKey: i.overrideOriginalItemWithCanonicalizedKey,
 		headerCaseMapping:                        i.headerCaseMapping,
+		headerCapacityHint:                       i.headerCapacityHint,
 		duplicateHeaderCounterVec:                duplicateHeaderCounterVec,
 	}
 
