@@ -23,6 +23,7 @@ package randpeer
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpctest"
@@ -52,4 +53,26 @@ func TestConfig(t *testing.T) {
 	require.NotNil(t, config.Outbounds)
 	require.NotNil(t, config.Outbounds["their-service"])
 	require.NotNil(t, config.Outbounds["their-service"].Unary)
+}
+
+func TestConfigInvalidCapacity(t *testing.T) {
+	cfg := yarpcconfig.New()
+	cfg.RegisterPeerList(Spec())
+	cfg.RegisterTransport(yarpctest.FakeTransportSpec())
+	_, err := cfg.LoadConfig("our-service", attrs{
+		"outbounds": attrs{
+			"their-service": attrs{
+				"fake-transport": attrs{
+					"random": attrs{
+						"capacity": 0,
+						"peers": []string{
+							"1.1.1.1:1111",
+						},
+					},
+				},
+			},
+		},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Capacity must be greater than 0")
 }

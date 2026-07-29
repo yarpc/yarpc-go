@@ -25,6 +25,8 @@ import (
 	"strings"
 	"testing"
 
+	"context"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
@@ -35,7 +37,6 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
-	"golang.org/x/net/context"
 )
 
 func TestOutboundChannel(t *testing.T) {

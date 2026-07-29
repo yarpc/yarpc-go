@@ -38,9 +38,9 @@ const _Type_name = "UnaryOnewayStreaming"
 var _Type_index = [...]uint8{0, 5, 11, 20}
 
 func (i Type) String() string {
-	i -= 1
-	if i < 0 || i >= Type(len(_Type_index)-1) {
-		return "Type(" + strconv.FormatInt(int64(i+1), 10) + ")"
+	idx := int(i) - 1
+	if i < 1 || idx >= len(_Type_index)-1 {
+		return "Type(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _Type_name[_Type_index[i]:_Type_index[i+1]]
+	return _Type_name[_Type_index[idx]:_Type_index[idx+1]]
 }

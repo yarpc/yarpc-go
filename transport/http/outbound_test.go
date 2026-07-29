@@ -35,7 +35,6 @@ import (
 	"time"
 
 	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 
 	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
@@ -148,12 +147,14 @@ func TestCallWithHTTP2(t *testing.T) {
 			},
 		)
 		h2s := &http2.Server{
-			NewWriteScheduler: func() http2.WriteScheduler {
-				return http2.NewPriorityWriteScheduler(nil)
-			},
 			IdleTimeout: defaultIdleConnTimeout,
 		}
-		h1s := httptest.NewServer(h2c.NewHandler(handler, h2s))
+		h1s := httptest.NewUnstartedServer(handler)
+		h1s.Config.Protocols = new(http.Protocols)
+		h1s.Config.Protocols.SetHTTP1(true)
+		h1s.Config.Protocols.SetUnencryptedHTTP2(true)
+		http2.ConfigureServer(h1s.Config, h2s)
+		h1s.Start()
 		t.Cleanup(h1s.Close)
 
 		httpTransport := NewTransport()
@@ -225,12 +226,14 @@ func TestCallWithHTTP2(t *testing.T) {
 			},
 		)
 		h2s := &http2.Server{
-			NewWriteScheduler: func() http2.WriteScheduler {
-				return http2.NewPriorityWriteScheduler(nil)
-			},
 			IdleTimeout: defaultIdleConnTimeout,
 		}
-		h1s := httptest.NewServer(h2c.NewHandler(handler, h2s))
+		h1s := httptest.NewUnstartedServer(handler)
+		h1s.Config.Protocols = new(http.Protocols)
+		h1s.Config.Protocols.SetHTTP1(true)
+		h1s.Config.Protocols.SetUnencryptedHTTP2(true)
+		http2.ConfigureServer(h1s.Config, h2s)
+		h1s.Start()
 		t.Cleanup(h1s.Close)
 
 		httpTransport := NewTransport()
