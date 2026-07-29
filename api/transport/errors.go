@@ -29,7 +29,7 @@ import "go.uber.org/yarpc/yarpcerrors"
 //
 // Deprecated: use yarpcerrors.Newf with yarpcerrors.CodeInvalidArgument instead.
 func InboundBadRequestError(err error) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, err.Error())
+	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "%s", err.Error())
 }
 
 // IsBadRequestError returns true if the request could not be processed

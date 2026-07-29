@@ -37,7 +37,6 @@ import (
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
-	ncontext "golang.org/x/net/context"
 )
 
 // inboundCall provides an interface similar tchannel.InboundCall.
@@ -110,7 +109,7 @@ type handler struct {
 	unaryInboundInterceptor        interceptor.UnaryInbound
 }
 
-func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
+func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
 	h.handle(ctx, tchannelCall{call})
 }
 
@@ -390,14 +389,14 @@ func getSystemError(err error) error {
 		return err
 	}
 	if !yarpcerrors.IsStatus(err) {
-		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error())
+		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, "%s", err.Error())
 	}
 	status := yarpcerrors.FromError(err)
 	tchannelCode, ok := _codeToTChannelCode[status.Code()]
 	if !ok {
 		tchannelCode = tchannel.ErrCodeUnexpected
 	}
-	return tchannel.NewSystemError(tchannelCode, status.Message())
+	return tchannel.NewSystemError(tchannelCode, "%s", status.Message())
 }
 
 func appendError(left error, right error) error {

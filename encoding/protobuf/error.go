@@ -166,7 +166,7 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	defer cleanup()
 	yarpcDet := make([]byte, len(detailsBytes))
 	copy(yarpcDet, detailsBytes)
-	return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet), nil
+	return yarpcerrors.Newf(pberr.code, "%s", pberr.message).WithDetails(yarpcDet), nil
 }
 
 func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {

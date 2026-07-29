@@ -21,8 +21,9 @@
 package tchannel
 
 import (
+	"context"
+
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
 )
 
 // Channel is the interface exposed by TChannel. The TChannel transport for

@@ -462,5 +462,5 @@ func NamedErrorf(name string, format string, args ...interface{}) error {
 //
 // Deprecated: Use only error codes to represent the type of the error.
 func FromHeaders(code Code, name string, message string) error {
-	return Newf(code, message).WithName(name)
+	return Newf(code, "%s", message).WithName(name)
 }
