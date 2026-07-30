@@ -128,7 +128,11 @@ func TestThriftExceptionObservability(t *testing.T) {
 			})
 
 			t.Run("metrics", func(t *testing.T) {
-				wantCounters := []testutils.CounterAssertion{
+				// The server (inbound) always classifies an unannotated Thrift
+				// exception as a caller failure: the handler flags the
+				// application-error bit but carries no YARPC code, so
+				// observability falls back to caller_failures.
+				wantInbound := []testutils.CounterAssertion{
 					{
 						Name: "caller_failures",
 						Tags: map[string]string{
@@ -142,7 +146,36 @@ func TestThriftExceptionObservability(t *testing.T) {
 					{Name: "successes"},
 				}
 
-				testutils.AssertClientAndServerCounters(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+				// The client (outbound) classification depends on the transport. Over
+				// HTTP the handler now emits rpc-application-error-code=unknown for
+				// unannotated exceptions so downstream relays can classify the
+				// response as a failure; the client reads that code back and
+				// attributes it to a server fault. TChannel has no equivalent
+				// on-the-wire code, so it still falls back to a caller failure,
+				// matching the inbound counters.
+				wantOutbound := wantInbound
+				if trans == http.TransportName {
+					wantOutbound = []testutils.CounterAssertion{
+						{Name: "calls", Value: 1},
+						{Name: "panics"},
+						{
+							Name: "server_failures",
+							Tags: map[string]string{
+								"error":      "unknown",
+								"error_name": "ExceptionWithoutCode",
+							},
+							Value: 1,
+						},
+						{Name: "successes"},
+					}
+				}
+
+				t.Run("inbound", func(t *testing.T) {
+					testutils.AssertCounters(t, wantInbound, serverMetricsRoot.Snapshot().Counters)
+				})
+				t.Run("outbound", func(t *testing.T) {
+					testutils.AssertCounters(t, wantOutbound, clientMetricsRoot.Snapshot().Counters)
+				})
 			})
 		})
 	}
