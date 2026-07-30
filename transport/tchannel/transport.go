@@ -130,7 +130,18 @@ func (o transportOptions) newTransport() *Transport {
 	}
 
 	tracer := o.tracer
-	if o.tracingInterceptorEnabled {
+	if o.otelTracerProvider != nil {
+		ti := tracinginterceptor.NewOTel(tracinginterceptor.OTelParams{
+			TracerProvider: o.otelTracerProvider,
+			Propagator:     o.otelPropagator,
+			Transport:      TransportName,
+			Logger:         logger,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		unaryOutbounds = append(unaryOutbounds, ti)
+
+		tracer = opentracing.NoopTracer{}
+	} else if o.tracingInterceptorEnabled {
 		ti := tracinginterceptor.New(tracinginterceptor.Params{
 			Tracer:    tracer,
 			Transport: TransportName,

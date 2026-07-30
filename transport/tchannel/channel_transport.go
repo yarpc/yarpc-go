@@ -67,7 +67,7 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 			err = errChannelOrServiceNameIsRequired
 		} else {
 			tracer := options.tracer
-			if options.tracingInterceptorEnabled {
+			if options.otelTracerProvider != nil || options.tracingInterceptorEnabled {
 				tracer = opentracing.NoopTracer{}
 			}
 			opts := tchannel.ChannelOptions{Tracer: tracer}
@@ -94,7 +94,18 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 	}
 	tracer := options.tracer
 
-	if options.tracingInterceptorEnabled {
+	if options.otelTracerProvider != nil {
+		ti := tracinginterceptor.NewOTel(tracinginterceptor.OTelParams{
+			TracerProvider: options.otelTracerProvider,
+			Propagator:     options.otelPropagator,
+			Transport:      TransportName,
+			Logger:         logger,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		unaryOutbounds = append(unaryOutbounds, ti)
+
+		tracer = opentracing.NoopTracer{}
+	} else if options.tracingInterceptorEnabled {
 		ti := tracinginterceptor.New(tracinginterceptor.Params{
 			Tracer:    tracer,
 			Transport: TransportName,
