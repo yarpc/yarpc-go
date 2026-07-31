@@ -26,11 +26,11 @@ import (
 	"io"
 	"net"
 	"strings"
-	"go.uber.org/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
@@ -38,6 +38,83 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/hpack"
 )
+
+// TestHTTP2GoAwayReplay exercises HTTP/2 transport implementation w.r.t. GOAWAY frames.
+func TestHTTP2GoAwayReplay(t *testing.T) {
+	tests := []struct {
+		name    string
+		mw      middleware.UnaryOutbound
+		reqBody io.Reader
+		wantErr bool
+	}{
+		{
+			name:    "no-op middleware, valid Request.Body; relay occurs",
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2ValidBody(),
+			wantErr: false,
+		},
+		{
+			name:    "no-op middleware, invalid Request.Body; relay fails",
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2InvalidBody(),
+			wantErr: true,
+		},
+		{
+			name:    "custom middleware, valid Request.Body becomes invalid; replay fails",
+			mw:      someCustomMiddleware{},
+			reqBody: getH2ValidBody(),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := newH2CGoAwayServer(t)
+
+			httpTransport := NewTransport()
+			require.NoError(t, httpTransport.Start(), "failed to start http transport")
+			t.Cleanup(func() { assert.NoError(t, httpTransport.Stop()) })
+
+			out := httpTransport.NewSingleOutbound("http://"+server.addr(), UseHTTP2())
+			require.NoError(t, out.Start(), "failed to start http2 outbound")
+			t.Cleanup(func() {
+				assert.NoError(t, out.Stop())
+				out.client.CloseIdleConnections()
+			})
+
+			outboundWithMiddleware := middleware.ApplyUnaryOutbound(out, tt.mw)
+
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+			t.Cleanup(cancel)
+
+			_, err := outboundWithMiddleware.Call(ctx, &transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
+				Procedure: "some-procedure",
+				Body:      tt.reqBody,
+			})
+
+			if tt.wantErr {
+				require.Error(t, err, "expected replay to fail when GetBody is not set")
+				assert.Contains(t, err.Error(), "GetBody", "error should mention GetBody")
+				return
+			}
+			require.NoError(t, err, "expected replay to succeed when GetBody is set")
+		})
+	}
+}
+
+func getH2ValidBody() io.Reader {
+	// transport.Request.Body must be one of *bytes.Buffer, *bytes.Reader, or *strings.Reader.
+	return strings.NewReader("some-payload")
+}
+
+func getH2InvalidBody() io.Reader {
+	// Any other transport.Request.Body concrete type that does not allow automatic GetBody creation.
+	return &someCustomBody{reader: strings.NewReader("some-payload")}
+}
 
 // --- HTTP/2 server: immediately send GOAWAY frame ---
 
@@ -146,78 +223,19 @@ type someCustomBody struct{ reader io.Reader }
 
 func (b someCustomBody) Read(p []byte) (int, error) { return b.reader.Read(p) }
 
-// useCustomBodyMiddleware is an outbound middleware that manipulates transport.Request.Body to be of type someCustomBody.
-type useCustomBodyMiddleware struct{}
+// someCustomMiddleware is an outbound middleware that manipulates transport.Request.Body to be of type someCustomBody.
+type someCustomMiddleware struct{}
 
-func (useCustomBodyMiddleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	req.Body = someCustomBody{reader: req.Body}
+// Call implements the middleware.UnaryOutbound interface.
+// This mimics a middleware that manipulates transport.Request.Body into a type that does not let GetBody be automatically populated by net/http.
+func (someCustomMiddleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	req.Body = &someCustomBody{reader: req.Body}
 	return out.Call(ctx, req)
 }
 
 // --- ----- ----- ---
 
-// TestHTTP2GoAwayReplay is a test suite covering HTTP/2 transport implementation w.r.t. GOAWAY frames.
-func TestHTTP2GoAwayReplay(t *testing.T) {
-	t.Run("no middleware - body type preserved - replay succeeds", func(t *testing.T) {
-		server := newH2CGoAwayServer(t)
-
-		httpTransport := NewTransport()
-		require.NoError(t, httpTransport.Start(), "failed to start http transport")
-		t.Cleanup(func() { assert.NoError(t, httpTransport.Stop()) })
-
-		out := httpTransport.NewSingleOutbound("http://"+server.addr(), UseHTTP2())
-		require.NoError(t, out.Start(), "failed to start http2 outbound")
-		t.Cleanup(func() {
-			assert.NoError(t, out.Stop())
-			out.client.CloseIdleConnections()
-		})
-
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-		t.Cleanup(cancel)
-
-		// strings.NewReader is recognized by net/http, so GetBody is populated
-		// and net/http2 can replay the request after the GOAWAY.
-		res, err := out.Call(ctx, &transport.Request{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  raw.Encoding,
-			Procedure: "hello",
-			Body:      strings.NewReader("world"),
-		})
-		require.NoError(t, err, "expected net/http2 to replay the request after GOAWAY when GetBody is set")
-		_ = res.Body.Close()
-	})
-
-	t.Run("middleware wraps body - non-rewindable type - replay fails", func(t *testing.T) {
-		server := newH2CGoAwayServer(t)
-
-		httpTransport := NewTransport()
-		require.NoError(t, httpTransport.Start(), "failed to start http transport")
-		t.Cleanup(func() { assert.NoError(t, httpTransport.Stop()) })
-
-		out := httpTransport.NewSingleOutbound("http://"+server.addr(), UseHTTP2())
-		require.NoError(t, out.Start(), "failed to start http2 outbound")
-		t.Cleanup(func() {
-			assert.NoError(t, out.Stop())
-			out.client.CloseIdleConnections()
-		})
-
-		outboundWithMiddleware := middleware.ApplyUnaryOutbound(out, useCustomBodyMiddleware{})
-
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-		t.Cleanup(cancel)
-
-		// The middleware wraps the body in someCustomBody, which net/http
-		// does not recognize. GetBody stays nil, so after the GOAWAY net/http2
-		// cannot replay the request and returns an error.
-		_, err := outboundWithMiddleware.Call(ctx, &transport.Request{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  raw.Encoding,
-			Procedure: "hello",
-			Body:      strings.NewReader("world"),
-		})
-		require.Error(t, err, "expected replay to fail when middleware wraps the body in a non-rewindable type")
-		assert.Contains(t, err.Error(), "GetBody", "error should mention GetBody")
-	})
-}
+var (
+	_ io.Reader                = someCustomBody{}
+	_ middleware.UnaryOutbound = someCustomMiddleware{}
+)
