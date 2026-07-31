@@ -233,8 +233,6 @@ func (someCustomMiddleware) Call(ctx context.Context, req *transport.Request, ou
 	return out.Call(ctx, req)
 }
 
-// --- ----- ----- ---
-
 var (
 	_ io.Reader                = someCustomBody{}
 	_ middleware.UnaryOutbound = someCustomMiddleware{}
