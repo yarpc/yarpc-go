@@ -120,6 +120,60 @@ func TestCreateRequest(t *testing.T) {
 	}
 }
 
+func getBenchRequest() *transport.Request {
+	return &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "some-procedure",
+		Body:      strings.NewReader("some-payload"),
+	}
+}
+
+func getBenchRequestWith(headers transport.Headers) *transport.Request {
+	treq := getBenchRequest()
+	treq.Headers = headers
+	return treq
+}
+
+func BenchmarkCreateRequest(b *testing.B) {
+	out := &Outbound{urlTemplate: defaultURLTemplate}
+	var (
+		blackholeReq *http.Request
+		blackholeErr error
+	)
+
+	headers := transport.HeadersFromMap(map[string]string{
+		"app-key1": "app-val1",
+		"app-key2": "app-val2",
+	})
+	benchs := []struct {
+		name string
+		treq *transport.Request
+	}{
+		{
+			name: "no headers",
+			treq: getBenchRequest(),
+		},
+		{
+			name: "with app headers",
+			treq: getBenchRequestWith(headers),
+		},
+	}
+	for _, bb := range benchs {
+		b.Run(bb.name, func(b *testing.B) {
+			b.ResetTimer()
+			for range b.N {
+				blackholeReq, blackholeErr = out.createRequest(bb.treq)
+			}
+			b.StopTimer()
+		})
+	}
+
+	_ = blackholeReq
+	_ = blackholeErr
+}
+
 func TestCallWithHTTP2(t *testing.T) {
 	t.Run("success - http2 client with http2 server", func(t *testing.T) {
 		handler := http.HandlerFunc(
