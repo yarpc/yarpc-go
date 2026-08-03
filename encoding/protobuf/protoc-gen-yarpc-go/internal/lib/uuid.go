@@ -159,12 +159,15 @@ type actorUUIDMethod struct {
 }
 
 // uuidFileInfo caches the per-file UUID discovery results so that
-// findActorUUIDFieldNumber and newUUIDContext are each computed at most
-// once per file generation, regardless of how many times the template
-// invokes UUID-related helpers for the same file.
+// findActorUUIDFieldNumber, newUUIDContext, and walkForUUID are each
+// computed at most once per file generation, regardless of how many
+// times the template invokes UUID-related helpers for the same file.
 type uuidFileInfo struct {
-	num int32        // 0 means the annotation is not in scope
-	ctx *uuidContext // nil when num == 0
+	num            int32        // 0 means the annotation is not in scope
+	ctx            *uuidContext // nil when num == 0
+	methods        []*actorUUIDMethod
+	serviceHasUUID map[*protoplugin.Service]bool
+	methodHasUUID  map[*protoplugin.Method]bool
 }
 
 var (
@@ -172,20 +175,59 @@ var (
 	uuidFileInfoCache = map[*protoplugin.File]*uuidFileInfo{}
 )
 
+// getUUIDFileInfo returns the cached UUID analysis for file, computing
+// it on first access.
 func getUUIDFileInfo(file *protoplugin.File) *uuidFileInfo {
 	uuidFileInfoMu.Lock()
 	defer uuidFileInfoMu.Unlock()
 	if info, ok := uuidFileInfoCache[file]; ok {
 		return info
 	}
-	num := findActorUUIDFieldNumber(file)
-	var ctx *uuidContext
-	if num != 0 {
-		ctx = newUUIDContext(file)
-	}
-	info := &uuidFileInfo{num: num, ctx: ctx}
+	info := buildUUIDFileInfo(file)
 	uuidFileInfoCache[file] = info
 	return info
+}
+
+func buildUUIDFileInfo(file *protoplugin.File) *uuidFileInfo {
+	num := findActorUUIDFieldNumber(file)
+	if num == 0 {
+		return &uuidFileInfo{}
+	}
+	ctx := newUUIDContext(file)
+	pkgPath := file.GoPackage.Path
+	serviceHas := make(map[*protoplugin.Service]bool)
+	methodHas := make(map[*protoplugin.Method]bool)
+	seen := map[*protoplugin.Message][]*uuidPath{}
+	var methods []*actorUUIDMethod
+
+	for _, svc := range file.Services {
+		for _, m := range svc.Methods {
+			req := m.RequestType
+			if req == nil {
+				continue
+			}
+			paths, computed := seen[req]
+			if !computed {
+				paths = walkForUUID(req.Fields, num, ctx, map[*protoplugin.Message]bool{req: true})
+				seen[req] = paths
+			}
+			hasUUID := len(paths) > 0
+			methodHas[m] = hasUUID
+			if hasUUID {
+				serviceHas[svc] = true
+			}
+			if hasUUID && req.File == file && !computed {
+				methods = append(methods, newActorUUIDMethod(req.GoType(pkgPath), paths))
+			}
+		}
+	}
+	return &uuidFileInfo{
+		num:            num,
+		ctx:            ctx,
+		methods:        methods,
+		serviceHasUUID: serviceHas,
+		methodHasUUID:  methodHas,
+	}
 }
 
 // actorUUIDMethods returns one ActorUUID() emission per request message of
@@ -199,37 +241,7 @@ func getUUIDFileInfo(file *protoplugin.File) *uuidFileInfo {
 // plugin should not emit any accessors.
 func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error) {
 	fi := getUUIDFileInfo(info.File)
-	if fi.num == 0 {
-		return nil, nil
-	}
-	pkgPath := info.File.GoPackage.Path
-	seen := map[*protoplugin.Message]bool{}
-	var out []*actorUUIDMethod
-	for _, svc := range info.File.Services {
-		for _, m := range svc.Methods {
-			req := m.RequestType
-			if req == nil {
-				continue
-			}
-			// Methods can only be added to a Go type from the package
-			// that declares it; cross-package request types must get
-			// their accessor when their own file is generated.
-			if req.File != info.File {
-				continue
-			}
-			if seen[req] {
-				continue
-			}
-			seen[req] = true
-
-			paths := walkForUUID(req.Fields, fi.num, fi.ctx, map[*protoplugin.Message]bool{req: true})
-			if len(paths) == 0 {
-				continue
-			}
-			out = append(out, newActorUUIDMethod(req.GoType(pkgPath), paths))
-		}
-	}
-	return out, nil
+	return fi.methods, nil
 }
 
 // serviceHasActorUUID reports whether any method of the given service has
@@ -239,15 +251,7 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 // points.
 func serviceHasActorUUID(info *protoplugin.TemplateInfo, service *protoplugin.Service) bool {
 	fi := getUUIDFileInfo(info.File)
-	if fi.num == 0 {
-		return false
-	}
-	for _, m := range service.Methods {
-		if methodHasActorUUIDNum(m, fi.num, fi.ctx) {
-			return true
-		}
-	}
-	return false
+	return fi.serviceHasUUID[service]
 }
 
 // methodHasActorUUID reports whether the given method's request type
@@ -257,25 +261,7 @@ func serviceHasActorUUID(info *protoplugin.TemplateInfo, service *protoplugin.Se
 // emission in actorUUIDMethods.
 func methodHasActorUUID(info *protoplugin.TemplateInfo, method *protoplugin.Method) bool {
 	fi := getUUIDFileInfo(info.File)
-	if fi.num == 0 {
-		return false
-	}
-	return methodHasActorUUIDNum(method, fi.num, fi.ctx)
-}
-
-// methodHasActorUUIDNum is the shared core of serviceHasActorUUID and
-// methodHasActorUUID: it reports whether the method's request type has at
-// least one path to an annotated leaf, reusing an already-resolved field
-// number and context.
-func methodHasActorUUIDNum(method *protoplugin.Method, num int32, ctx *uuidContext) bool {
-	if method == nil {
-		return false
-	}
-	req := method.RequestType
-	if req == nil {
-		return false
-	}
-	return len(walkForUUID(req.Fields, num, ctx, map[*protoplugin.Message]bool{req: true})) > 0
+	return fi.methodHasUUID[method]
 }
 
 // newActorUUIDMethod classifies the given non-empty set of paths into a
