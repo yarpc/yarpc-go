@@ -229,6 +229,324 @@ func BenchmarkRequestGetBody(b *testing.B) {
 	_ = blackholeErr
 }
 
+// counterReader is a io.Reader wrapper that keeps track of Read operations.
+type counterReader struct {
+	count int
+	src   io.Reader
+}
+
+// Implements the io.Reader interface.
+func (c *counterReader) Read(p []byte) (int, error) {
+	n, err := c.src.Read(p)
+	// Only count actual successful reads (io.ReadAll makes 2 calls to Read, second fails w/ 0 bytes & EOF error)
+	if n > 0 && err == nil {
+		c.count++
+	}
+	return n, err
+}
+
+var _ io.Reader = (*counterReader)(nil)
+
+// TestNewGetBodyHelper validates constructor for getBodyHelper.
+func TestNewGetBodyHelper(t *testing.T) {
+	tests := []struct {
+		name    string
+		treq    *transport.Request
+		wantErr bool
+	}{
+		{
+			name:    "nil body",
+			treq:    &transport.Request{},
+			wantErr: true,
+		},
+		{
+			name: "valid body",
+			treq: &transport.Request{
+				Body: &counterReader{src: strings.NewReader("some-payload")},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			h, err := newGetBodyHelper(tt.treq)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Nil(t, h)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, h)
+
+			// Internals check: not initialized
+			assert.Nil(t, h.rawBuf, "rawBuf should be nil before first GetBody call")
+			assert.Nil(t, h.reader, "reader should be nil before first GetBody call")
+			assert.False(t, h.mustRewind, "mustRewind should be false before first GetBody call")
+			// Reader check: no reads
+			assert.Equal(t, 0, h.treq.Body.(*counterReader).count, "no reads before first GetBody call")
+		})
+	}
+}
+
+// TestGetBodyHelper_Init validates initialization of getBodyHelper.
+func TestGetBodyHelper_Init(t *testing.T) {
+	tests := []struct {
+		name  string
+		treq  *transport.Request
+		inits int
+	}{
+		{
+			name: "single init",
+			treq: &transport.Request{
+				Body: &counterReader{src: strings.NewReader("some-payload")},
+			},
+			inits: 1,
+		},
+		{
+			name: "multiple inits",
+			treq: &transport.Request{
+				Body: &counterReader{src: strings.NewReader("some-payload")},
+			},
+			inits: 5,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			h, err := newGetBodyHelper(tt.treq)
+			require.NotNil(t, h)
+			require.NoError(t, err)
+			for i := 0; i < tt.inits; i++ {
+				err := h.Init()
+				require.NoError(t, err, "Init failed on iteration %d", i+1)
+			}
+
+			// Internals check: initialized
+			assert.NotNil(t, h.rawBuf, "rawBuf should be non-nil after Init")
+			assert.NotEmpty(t, h.rawBuf, "rawBuf should be non-empty after Init")
+			assert.NotNil(t, h.reader, "reader should be non-nil after Init")
+			assert.False(t, h.mustRewind, "mustRewind should be false after Init and before Read")
+			// Reader check: only one read
+			assert.Equal(t, 1, h.treq.Body.(*counterReader).count, "should only have read once regardless of multiple Init calls")
+		})
+	}
+}
+
+// TestGetBodyHelper_Read validates read & rewind functionalities from getBodyHelper.
+func TestGetBodyHelper_Read(t *testing.T) {
+	const (
+		somePayload = "some-payload"
+	)
+
+	tests := []struct {
+		name    string
+		treq    *transport.Request
+		reads   int    // Number of Read calls to make on a getBodyHelper
+		wantEOF []bool // Expected EOF status from io.ReadAll on a getBodyHelper; must be same length as "reads"
+	}{
+		{
+			name: "single read",
+			treq: &transport.Request{
+				Body: &counterReader{src: strings.NewReader(somePayload)},
+			},
+			reads:   1,
+			wantEOF: []bool{false},
+		},
+		{
+			name: "first read succeeds, subsequent ones fail with EOF",
+			treq: &transport.Request{
+				Body: &counterReader{src: strings.NewReader(somePayload)},
+			},
+			reads:   5,
+			wantEOF: []bool{false, true, true, true, true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Test sanity check
+			if tt.reads != len(tt.wantEOF) {
+				t.Fatalf("test case misconfigured: mismatch between reads=%d and wantEOF=%d", tt.reads, len(tt.wantEOF))
+			}
+
+			expected, _ := io.ReadAll(strings.NewReader(somePayload))
+			h, err := newGetBodyHelper(tt.treq)
+			require.NotNil(t, h)
+			require.NoError(t, err)
+			for i := 0; i < tt.reads; i++ {
+				data, err := io.ReadAll(h)
+				// io.ReadAll does not report EOF as error, but returns empty data slice
+				if tt.wantEOF[i] {
+					require.Empty(t, data, "expected empty data on read %d", i+1)
+					continue
+				}
+				require.NoError(t, err, "unexpected error on read %d", i+1)
+				assert.Equal(t, expected, data, "read data mismatch on read %d", i+1)
+				// Reader check: only one read from actual source
+				assert.Equal(t, 1, h.treq.Body.(*counterReader).count, "should only have read once regardless of multiple Read calls")
+			}
+		})
+	}
+}
+
+// TestNewGetBodyFunc validates constructor for newGetBodyFunc.
+func TestNewGetBodyFunc(t *testing.T) {
+	const (
+		somePayload = "some-payload"
+	)
+
+	tests := []struct {
+		name    string
+		treq    *transport.Request
+		wantErr bool
+		execs   int // Number of times to call the GetBody function
+	}{
+		{
+			name:    "nil body",
+			treq:    &transport.Request{},
+			wantErr: true,
+		},
+		{
+			name: "valid body, single GetBody call",
+			treq: &transport.Request{
+				Body: &counterReader{src: strings.NewReader(somePayload)},
+			},
+			wantErr: false,
+			execs:   1,
+		},
+		{
+			name: "valid body, multiple GetBody call",
+			treq: &transport.Request{
+				Body: &counterReader{src: strings.NewReader(somePayload)},
+			},
+			wantErr: false,
+			execs:   5,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			getBodyFn := newGetBodyFunc(tt.treq)
+			if tt.wantErr {
+				require.Nil(t, getBodyFn)
+				return
+			}
+			require.NotNil(t, getBodyFn)
+			expected, _ := io.ReadAll(strings.NewReader(somePayload))
+
+			// Reader check: no reads before first GetBody call
+			assert.Equal(t, 0, tt.treq.Body.(*counterReader).count, "no reads before first GetBody call")
+			for i := 0; i < tt.execs; i++ {
+				assert.NotPanics(t, func() {
+					// GetBody call internally rewinds the reader
+					ioCloser, err := getBodyFn()
+					assert.NoError(t, err, "unexpected error on GetBody call %d", i+1)
+					data, err := io.ReadAll(ioCloser)
+					require.NoError(t, err, "unexpected error on read call %d", i+1)
+					assert.Equal(t, expected, data, "read data mismatch on call %d", i+1)
+				})
+
+				// Reader check: only one read from actual source
+				assert.Equal(t, 1, tt.treq.Body.(*counterReader).count, "should only have read once regardless of multiple GetBody calls")
+			}
+		})
+	}
+}
+
+// TestEnsureGetBody validates that a GetBody function is properly attached to the net/http.Request when needed.
+func TestEnsureGetBody(t *testing.T) {
+	// This reader type should trigger a missing GetBody that is fixed by ensureGetBody
+	type opaqueReader struct{ io.Reader }
+	const (
+		somePayload = "some-payload"
+	)
+
+	tests := []struct {
+		name           string
+		treq           *transport.Request
+		isHreqGetBody  bool // Whether GetBody is to be found on net/http.Request
+		wantEnsureErr  bool // Whether ensureGetBody is expected to return an error
+		isGetBodyFound bool // Whether GetBody is expected to be found on net/http.Request after ensureGetBody
+		reads          int  // Number of times to call the GetBody function
+	}{
+		{
+			name:           "nil body",
+			treq:           &transport.Request{},
+			isHreqGetBody:  false,
+			wantEnsureErr:  false,
+			isGetBodyFound: false,
+			reads:          0, // Not expected to call GetBody; test case ends way before
+		},
+		{
+			name: "valid body, GetBody already provided",
+			treq: &transport.Request{
+				Body: strings.NewReader(somePayload),
+			},
+			isHreqGetBody:  true,
+			wantEnsureErr:  false,
+			isGetBodyFound: true,
+			reads:          5,
+		},
+		{
+			name: "valid body, GetBody must be attached",
+			treq: &transport.Request{
+				Body: &opaqueReader{strings.NewReader(somePayload)},
+			},
+			isHreqGetBody:  false,
+			wantEnsureErr:  false,
+			isGetBodyFound: true,
+			reads:          5,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			hreq, err := http.NewRequest("POST", defaultURLTemplate.String(), tt.treq.Body)
+			require.NoError(t, err)
+
+			// Store original GetBody for later checks
+			ogGetBody := hreq.GetBody
+			if tt.isHreqGetBody {
+				require.NotNil(t, ogGetBody)
+			} else {
+				require.Nil(t, ogGetBody)
+			}
+
+			err = ensureGetBody(hreq, tt.treq)
+			if tt.wantEnsureErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			if tt.isGetBodyFound {
+				require.NotNil(t, hreq.GetBody, "GetBody should be attached to net/http.Request")
+			} else {
+				require.Nil(t, hreq.GetBody, "GetBody should not be attached to net/http.Request")
+				// GetBody was not attached; no point in checking data consistency
+				return
+			}
+
+			// Data consistency
+			expected, _ := io.ReadAll(strings.NewReader(somePayload))
+			for i := 0; i < tt.reads; i++ {
+				ioCloser, err := hreq.GetBody()
+				require.NoError(t, err, "unexpected error on GetBody read %d", i+1)
+				data, err := io.ReadAll(ioCloser)
+				require.NoError(t, err, "unexpected error on read call %d", i+1)
+				assert.Equal(t, expected, data, "read data mismatch on call %d", i+1)
+			}
+		})
+	}
+}
+
 func TestCallWithHTTP2(t *testing.T) {
 	t.Run("success - http2 client with http2 server", func(t *testing.T) {
 		handler := http.HandlerFunc(
