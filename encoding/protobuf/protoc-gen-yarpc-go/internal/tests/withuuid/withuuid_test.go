@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// End-to-end test for the (uber.auth.annotations.actor_uuid) annotation
+// End-to-end test for the (uber.security.engsec.utoken.annotations.actor_uuid) annotation
 // support in protoc-gen-yarpc-go. The fixtures in this package are
 // generated from withuuid.proto by protoc-gen-yarpc-go using the same
 // dynamic FQN-based discovery mechanism the production plugin uses, so

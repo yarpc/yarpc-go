@@ -34,7 +34,7 @@ import (
 // in-memory CodeGeneratorRequest and asserts the generated .pb.yarpc.go
 // contains an ActorUUID() accessor for the annotated request message.
 //
-// This is the integration-level coverage for the (uber.auth.annotations.
+// This is the integration-level coverage for the (uber.security.engsec.utoken.annotations.
 // actor_uuid) annotation: it exercises template compilation, helper wiring,
 // extension discovery from descriptor, and gofmt of the generated source.
 func TestRunnerEmitsActorUUIDAccessor(t *testing.T) {
@@ -189,7 +189,7 @@ func containerTargetFileDescriptor(t *testing.T) *descriptor.FileDescriptorProto
 		Name:       proto.String("svc/foo.proto"),
 		Package:    proto.String("svc"),
 		Syntax:     proto.String("proto3"),
-		Dependency: []string{"uber/auth/annotations/options.proto"},
+		Dependency: []string{"uber/security/engsec/utoken/annotations/options.proto"},
 		Options: &descriptor.FileOptions{
 			GoPackage: proto.String("svc/foopb"),
 		},
@@ -298,12 +298,12 @@ func TestRunnerSilentlyIgnoresMisplacedAnnotations(t *testing.T) {
 		"misplaced annotations must not produce an accessor; output was:\n%s", out)
 }
 
-// optionsFileDescriptor returns a synthetic uber/auth/annotations/options.proto
+// optionsFileDescriptor returns a synthetic uber/security/engsec/utoken/annotations/options.proto
 // declaring the actor_uuid FieldOptions extension at the test field number.
 func optionsFileDescriptor() *descriptor.FileDescriptorProto {
 	return &descriptor.FileDescriptorProto{
-		Name:    proto.String("uber/auth/annotations/options.proto"),
-		Package: proto.String("uber.auth.annotations"),
+		Name:    proto.String("uber/security/engsec/utoken/annotations/options.proto"),
+		Package: proto.String("uber.security.engsec.utoken.annotations"),
 		Syntax:  proto.String("proto3"),
 		Extension: []*descriptor.FieldDescriptorProto{{
 			Name:     proto.String("actor_uuid"),
@@ -313,7 +313,7 @@ func optionsFileDescriptor() *descriptor.FileDescriptorProto {
 			Extendee: proto.String(fieldOptionsExtendee),
 		}},
 		Options: &descriptor.FileOptions{
-			GoPackage: proto.String("uber/auth/annotations/authpb"),
+			GoPackage: proto.String("uber/security/engsec/utoken/annotations/authpb"),
 		},
 	}
 }
@@ -326,7 +326,7 @@ func targetFileDescriptor(t *testing.T) *descriptor.FileDescriptorProto {
 		Name:       proto.String("svc/foo.proto"),
 		Package:    proto.String("svc"),
 		Syntax:     proto.String("proto3"),
-		Dependency: []string{"uber/auth/annotations/options.proto"},
+		Dependency: []string{"uber/security/engsec/utoken/annotations/options.proto"},
 		Options: &descriptor.FileOptions{
 			GoPackage: proto.String("svc/foopb"),
 		},
@@ -380,7 +380,7 @@ func nestedTargetFileDescriptor(t *testing.T) *descriptor.FileDescriptorProto {
 		Name:       proto.String("svc/foo.proto"),
 		Package:    proto.String("svc"),
 		Syntax:     proto.String("proto3"),
-		Dependency: []string{"uber/auth/annotations/options.proto"},
+		Dependency: []string{"uber/security/engsec/utoken/annotations/options.proto"},
 		Options: &descriptor.FileOptions{
 			GoPackage: proto.String("svc/foopb"),
 		},
@@ -437,7 +437,7 @@ func ignoredTargetFileDescriptor(t *testing.T) *descriptor.FileDescriptorProto {
 		Name:       proto.String("svc/foo.proto"),
 		Package:    proto.String("svc"),
 		Syntax:     proto.String("proto3"),
-		Dependency: []string{"uber/auth/annotations/options.proto"},
+		Dependency: []string{"uber/security/engsec/utoken/annotations/options.proto"},
 		Options: &descriptor.FileOptions{
 			GoPackage: proto.String("svc/foopb"),
 		},

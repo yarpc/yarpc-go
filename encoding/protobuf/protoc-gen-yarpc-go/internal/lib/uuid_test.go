@@ -44,7 +44,7 @@ var _testActorUUIDExt = &proto.ExtensionDesc{
 	Field:         _testActorUUIDFieldNumber,
 	Name:          _ActorUUIDFQN,
 	Tag:           "varint,99999,opt,name=actor_uuid",
-	Filename:      "uber/auth/annotations/options_test.proto",
+	Filename:      "uber/security/engsec/utoken/annotations/options_test.proto",
 }
 
 func init() {
@@ -85,8 +85,8 @@ func TestFindActorUUIDFieldNumber(t *testing.T) {
 		// must be ignored.
 		fileWithWrongExtendee := &protoplugin.File{
 			FileDescriptorProto: &descriptor.FileDescriptorProto{
-				Name:    proto.String("uber/auth/annotations/options.proto"),
-				Package: proto.String("uber.auth.annotations"),
+				Name:    proto.String("uber/security/engsec/utoken/annotations/options.proto"),
+				Package: proto.String("uber.security.engsec.utoken.annotations"),
 				Extension: []*descriptor.FieldDescriptorProto{{
 					Name:     proto.String("actor_uuid"),
 					Number:   proto.Int32(_testActorUUIDFieldNumber),
@@ -684,12 +684,12 @@ func TestActorUUIDMethods(t *testing.T) {
 // --- helpers --------------------------------------------------------------
 
 // newOptionsFile builds a synthetic protoplugin.File that mirrors the shape
-// of the monorepo's uber/auth/annotations/options.proto.
+// of the monorepo's uber/security/engsec/utoken/annotations/options.proto.
 func newOptionsFile() *protoplugin.File {
 	return &protoplugin.File{
 		FileDescriptorProto: &descriptor.FileDescriptorProto{
-			Name:    proto.String("uber/auth/annotations/options.proto"),
-			Package: proto.String("uber.auth.annotations"),
+			Name:    proto.String("uber/security/engsec/utoken/annotations/options.proto"),
+			Package: proto.String("uber.security.engsec.utoken.annotations"),
 			Extension: []*descriptor.FieldDescriptorProto{{
 				Name:     proto.String("actor_uuid"),
 				Number:   proto.Int32(_testActorUUIDFieldNumber),

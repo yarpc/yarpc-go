@@ -826,7 +826,7 @@ var (
 )
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -836,7 +836,7 @@ func (t *DeleteUserRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -846,7 +846,7 @@ func (t *GetUserRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -856,7 +856,7 @@ func (t *ListUsersRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -866,7 +866,7 @@ func (t *NestedRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -876,7 +876,7 @@ func (t *CycleRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -886,7 +886,7 @@ func (t *MultiAnnotatedRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -896,7 +896,7 @@ func (t *RepeatedActorsRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -910,7 +910,7 @@ func (t *MapActorsRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -924,7 +924,7 @@ func (t *RepeatedMessageRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.auth.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values

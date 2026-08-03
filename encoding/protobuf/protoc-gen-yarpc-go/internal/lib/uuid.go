@@ -41,10 +41,7 @@ import (
 // the plugin discovers its field number from the descriptor request itself
 // and emits ActorUUID() accessors for every annotated request type in the
 // target file.
-//
-// Mirrors the auth.actor_uuid annotation handled by thriftrw-plugin-yarpc
-// (see encoding/thrift/thriftrw-plugin-yarpc/uuid.go).
-const _ActorUUIDFQN = "uber.auth.annotations.actor_uuid"
+const _ActorUUIDFQN = "uber.security.engsec.utoken.annotations.actor_uuid"
 
 // fieldOptionsExtendee is the Extendee value that
 // FieldDescriptorProto carries for any extension of google.protobuf.FieldOptions.
