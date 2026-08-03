@@ -26,6 +26,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -39,9 +40,14 @@ import (
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 const (
+	// http11NextProtoTLS is the ALPN protocol name for HTTP/1.1.
+	http11NextProtoTLS = "http/1.1"
+
 	// We want a value that's around 5 seconds, but slightly higher than how
 	// long a successful HTTP shutdown can take.
 	// There's a specific path in the HTTP shutdown path that can take 5 seconds:
@@ -319,6 +325,19 @@ func (i *Inbound) start() error {
 		protos.SetHTTP2(true)
 		protos.SetUnencryptedHTTP2(true)
 		i.server.Protocols = &protos
+
+		// http.Server.Protocols selects the protocol at the connection layer:
+		// HTTP/2 over TLS is only chosen when ALPN negotiated "h2", and
+		// SetUnencryptedHTTP2 only applies to connections that are not
+		// *tls.Conn.
+		//
+		// When TLS is enabled the mux listener terminates TLS itself and hands
+		// the server an already established *tls.Conn, so a client that speaks
+		// HTTP/2 with prior knowledge without offering ALPN would be served
+		// HTTP/1.1. Wrapping the handler with h2c restores the pre-Go-1.26
+		// behavior of detecting the HTTP/2 client preface at the request layer
+		// for those connections.
+		i.server.Handler = h2c.NewHandler(httpHandler, &http2.Server{})
 	}
 
 	addr := i.addr
@@ -336,9 +355,17 @@ func (i *Inbound) start() error {
 			return errors.New("HTTP TLS enabled but configuration not provided")
 		}
 
+		tlsConfig := i.tlsConfig
+		if !i.disableHTTP2 {
+			// The mux listener terminates TLS with this configuration, not with
+			// http.Server.TLSConfig, so "h2" must be advertised here for ALPN
+			// capable HTTP/2 clients to negotiate HTTP/2.
+			tlsConfig = withHTTP2ALPN(tlsConfig)
+		}
+
 		listener = muxlistener.NewListener(muxlistener.Config{
 			Listener:      listener,
-			TLSConfig:     i.tlsConfig,
+			TLSConfig:     tlsConfig,
 			ServiceName:   i.transport.serviceName,
 			TransportName: TransportName,
 			Meter:         i.transport.meter,
@@ -357,6 +384,42 @@ func (i *Inbound) start() error {
 		i.logger.Warn("no procedures specified for HTTP inbound")
 	}
 	return nil
+}
+
+// withHTTP2ALPN returns a copy of the given TLS configuration that also
+// advertises HTTP/2 over ALPN, so that HTTP/2 clients negotiating "h2" are
+// served HTTP/2 instead of failing or being downgraded.
+//
+// "h2" is appended with the lowest preference and the relative order of the
+// protocols already configured is preserved. Go's TLS server resolves ALPN
+// using the server's preference order, and clients that offer both "http/1.1"
+// and "h2" are not necessarily able to speak HTTP/2 over TLS: the HTTP/1.1
+// outbound of this package, for instance, advertises both but always speaks
+// HTTP/1.1. Promoting "h2" would break those peers, so the negotiated protocol
+// is only changed for clients that do not offer any of the previously
+// configured protocols. Clients using HTTP/2 with prior knowledge are handled
+// by the h2c handler instead.
+//
+// "http/1.1" is added when missing: Go's TLS server aborts the handshake with
+// no_application_protocol when a client offers ALPN protocols and none of them
+// is supported by the server, so advertising "h2" alone would break plain
+// HTTPS/1.1 clients rather than downgrading them.
+func withHTTP2ALPN(config *tls.Config) *tls.Config {
+	if slices.Contains(config.NextProtos, http2.NextProtoTLS) {
+		return config
+	}
+
+	// Clone so that the configuration owned by the caller is left untouched.
+	// Note that Clone copies the NextProtos slice header, so a fresh slice is
+	// built rather than mutating the existing one in place.
+	newConfig := config.Clone()
+	protos := make([]string, 0, len(config.NextProtos)+2)
+	protos = append(protos, config.NextProtos...)
+	if !slices.Contains(protos, http11NextProtoTLS) {
+		protos = append(protos, http11NextProtoTLS)
+	}
+	newConfig.NextProtos = append(protos, http2.NextProtoTLS)
+	return newConfig
 }
 
 // Stop the inbound using Shutdown.
