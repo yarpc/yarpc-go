@@ -25,7 +25,7 @@ var E_ActorUuid = &proto.ExtensionDesc{
 	ExtendedType:  (*descriptor.FieldOptions)(nil),
 	ExtensionType: (*bool)(nil),
 	Field:         50001,
-	Name:          "uber.auth.annotations.actor_uuid",
+	Name:          "uber.security.engsec.utoken.annotations.actor_uuid",
 	Tag:           "varint,50001,opt,name=actor_uuid",
 	Filename:      "encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto",
 }

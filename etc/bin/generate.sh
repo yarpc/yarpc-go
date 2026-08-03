@@ -154,7 +154,7 @@ generate_with_protoc_all() {
   protoc_all internal/examples/streaming/stream.proto
   protoc_all internal/prototest/examplepb/example.proto
 
-  # Test fixtures for the yarpc-go plugin's (uber.auth.annotations.actor_uuid)
+  # Test fixtures for the yarpc-go plugin's (uber.security.engsec.utoken.annotations.actor_uuid)
   # support. annotations.proto only defines the extension and so does not need
   # the yarpc-go plugin run on it; withuuid.proto exercises emission of the
   # ActorUUID() accessor on annotated messages.

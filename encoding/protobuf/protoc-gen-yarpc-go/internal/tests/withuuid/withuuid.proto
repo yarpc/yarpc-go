@@ -1,8 +1,6 @@
 // Test fixture for protoc-gen-yarpc-go's actor_uuid annotation support.
 //
-// Mirrors the cases in
-// encoding/thrift/thriftrw-plugin-yarpc/internal/uuid_test/, adapted to
-// protobuf. Every message that appears as a request type of a service
+// Every message that appears as a request type of a service
 // method exercises a different shape the generator must handle:
 //
 //   - DeleteUserRequest, GetUserRequest, ListUsersRequest carry the
@@ -38,7 +36,7 @@ option go_package = "withuuid";
 import "encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto";
 
 message DeleteUserRequest {
-  string actor = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string actor = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
   string user_id = 2;
 }
 
@@ -47,7 +45,7 @@ message DeleteUserResponse {
 }
 
 message GetUserRequest {
-  string requester_id = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string requester_id = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
   string target_id = 2;
 }
 
@@ -57,7 +55,7 @@ message GetUserResponse {
 }
 
 message ListUsersRequest {
-  string caller_actor_id = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string caller_actor_id = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
   int32 page_size = 2;
 }
 
@@ -69,7 +67,7 @@ message ListUsersResponse {
 // field is annotated; the walker must descend through every hop and
 // surface a multi-step path ending at innerUUID.
 message InnerLevel {
-  string inner_uuid = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string inner_uuid = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
 }
 
 message MidLevel {
@@ -90,7 +88,7 @@ message NestedRequest {
 // descending, recognise the cycle, and pick `id` instead of looping.
 message CycleNode {
   CycleNode loop = 1;
-  string id = 2 [(uber.auth.annotations.actor_uuid) = true];
+  string id = 2 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
 }
 
 message CycleRequest {
@@ -101,15 +99,15 @@ message CycleRequest {
 // collects both, in declaration order, so the accessor returns
 // [first_actor, second_actor]. No error is raised.
 message MultiAnnotatedRequest {
-  string first_actor = 1 [(uber.auth.annotations.actor_uuid) = true];
-  string second_actor = 2 [(uber.auth.annotations.actor_uuid) = true];
+  string first_actor = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
+  string second_actor = 2 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
 }
 
 // RepeatedActorsRequest annotates a `repeated string`. The accessor must
 // append every element of the slice, so a request with N actors yields N
 // values.
 message RepeatedActorsRequest {
-  repeated string actors = 1 [(uber.auth.annotations.actor_uuid) = true];
+  repeated string actors = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
   string trace_id = 2;
 }
 
@@ -118,14 +116,14 @@ message RepeatedActorsRequest {
 // non-deterministic, so the relative order of the surfaced values is
 // unspecified.
 message MapActorsRequest {
-  map<string, string> actors_by_role = 1 [(uber.auth.annotations.actor_uuid) = true];
+  map<string, string> actors_by_role = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
 }
 
 // ActorItem is the element type behind the repeated- and map-message
 // requests below; its annotated string is reached by descending through
 // the container hop.
 message ActorItem {
-  string actor_uuid = 1 [(uber.auth.annotations.actor_uuid) = true];
+  string actor_uuid = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
   string label = 2;
 }
 
@@ -147,18 +145,18 @@ message MapMessageRequest {
 // leaves, so the generator must NOT emit an ActorUUID() method for this
 // request type.
 message IgnoredAnnotationsRequest {
-  int64 timestamp = 1 [(uber.auth.annotations.actor_uuid) = true];
+  int64 timestamp = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
   // The annotation on a message-typed field is ignored. The walker does
   // still descend into creds looking for a string leaf - and finds none,
   // since IgnoredCredsContainer holds only a non-string scalar.
-  IgnoredCredsContainer creds = 2 [(uber.auth.annotations.actor_uuid) = true];
+  IgnoredCredsContainer creds = 2 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
 }
 
 // IgnoredCredsContainer's only field is a non-string scalar, so there is
 // no string leaf to surface. Used by IgnoredAnnotationsRequest to confirm
 // the walker descends into a message field but finds nothing collectable.
 message IgnoredCredsContainer {
-  int64 issued_at = 1 [(uber.auth.annotations.actor_uuid) = true];
+  int64 issued_at = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
 }
 
 // UnannotatedRequest has no annotated field; the plugin must not emit
