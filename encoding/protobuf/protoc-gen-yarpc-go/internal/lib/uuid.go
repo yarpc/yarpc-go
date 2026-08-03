@@ -158,6 +158,36 @@ type actorUUIDMethod struct {
 	Stmts []actorUUIDStmt
 }
 
+// uuidFileInfo caches the per-file UUID discovery results so that
+// findActorUUIDFieldNumber and newUUIDContext are each computed at most
+// once per file generation, regardless of how many times the template
+// invokes UUID-related helpers for the same file.
+type uuidFileInfo struct {
+	num int32        // 0 means the annotation is not in scope
+	ctx *uuidContext // nil when num == 0
+}
+
+var (
+	uuidFileInfoMu    sync.Mutex
+	uuidFileInfoCache = map[*protoplugin.File]*uuidFileInfo{}
+)
+
+func getUUIDFileInfo(file *protoplugin.File) *uuidFileInfo {
+	uuidFileInfoMu.Lock()
+	defer uuidFileInfoMu.Unlock()
+	if info, ok := uuidFileInfoCache[file]; ok {
+		return info
+	}
+	num := findActorUUIDFieldNumber(file)
+	var ctx *uuidContext
+	if num != 0 {
+		ctx = newUUIDContext(file)
+	}
+	info := &uuidFileInfo{num: num, ctx: ctx}
+	uuidFileInfoCache[file] = info
+	return info
+}
+
 // actorUUIDMethods returns one ActorUUID() emission per request message of
 // services in the target file that has at least one path to an
 // actor_uuid-annotated string field. The same request type used by
@@ -168,11 +198,10 @@ type actorUUIDMethod struct {
 // reach the option's declaration, which is the common case and means the
 // plugin should not emit any accessors.
 func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error) {
-	num := findActorUUIDFieldNumber(info.File)
-	if num == 0 {
+	fi := getUUIDFileInfo(info.File)
+	if fi.num == 0 {
 		return nil, nil
 	}
-	ctx := newUUIDContext(info.File)
 	pkgPath := info.File.GoPackage.Path
 	seen := map[*protoplugin.Message]bool{}
 	var out []*actorUUIDMethod
@@ -193,7 +222,7 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 			}
 			seen[req] = true
 
-			paths := walkForUUID(req.Fields, num, ctx, map[*protoplugin.Message]bool{req: true})
+			paths := walkForUUID(req.Fields, fi.num, fi.ctx, map[*protoplugin.Message]bool{req: true})
 			if len(paths) == 0 {
 				continue
 			}
