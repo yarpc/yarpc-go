@@ -173,13 +173,12 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 // validator field and the validator extraction in the Build/Fx entry
 // points.
 func serviceHasActorUUID(info *protoplugin.TemplateInfo, service *protoplugin.Service) bool {
-	num := findActorUUIDFieldNumber(info.File)
-	if num == 0 {
+	fi := getUUIDFileInfo(info.File)
+	if fi.num == 0 {
 		return false
 	}
-	ctx := newUUIDContext(info.File)
 	for _, m := range service.Methods {
-		if methodHasActorUUIDNum(m, num, ctx) {
+		if methodHasActorUUIDNum(m, fi.num, fi.ctx) {
 			return true
 		}
 	}
@@ -192,11 +191,11 @@ func serviceHasActorUUID(info *protoplugin.TemplateInfo, service *protoplugin.Se
 // request.ActorUUID()), so it must stay in lockstep with the accessor
 // emission in actorUUIDMethods.
 func methodHasActorUUID(info *protoplugin.TemplateInfo, method *protoplugin.Method) bool {
-	num := findActorUUIDFieldNumber(info.File)
-	if num == 0 {
+	fi := getUUIDFileInfo(info.File)
+	if fi.num == 0 {
 		return false
 	}
-	return methodHasActorUUIDNum(method, num, newUUIDContext(info.File))
+	return methodHasActorUUIDNum(method, fi.num, fi.ctx)
 }
 
 // methodHasActorUUIDNum is the shared core of serviceHasActorUUID and
