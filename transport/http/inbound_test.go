@@ -469,16 +469,18 @@ func TestInboundWithHTTPVersion(t *testing.T) {
 func TestInboundHTTP2OverTLS(t *testing.T) {
 	scenario := testscenario.Create(t, time.Minute, time.Minute)
 
-	// Drop "h2" from the server configuration so that the ALPN case only
-	// succeeds if the inbound adds it back.
-	serverTLSConfig := scenario.ServerTLSConfig()
-	serverTLSConfig.NextProtos = []string{"http/1.1"}
+	// Default server configuration for the cases below. "h2" is dropped so
+	// that the ALPN case only succeeds if the inbound adds it back.
+	defaultServerProtos := []string{"http/1.1"}
 
 	tests := []struct {
-		desc      string
-		scheme    string
-		wantProto string
-		transport func() http.RoundTripper
+		desc string
+		// serverProtos is the ALPN list configured on the inbound. Defaults to
+		// defaultServerProtos when nil.
+		serverProtos []string
+		scheme       string
+		wantProto    string
+		transport    func() http.RoundTripper
 	}{
 		{
 			desc:      "tls client negotiating http2 over alpn",
@@ -536,10 +538,55 @@ func TestInboundHTTP2OverTLS(t *testing.T) {
 				}
 			},
 		},
+		{
+			// Regression guard for an "h2"-first server configuration: Go
+			// returns on the first exact ALPN match in server preference
+			// order, so without reordering the server would negotiate "h2"
+			// with this client and then receive HTTP/1.1.
+			desc:         "tls client speaking http1 while advertising h2 against h2 only server",
+			serverProtos: []string{"h2"},
+			scheme:       "http",
+			wantProto:    "HTTP/1.1",
+			transport: func() http.RoundTripper {
+				return &http.Transport{
+					DialContext: func(_ context.Context, network, addr string) (net.Conn, error) {
+						clientTLSConfig := scenario.ClientTLSConfig()
+						clientTLSConfig.NextProtos = []string{"http/1.1", "h2"}
+						return tls.Dial(network, addr, clientTLSConfig)
+					},
+				}
+			},
+		},
+		{
+			// A proxy that does not implement ALPN offers no protocols at all.
+			// The handshake must succeed, negotiate nothing, and still serve
+			// HTTP/2 through the h2c handler.
+			desc:         "tls client with no alpn against h2 only server",
+			serverProtos: []string{"h2"},
+			scheme:       "http",
+			wantProto:    "HTTP/2.0",
+			transport: func() http.RoundTripper {
+				return &http2.Transport{
+					AllowHTTP: true,
+					DialTLSContext: func(_ context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+						clientTLSConfig := scenario.ClientTLSConfig()
+						clientTLSConfig.NextProtos = nil
+						return tls.Dial(network, addr, clientTLSConfig)
+					},
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
+			serverProtos := tt.serverProtos
+			if serverProtos == nil {
+				serverProtos = defaultServerProtos
+			}
+			serverTLSConfig := scenario.ServerTLSConfig()
+			serverTLSConfig.NextProtos = append([]string(nil), serverProtos...)
+
 			testTransport := NewTransport()
 			inbound := testTransport.NewInbound(
 				"127.0.0.1:0",
@@ -566,15 +613,15 @@ func TestInboundHTTP2OverTLS(t *testing.T) {
 			assert.Equal(t, tt.wantProto, res.Proto, "unexpected protocol used to serve the response")
 
 			// The caller owned configuration must never be mutated.
-			assert.Equal(t, []string{"http/1.1"}, serverTLSConfig.NextProtos)
+			assert.Equal(t, serverProtos, serverTLSConfig.NextProtos)
 		})
 	}
 }
 
 // TestWithHTTP2ALPN verifies that the TLS configuration handed to the mux
-// listener advertises h2 without dropping http/1.1 or reordering the already
-// configured protocols, and that the caller owned configuration is never
-// mutated.
+// listener advertises h2 ranked below http/1.1, that the relative order of the
+// other configured protocols is preserved, and that the caller owned
+// configuration is never mutated.
 func TestWithHTTP2ALPN(t *testing.T) {
 	tests := []struct {
 		desc string
@@ -584,8 +631,19 @@ func TestWithHTTP2ALPN(t *testing.T) {
 		{desc: "empty", give: nil, want: []string{"http/1.1", "h2"}},
 		{desc: "http1 only", give: []string{"http/1.1"}, want: []string{"http/1.1", "h2"}},
 		{desc: "http1 and h2", give: []string{"http/1.1", "h2"}, want: []string{"http/1.1", "h2"}},
-		{desc: "h2 only", give: []string{"h2"}, want: []string{"h2"}},
 		{desc: "custom protocol", give: []string{"myproto"}, want: []string{"myproto", "http/1.1", "h2"}},
+
+		// "h2" must never outrank "http/1.1": a client offering both, such as
+		// this package's HTTP/1.1 outbound, would otherwise negotiate "h2" and
+		// then speak HTTP/1.1.
+		{desc: "h2 only", give: []string{"h2"}, want: []string{"http/1.1", "h2"}},
+		{desc: "h2 before http1", give: []string{"h2", "http/1.1"}, want: []string{"http/1.1", "h2"}},
+		{desc: "h2 before custom protocol", give: []string{"h2", "myproto"}, want: []string{"http/1.1", "h2", "myproto"}},
+		{desc: "custom protocol before h2", give: []string{"myproto", "h2"}, want: []string{"myproto", "http/1.1", "h2"}},
+
+		// Already correct: "http/1.1" outranks "h2", so the list is untouched
+		// even though the two are not adjacent.
+		{desc: "http1 and h2 with protocol between", give: []string{"http/1.1", "myproto", "h2"}, want: []string{"http/1.1", "myproto", "h2"}},
 	}
 
 	for _, tt := range tests {

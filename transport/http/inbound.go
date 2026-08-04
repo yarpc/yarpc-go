@@ -326,17 +326,12 @@ func (i *Inbound) start() error {
 		protos.SetUnencryptedHTTP2(true)
 		i.server.Protocols = &protos
 
-		// http.Server.Protocols selects the protocol at the connection layer:
-		// HTTP/2 over TLS is only chosen when ALPN negotiated "h2", and
-		// SetUnencryptedHTTP2 only applies to connections that are not
-		// *tls.Conn.
-		//
-		// When TLS is enabled the mux listener terminates TLS itself and hands
-		// the server an already established *tls.Conn, so a client that speaks
-		// HTTP/2 with prior knowledge without offering ALPN would be served
-		// HTTP/1.1. Wrapping the handler with h2c restores the pre-Go-1.26
-		// behavior of detecting the HTTP/2 client preface at the request layer
-		// for those connections.
+		// http.Server.Protocols decides at the connection layer: over TLS it
+		// selects HTTP/2 from ALPN only, and SetUnencryptedHTTP2 applies just
+		// to non-TLS connections. The mux listener hands the server an already
+		// established *tls.Conn, so a prior-knowledge HTTP/2 client offering no
+		// ALPN would be served HTTP/1.1. h2c restores the pre-Go-1.26 preface
+		// detection at the request layer for those connections.
 		i.server.Handler = h2c.NewHandler(httpHandler, &http2.Server{})
 	}
 
@@ -357,9 +352,8 @@ func (i *Inbound) start() error {
 
 		tlsConfig := i.tlsConfig
 		if !i.disableHTTP2 {
-			// The mux listener terminates TLS with this configuration, not with
-			// http.Server.TLSConfig, so "h2" must be advertised here for ALPN
-			// capable HTTP/2 clients to negotiate HTTP/2.
+			// The mux listener terminates TLS with this config, not with
+			// http.Server.TLSConfig, so "h2" must be advertised here.
 			tlsConfig = withHTTP2ALPN(tlsConfig)
 		}
 
@@ -386,39 +380,60 @@ func (i *Inbound) start() error {
 	return nil
 }
 
-// withHTTP2ALPN returns a copy of the given TLS configuration that also
-// advertises HTTP/2 over ALPN, so that HTTP/2 clients negotiating "h2" are
-// served HTTP/2 instead of failing or being downgraded.
+// withHTTP2ALPN returns a TLS configuration advertising "h2" over ALPN, always
+// ranked below "http/1.1".
 //
-// "h2" is appended with the lowest preference and the relative order of the
-// protocols already configured is preserved. Go's TLS server resolves ALPN
-// using the server's preference order, and clients that offer both "http/1.1"
-// and "h2" are not necessarily able to speak HTTP/2 over TLS: the HTTP/1.1
-// outbound of this package, for instance, advertises both but always speaks
-// HTTP/1.1. Promoting "h2" would break those peers, so the negotiated protocol
-// is only changed for clients that do not offer any of the previously
-// configured protocols. Clients using HTTP/2 with prior knowledge are handled
-// by the h2c handler instead.
+// Go's TLS server picks the first of its own protocols that the client also
+// offers, so whichever of the two is listed first decides the protocol for any
+// client offering both. Offering "h2" does not mean a client can speak it over
+// TLS: the HTTP/1.1 outbound of this package advertises both yet always speaks
+// HTTP/1.1, and answering it in HTTP/2 breaks the connection. Ranking
+// "http/1.1" first protects those peers, while clients offering only "h2" still
+// match it. Clients using HTTP/2 with prior knowledge send no ALPN at all and
+// are handled by the h2c handler instead.
 //
-// "http/1.1" is added when missing: Go's TLS server aborts the handshake with
-// no_application_protocol when a client offers ALPN protocols and none of them
-// is supported by the server, so advertising "h2" alone would break plain
-// HTTPS/1.1 clients rather than downgrading them.
+// An "h2"-first configuration is therefore rewritten rather than honored. The
+// relative order of every other protocol is preserved.
 func withHTTP2ALPN(config *tls.Config) *tls.Config {
-	if slices.Contains(config.NextProtos, http2.NextProtoTLS) {
+	h2Index := slices.Index(config.NextProtos, http2.NextProtoTLS)
+	http11Index := slices.Index(config.NextProtos, http11NextProtoTLS)
+
+	// "http/1.1" already outranks "h2", nothing to do.
+	if h2Index >= 0 && http11Index >= 0 && http11Index < h2Index {
 		return config
 	}
 
-	// Clone so that the configuration owned by the caller is left untouched.
-	// Note that Clone copies the NextProtos slice header, so a fresh slice is
-	// built rather than mutating the existing one in place.
+	// Clone leaves the caller's config untouched, but it copies the NextProtos
+	// slice header, so build a fresh slice rather than appending in place.
 	newConfig := config.Clone()
-	protos := make([]string, 0, len(config.NextProtos)+2)
-	protos = append(protos, config.NextProtos...)
-	if !slices.Contains(protos, http11NextProtoTLS) {
-		protos = append(protos, http11NextProtoTLS)
+
+	if h2Index < 0 {
+		// "h2" is ours to add, so it goes last and outranks nothing.
+		protos := make([]string, 0, len(config.NextProtos)+2)
+		protos = append(protos, config.NextProtos...)
+		if http11Index < 0 {
+			protos = append(protos, http11NextProtoTLS)
+		}
+		newConfig.NextProtos = append(protos, http2.NextProtoTLS)
+		return newConfig
 	}
-	newConfig.NextProtos = append(protos, http2.NextProtoTLS)
+
+	// Move, or add, "http/1.1" immediately before the configured "h2".
+	protos := make([]string, 0, len(config.NextProtos)+1)
+	for _, proto := range config.NextProtos {
+		switch proto {
+		case http11NextProtoTLS:
+			// Re-inserted below, immediately before "h2".
+		case http2.NextProtoTLS:
+			if !slices.Contains(protos, http11NextProtoTLS) {
+				protos = append(protos, http11NextProtoTLS)
+			}
+			protos = append(protos, proto)
+		default:
+			protos = append(protos, proto)
+		}
+	}
+	newConfig.NextProtos = protos
 	return newConfig
 }
 
