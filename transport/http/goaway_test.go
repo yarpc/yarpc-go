@@ -43,24 +43,42 @@ import (
 func TestHTTP2GoAwayReplay(t *testing.T) {
 	tests := []struct {
 		name    string
+		rejects int32 // Number of requests the server rejects with GOAWAY
 		mw      middleware.UnaryOutbound
 		reqBody io.Reader
 		wantErr bool
 	}{
 		{
-			name:    "no-op middleware, valid Request.Body; relay occurs",
+			name:    "no GOAWAY: no-op middleware, valid Request.Body; usual operation",
+			rejects: 0,
 			mw:      middleware.NopUnaryOutbound,
 			reqBody: getH2ValidBody(),
 			wantErr: false,
 		},
 		{
-			name:    "no-op middleware, invalid Request.Body; relay fails",
+			name:    "no GOAWAY: no-op middleware, invalid Request.Body; usual operation",
+			rejects: 0,
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2InvalidBody(),
+			wantErr: false,
+		},
+		{
+			name:    "one GOAWAY: no-op middleware, valid Request.Body; relay occurs",
+			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2ValidBody(),
+			wantErr: false,
+		},
+		{
+			name:    "one GOAWAY: no-op middleware, invalid Request.Body; relay fails",
+			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
 			mw:      middleware.NopUnaryOutbound,
 			reqBody: getH2InvalidBody(),
 			wantErr: true,
 		},
 		{
-			name:    "custom middleware, valid Request.Body becomes invalid; replay fails",
+			name:    "one GOAWAY: custom middleware, valid Request.Body becomes invalid; replay fails",
+			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
 			mw:      someCustomMiddleware{},
 			reqBody: getH2ValidBody(),
 			wantErr: true,
@@ -70,20 +88,8 @@ func TestHTTP2GoAwayReplay(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			server := newH2CGoAwayServer(t)
-
-			httpTransport := NewTransport()
-			require.NoError(t, httpTransport.Start(), "failed to start http transport")
-			t.Cleanup(func() { assert.NoError(t, httpTransport.Stop()) })
-
-			out := httpTransport.NewSingleOutbound("http://"+server.addr(), UseHTTP2())
-			require.NoError(t, out.Start(), "failed to start http2 outbound")
-			t.Cleanup(func() {
-				assert.NoError(t, out.Stop())
-				out.client.CloseIdleConnections()
-			})
-
-			outboundWithMiddleware := middleware.ApplyUnaryOutbound(out, tt.mw)
+			server := newH2CGoAwayServer(t, tt.rejects)
+			outboundWithMiddleware := makeYarpcOutbound(t, server, tt.mw)
 
 			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 			t.Cleanup(cancel)
@@ -106,6 +112,115 @@ func TestHTTP2GoAwayReplay(t *testing.T) {
 	}
 }
 
+// BenchmarkHTTP2GoAway exercises HTTP/2 transport implementation w.r.t. GOAWAY frames.
+// In particular, it focuses on net/http.Request creation, reads, and allocations in cases where an
+// HTTP/2 server sends GOAWAY frames.
+func BenchmarkHTTP2GoAway(b *testing.B) {
+	var (
+		blackholeResp *transport.Response
+		blackholeErr  error
+	)
+
+	benchs := []struct {
+		name    string
+		rejects int32 // Number of requests the server rejects with GOAWAY
+		mw      middleware.UnaryOutbound
+		reqBody io.Reader
+	}{
+		{
+			name:    "happy path: no-op middleware, no GOAWAY, valid Request.Body",
+			rejects: 0,
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2ValidBody(),
+		},
+		{
+			name:    "happy path: no-op middleware, no GOAWAY, invalid Request.Body",
+			rejects: 0,
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2InvalidBody(),
+		},
+		{
+			name:    "sad path: no-op middleware, one GOAWAY, valid Request.Body",
+			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2ValidBody(),
+		},
+		{
+			name:    "sad path: no-op middleware, one GOAWAY, invalid Request.Body",
+			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2InvalidBody(),
+		},
+		{
+			name:    "sad path: custom middleware, one GOAWAY, valid Request.Body becomes invalid",
+			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
+			mw:      someCustomMiddleware{},
+			reqBody: getH2ValidBody(),
+		},
+		{
+			name:    "saddest path: no-op middleware, always GOAWAY, valid Request.Body",
+			rejects: -1, // -1 means always reject with GOAWAY
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2ValidBody(),
+		},
+		{
+			name:    "saddest path: no-op middleware, always GOAWAY, invalid Request.Body",
+			rejects: -1, // -1 means always reject with GOAWAY
+			mw:      middleware.NopUnaryOutbound,
+			reqBody: getH2InvalidBody(),
+		},
+		{
+			name:    "saddest path: custom middleware, always GOAWAY, valid Request.Body becomes invalid",
+			rejects: -1, // -1 means always reject with GOAWAY
+			mw:      someCustomMiddleware{},
+			reqBody: getH2ValidBody(),
+		},
+	}
+	for _, bb := range benchs {
+		b.Run(bb.name, func(b *testing.B) {
+			server := newH2CGoAwayServer(b, bb.rejects)
+			outboundWithMiddleware := makeYarpcOutbound(b, server, bb.mw)
+
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+			b.Cleanup(cancel)
+
+			treq := &transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
+				Procedure: "some-procedure",
+				Body:      bb.reqBody,
+			}
+
+			b.ResetTimer()
+			for range b.N {
+				blackholeResp, blackholeErr = outboundWithMiddleware.Call(ctx, treq)
+			}
+			b.StopTimer()
+		})
+	}
+
+	_ = blackholeResp
+	_ = blackholeErr
+}
+
+func makeYarpcOutbound(tb testing.TB, s *h2cGoAwayServer, mw middleware.UnaryOutbound) transport.UnaryOutbound {
+	tb.Helper()
+
+	httpTransport := NewTransport()
+	require.NoError(tb, httpTransport.Start(), "failed to start http transport")
+	tb.Cleanup(func() { assert.NoError(tb, httpTransport.Stop()) })
+
+	out := httpTransport.NewSingleOutbound("http://"+s.addr(), UseHTTP2())
+	require.NoError(tb, out.Start(), "failed to start http2 outbound")
+	tb.Cleanup(func() {
+		assert.NoError(tb, out.Stop())
+		out.client.CloseIdleConnections()
+	})
+
+	return middleware.ApplyUnaryOutbound(out, mw)
+}
+
 func getH2ValidBody() io.Reader {
 	// transport.Request.Body must be one of *bytes.Buffer, *bytes.Reader, or *strings.Reader.
 	return strings.NewReader("some-payload")
@@ -116,26 +231,33 @@ func getH2InvalidBody() io.Reader {
 	return &someCustomBody{reader: strings.NewReader("some-payload")}
 }
 
-// --- HTTP/2 server: immediately send GOAWAY frame ---
+// --- HTTP/2 server: send a configurable number of GOAWAY frames ---
 
 // h2cGoAwayServer is a minimal cleartext HTTP/2 server that sends a GOAWAY on
-// the first request and answers subsequent requests with 200. This reproduces
-// the net/http2 internal replay path that requires http.Request.GetBody to be
-// set.
+// to a configurable number of requests and answers with 200 to the rest.
+// This reproduces the net/http2 internal replay path that requires
+// http.Request.GetBody to be set.
 type h2cGoAwayServer struct {
-	listener net.Listener
-	requests atomic.Int32
+	listener     net.Listener
+	requests     atomic.Int32
+	rejectBefore int32 // Number of requests to reject with GOAWAY before accepting the rest; -1 rejects all requests.
 }
 
-func newH2CGoAwayServer(t *testing.T) *h2cGoAwayServer {
-	t.Helper()
+func newH2CGoAwayServer(tb testing.TB, rejectBefore int32) *h2cGoAwayServer {
+	tb.Helper()
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err, "failed to listen for the h2c server")
+	require.NoError(tb, err, "failed to listen for the h2c server")
 
-	s := &h2cGoAwayServer{listener: ln}
+	if rejectBefore < -1 {
+		rejectBefore = -1
+	}
+	s := &h2cGoAwayServer{
+		listener:     ln,
+		rejectBefore: rejectBefore,
+	}
 	go s.serve()
-	t.Cleanup(func() { _ = ln.Close() })
+	tb.Cleanup(func() { _ = ln.Close() })
 	return s
 }
 
@@ -168,9 +290,9 @@ func (s *h2cGoAwayServer) handleConn(conn net.Conn) {
 		return
 	}
 
-	// First request ever: send GOAWAY with LastStreamID=0 so net/http2 considers
-	// stream 1 "not processed" and replays it on a new connection.
-	if s.requests.Add(1) == 1 {
+	// Send GOAWAY to any LastStreamID (-1) or LastStreamID <= s.rejectBefore so
+	// net/http2 considers stream "not processed" and replays it on a new connection.
+	if s.rejectBefore == -1 || s.requests.Add(1) <= s.rejectBefore {
 		_ = framer.WriteGoAway(0, http2.ErrCodeNo, nil)
 		return
 	}
