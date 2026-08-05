@@ -452,13 +452,28 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 
 func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
+
+	// Prepare to patch net/http.Request.GetBody if needed
+	var helper *getBodyHelper
+	if needGetBodyHelper(treq) {
+		if h, err := newGetBodyHelper(treq); err == nil {
+			helper = h
+		} else {
+			return nil, err
+		}
+	}
+
 	hreq, err := http.NewRequest("POST", newURL.String(), treq.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := ensureGetBody(hreq, treq); err != nil {
-		return nil, err
+	// Patch net/http.Request.GetBody through getBodyHelper
+	if helper != nil {
+		err := helper.EnsureGetBody(hreq)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
@@ -755,33 +770,126 @@ func (o *Outbound) Introspect() introspection.OutboundStatus {
 // See https://cs.opensource.google/go/go/+/refs/tags/go1.26.5:src/net/http/request.go;l=196.
 type httpGetBodyFunc func() (io.ReadCloser, error)
 
-// ensureGetBody checks for net/http.Request.GetBody presence, setting it if absent.
-// Its absence can be due to a concrete type of transport.Request.Body for which the underlying net/http library does not provide a GetBody implementation automatically.
+// getBodyHelper is a supporting struct for lazy body reading.
+type getBodyHelper struct {
+	once       sync.Once
+	treq       *transport.Request
+	buf        *bytes.Buffer
+	reader     io.ReadSeeker
+	mustRewind bool
+}
+
+// needGetBodyHelper checks if a GetBody function will be needed for the transport.Request body.
+// This must remain aligned with net/http.NewRequest behavior.
 // See https://cs.opensource.google/go/go/+/refs/tags/go1.26.5:src/net/http/request.go;l=884.
-func ensureGetBody(hreq *http.Request, treq *transport.Request) error {
-	// GetBody already populated: prevent overwriting it
-	if hreq.GetBody != nil {
-		return nil
+func needGetBodyHelper(treq *transport.Request) bool {
+	if treq == nil || treq.Body == nil {
+		return false
 	}
+
+	// Match Go net/http library
+	switch treq.Body.(type) {
+	case *bytes.Buffer, *bytes.Reader, *strings.Reader:
+		return false
+	default:
+		return true
+	}
+}
+
+// newGetBodyHelper is a constructor for getBodyHelper.
+// Returns an instance of getBodyHelper with the provided raw buffer, or an error on failures.
+func newGetBodyHelper(treq *transport.Request) (*getBodyHelper, error) {
+	// TODO: data races / consistency between first Body read & GetBody calls ?
 	if treq.Body == nil {
-		// TODO: silently ignore nil body ?
-		return nil
+		return nil, errors.New("request body is nil, cannot create getBodyHelper")
 	}
-	hreq.GetBody = newGetBodyFunc(treq)
+
+	helper := &getBodyHelper{
+		treq: treq,
+	}
+
+	// Leverage io.Seeker or swap for io.TeeReader
+	_, isSeeker := treq.Body.(io.ReadSeeker)
+	helper.mustRewind = isSeeker
+	if !isSeeker {
+		// Redirect bytes read from original reader into buffer for later replay
+		helper.buf = &bytes.Buffer{}
+		teeReader := io.TeeReader(treq.Body, helper.buf)
+		treq.Body = ioutil.NopCloser(teeReader)
+	}
+
+	// Prevent calling Init here so buffer read is delayed until first GetBody call
+	return helper, nil
+}
+
+// initFromSeeker initializes the getBodyHelper from a transport.Request.Body that implements io.Seeker.
+// For the same getBodyHelper instance, it is mutually exclusive with initFromTeeReader; exactly one of the two must be executed.
+func (h *getBodyHelper) initFromSeeker() error {
+	// Simply re-use original reader and set mustRewind for next GetBody call
+	h.reader = h.treq.Body.(io.ReadSeeker)
+	h.mustRewind = true
 	return nil
 }
 
-// newGetBodyFunc creates a function suitable for use in net/http.Request.GetBody field.
+// initFromTeeReader initializes the getBodyHelper from a transport.Request.Body that has been swapped for a io.TeeReader.
+// For the same getBodyHelper instance, it is mutually exclusive with initFromSeeker; exactly one of the two must be executed.
+func (h *getBodyHelper) initFromTeeReader() error {
+	if h.buf == nil || h.buf.Len() == 0 {
+		return errors.New("buffer is nil or empty, cannot initialize getBodyHelper from TeeReader")
+	}
+
+	// Raw buffer has already been populated by the TeeReader, simply create a new bytes.Reader on it
+	h.reader = bytes.NewReader(h.buf.Bytes())
+	h.mustRewind = false
+	return nil
+}
+
+// Init ensures that the request body is behind a io.Reader that can be rewinded.
+// Safe to be called multiple times.
+func (h *getBodyHelper) Init() error {
+	var err error
+	h.once.Do(func() {
+		if h.mustRewind {
+			// Must rewind during init represents original body impls io.Seeker
+			err = multierr.Combine(err, h.initFromSeeker())
+		} else {
+			// Otherwise: TeeReader has been used to populate buffer during previous read
+			err = multierr.Combine(err, h.initFromTeeReader())
+		}
+	})
+	if h.reader == nil {
+		err = multierr.Combine(errors.New("failed to initialize getBodyHelper reader"), err)
+	}
+	return err
+}
+
+// Implements the io.Reader interface.
+func (h *getBodyHelper) Read(p []byte) (int, error) {
+	// Ensure reader initialization on first Read call
+	if err := h.Init(); err != nil {
+		return 0, err
+	}
+
+	// Ensure next GetBody call will rewind the reader
+	defer func() {
+		// TODO: err check from Read ?
+		h.mustRewind = true
+	}()
+
+	// TODO: read & seek ops might need data race protection
+	return h.reader.Read(p)
+}
+
+// NewGetBody creates a function suitable for use in net/http.Request.GetBody field.
 //
 // Intent is to provide a GetBody function proxy that executes as late as possible and only in case of a HTTP/2 GOAWAY reception.
 // By doing so, performance on the happy path is not impacted, with an extra buffer read only needed on the sad path.
-func newGetBodyFunc(treq *transport.Request) httpGetBodyFunc {
-	// This io.Reader concrete impl uses above buffer & a rewindable bytes.Reader on it
-	h, err := newGetBodyHelper(treq)
-	if err != nil {
-		return nil
-	}
+func (h *getBodyHelper) NewGetBody() httpGetBodyFunc {
 	return func() (io.ReadCloser, error) {
+		// Ensure reader initialization on first GetBody call
+		if err := h.Init(); err != nil {
+			return nil, err
+		}
 		// Rewind reader if needed
 		if h.mustRewind {
 			_, err := h.reader.Seek(0, io.SeekStart)
@@ -795,69 +903,21 @@ func newGetBodyFunc(treq *transport.Request) httpGetBodyFunc {
 	}
 }
 
-// getBodyHelper is a supporting struct for lazy body reading.
-type getBodyHelper struct {
-	once       sync.Once
-	treq       *transport.Request
-	rawBuf     []byte
-	reader     *bytes.Reader
-	mustRewind bool
-}
-
-// newGetBodyHelper is a constructor for getBodyHelper.
-// Returns an instance of getBodyHelper with the provided raw buffer, or an error on failures.
-func newGetBodyHelper(treq *transport.Request) (*getBodyHelper, error) {
-	// TODO: data races / consistency between first Body read & GetBody calls ?
-	if treq.Body == nil {
-		return nil, errors.New("request body is nil, cannot create getBodyHelper")
+// EnsureGetBody checks for net/http.Request.GetBody presence, setting it if absent.
+//
+// Its absence can be due to a concrete type of transport.Request.Body for which the underlying net/http library does not provide a GetBody implementation automatically.
+// See https://cs.opensource.google/go/go/+/refs/tags/go1.26.5:src/net/http/request.go;l=884.
+func (h *getBodyHelper) EnsureGetBody(hreq *http.Request) error {
+	// GetBody already populated: prevent overwriting it
+	if hreq.GetBody != nil {
+		return nil
 	}
-
-	// Prevent calling Init here so buffer read is delayed until first GetBody call
-	return &getBodyHelper{
-		treq: treq,
-	}, nil
-}
-
-// Init ensures that the request body is behind a io.Reader that can be rewinded; safe to be called multiple times.
-func (h *getBodyHelper) Init() error {
-	var err error
-	// Populate buffer only once
-	h.once.Do(func() {
-		// TODO: is this using buffer pool?
-		b, readErr := io.ReadAll(h.treq.Body)
-		err = multierr.Combine(err, readErr)
-		if readErr == nil {
-			h.rawBuf = b
-		}
-		if err == nil && len(h.rawBuf) == 0 {
-			err = multierr.Combine(err, errors.New("raw buffer is empty"))
-		}
-		if err == nil {
-			h.reader = bytes.NewReader(h.rawBuf)
-			h.mustRewind = false
-		}
-	})
-	if h.reader == nil {
-		err = multierr.Combine(errors.New("failed to initialize getBodyHelper reader"), err)
+	if h.treq.Body == nil {
+		// TODO: silently ignore nil body ?
+		return nil
 	}
-	return err
-}
-
-// Implements the io.Reader interface.
-func (h *getBodyHelper) Read(p []byte) (int, error) {
-	// Ensure reader initialization
-	if err := h.Init(); err != nil {
-		return 0, err
-	}
-
-	// Ensure next GetBody call will rewind the reader
-	defer func() {
-		// TODO: err check from Read ?
-		h.mustRewind = true
-	}()
-
-	// TODO: read & seek ops might need data race protection
-	return h.reader.Read(p)
+	hreq.GetBody = h.NewGetBody()
+	return nil
 }
 
 var (
