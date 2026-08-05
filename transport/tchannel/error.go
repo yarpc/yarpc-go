@@ -61,6 +61,11 @@ type ytchanError struct {
 
 func (y *ytchanError) Error() string { return y.err.Message() }
 
+// Unwrap exposes the underlying tchannel.SystemError so that standard library
+// helpers (errors.As, errors.Is) can inspect the original transport error
+// through the YARPC error chain.
+func (y *ytchanError) Unwrap() error { return y.err }
+
 func fromSystemError(err tchannel.SystemError) error {
 	code, ok := _tchannelCodeToCode[err.Code()]
 	if !ok {
