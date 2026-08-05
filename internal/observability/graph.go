@@ -27,8 +27,10 @@ import (
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/net/metrics/bucket"
+	"go.uber.org/yarpc/api/metrics/metricstagdecorator"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/digester"
+	"go.uber.org/yarpc/internal/sampledlogger"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -36,6 +38,8 @@ import (
 var (
 	_timeNow          = time.Now // for tests
 	_defaultGraphSize = 128
+	_logInterval      = time.Duration(5 * time.Minute)
+
 	// Latency buckets for histograms. At some point, we may want to make these
 	// configurable.
 	_bucketsMs = bucket.NewRPCLatency()
@@ -72,9 +76,10 @@ type graph struct {
 	logger           *zap.Logger
 	extract          ContextExtractor
 	ignoreMetricsTag *metricsTagIgnore
-
-	edgesMu sync.RWMutex
-	edges   map[string]*edge
+	decoratorTags    []metricstagdecorator.MetricsTagDecorator
+	sampledLogger    *sampledlogger.SampledLogger
+	edgesMu          sync.RWMutex
+	edges            map[string]*edge
 
 	inboundLevels, outboundLevels levels
 }
@@ -164,13 +169,15 @@ func (m *metricsTagIgnore) tags(req *transport.Request, direction string, rpcTyp
 	return tags
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string) graph {
+func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string, metricsTagsDecorators []metricstagdecorator.MetricsTagDecorator) graph {
 	return graph{
 		edges:            make(map[string]*edge, _defaultGraphSize),
 		meter:            meter,
 		logger:           logger,
 		extract:          extract,
 		ignoreMetricsTag: newMetricsTagIgnore(metricTagsIgnore),
+		decoratorTags:    metricsTagsDecorators,
+		sampledLogger:    sampledlogger.NewSampledLogger(_logInterval, logger),
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -220,7 +227,7 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	if !g.ignoreMetricsTag.rpcType {
 		d.Add(rpcType.String())
 	}
-	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)
+	e := g.getOrCreateEdge(ctx, d.Digest(), req, string(direction), rpcType)
 	d.Free()
 
 	levels := &g.inboundLevels
@@ -240,11 +247,11 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	}
 }
 
-func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func (g *graph) getOrCreateEdge(ctx context.Context, key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	if e := g.getEdge(key); e != nil {
 		return e
 	}
-	return g.createEdge(key, req, direction, rpcType)
+	return g.createEdge(ctx, key, req, direction, rpcType)
 }
 
 func (g *graph) getEdge(key []byte) *edge {
@@ -254,7 +261,7 @@ func (g *graph) getEdge(key []byte) *edge {
 	return e
 }
 
-func (g *graph) createEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func (g *graph) createEdge(ctx context.Context, key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	g.edgesMu.Lock()
 	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
 	defer g.edgesMu.Unlock()
@@ -264,7 +271,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string,
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, req, direction, rpcType)
+	e := newEdge(ctx, g.logger, g.sampledLogger, g.meter, g.ignoreMetricsTag, g.decoratorTags, req, direction, rpcType)
 	g.edges[string(key)] = e
 	return e
 }
@@ -309,8 +316,16 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func newEdge(ctx context.Context, logger *zap.Logger, sampledLogger *sampledlogger.SampledLogger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, decoratorTags []metricstagdecorator.MetricsTagDecorator, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := tagToIgnore.tags(req, direction, rpcType)
+
+	// Merge custom decorator tags into the YARPC metrics base tag set.
+	customDecoratorTags := getDecoratorTags(ctx, sampledLogger, decoratorTags)
+	if customDecoratorTags != nil {
+		for key, value := range *customDecoratorTags {
+			tags[key] = value
+		}
+	}
 
 	// metrics for all RPCs
 	calls, err := meter.Counter(metrics.Spec{
@@ -602,4 +617,24 @@ func unknownIfEmpty(t string) string {
 		t = "unknown"
 	}
 	return t
+}
+
+// getDecoratorTags collects tags from all provided MetricsTagDecorators.
+func getDecoratorTags(ctx context.Context, sampledLogger *sampledlogger.SampledLogger, metricsTagsDecorators []metricstagdecorator.MetricsTagDecorator) *metrics.Tags {
+	if len(metricsTagsDecorators) == 0 {
+		return nil
+	}
+
+	decoratorTags := metrics.Tags{}
+	for _, decorator := range metricsTagsDecorators {
+		tags := decorator.ProvideTags(ctx)
+		for key, value := range tags {
+			if oldValue, exists := decoratorTags[key]; exists {
+				sampledLogger.Warn("MetricsTagsDecorators is overwriting metric tag", zap.String("key", key), zap.String("old", oldValue), zap.String("new", value))
+			}
+			decoratorTags[key] = value
+		}
+	}
+
+	return &decoratorTags
 }
