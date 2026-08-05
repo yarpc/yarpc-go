@@ -49,28 +49,28 @@ func TestHTTP2GoAwayReplay(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "no GOAWAY: no-op middleware, valid Request.Body; usual operation",
+			name:    "no GOAWAY: no-op middleware, valid Request.Body; no replay needed",
 			rejects: 0,
 			mw:      middleware.NopUnaryOutbound,
 			reqBody: getH2ValidBody(),
 			wantErr: false,
 		},
 		{
-			name:    "no GOAWAY: no-op middleware, invalid Request.Body; usual operation",
+			name:    "no GOAWAY: no-op middleware, invalid Request.Body; no replay needed",
 			rejects: 0,
 			mw:      middleware.NopUnaryOutbound,
 			reqBody: getH2InvalidBody(),
 			wantErr: false,
 		},
 		{
-			name:    "one GOAWAY: no-op middleware, valid Request.Body; relay occurs",
+			name:    "one GOAWAY: no-op middleware, valid Request.Body; replay succeeds",
 			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
 			mw:      middleware.NopUnaryOutbound,
 			reqBody: getH2ValidBody(),
 			wantErr: false,
 		},
 		{
-			name:    "one GOAWAY: no-op middleware, invalid Request.Body; relay fails",
+			name:    "one GOAWAY: no-op middleware, invalid Request.Body; replay fails",
 			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
 			mw:      middleware.NopUnaryOutbound,
 			reqBody: getH2InvalidBody(),
