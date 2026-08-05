@@ -17,6 +17,8 @@ ignore:
  - /api/transport/tls/
  - /encoding/protobuf/internal/testpb/
  - /encoding/protobuf/internal/testpb/v2/
+ - /encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/
+ - /encoding/protobuf/protoc-gen-yarpc-go/internal/tests/withuuid/
  - /encoding/thrift/internal/
  - /encoding/thrift/internal/observabilitytest/test/
  - /encoding/thrift/internal/observabilitytest/test/testserviceclient/
