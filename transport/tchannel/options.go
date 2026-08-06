@@ -28,6 +28,8 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
+	"go.opentelemetry.io/otel/propagation"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/net/metrics"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
@@ -56,6 +58,8 @@ type transportOptions struct {
 	ch                             Channel
 	tracer                         opentracing.Tracer
 	tracingInterceptorEnabled      bool
+	otelTracerProvider             oteltrace.TracerProvider
+	otelPropagator                 propagation.TextMapPropagator
 	logger                         *zap.Logger
 	meter                          *metrics.Scope
 	addr                           string
@@ -100,6 +104,23 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 func TracingInterceptorEnabled(enabled bool) TransportOption {
 	return func(t *transportOptions) {
 		t.tracingInterceptorEnabled = enabled
+	}
+}
+
+// OTelTracerProvider opts the transport into OpenTelemetry-native tracing.
+// When set, the transport installs the OTel tracing interceptor and disables
+// both the legacy OpenTracing tracer and the OpenTracing interceptor.
+func OTelTracerProvider(provider oteltrace.TracerProvider) TransportOption {
+	return func(t *transportOptions) {
+		t.otelTracerProvider = provider
+	}
+}
+
+// OTelPropagator sets the propagator used to inject and extract trace context
+// when OTelTracerProvider is set. Defaults to otel.GetTextMapPropagator().
+func OTelPropagator(propagator propagation.TextMapPropagator) TransportOption {
+	return func(t *transportOptions) {
+		t.otelPropagator = propagator
 	}
 }
 
