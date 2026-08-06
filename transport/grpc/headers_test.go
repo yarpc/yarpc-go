@@ -404,3 +404,19 @@ func BenchmarkIsReserved(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkAddApplicationHeaders(b *testing.B) {
+	headers := transport.HeadersFromMap(map[string]string{
+		"x-uber-source": "service-a",
+		"x-request-id":  "abc-123",
+		"x-trace-id":    "trace-456",
+		"x-custom-1":    "val1",
+		"x-custom-2":    "val2",
+	})
+
+	b.ResetTimer()
+	for range b.N {
+		md := metadata.New(nil)
+		_ = addApplicationHeaders(md, headers)
+	}
+}
