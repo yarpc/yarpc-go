@@ -1,0 +1,224 @@
+// Copyright (c) 2026 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+package yarpcklauspostgzip_test
+
+import (
+	"bytes"
+	stdgzip "compress/gzip"
+	"io"
+	"strconv"
+	"testing"
+
+	kpgzip "github.com/klauspost/compress/gzip"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	yarpcklauspostgzip "go.uber.org/yarpc/compressor/klauspostgzip"
+)
+
+// This should be compressible:
+var quote = "Now is the time for all good men to come to the aid of their country"
+var input = []byte(quote + quote + quote)
+
+// compressData compresses data using the given compressor and returns the compressed bytes.
+func compressData(tb testing.TB, compressor *yarpcklauspostgzip.Compressor, data []byte) []byte {
+	tb.Helper()
+	buf := bytes.NewBuffer(nil)
+	writer, err := compressor.Compress(buf)
+	require.NoError(tb, err)
+	_, err = writer.Write(data)
+	require.NoError(tb, err)
+	require.NoError(tb, writer.Close())
+	return buf.Bytes()
+}
+
+func TestGzip(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	writer, err := yarpcklauspostgzip.New().Compress(buf)
+	require.NoError(t, err)
+
+	_, err = writer.Write(input)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	str, err := yarpcklauspostgzip.New().Decompress(buf)
+	require.NoError(t, err)
+
+	output, err := io.ReadAll(str)
+	require.NoError(t, err)
+	require.NoError(t, str.Close())
+
+	assert.Equal(t, input, output)
+}
+
+func TestCompressionPooling(t *testing.T) {
+	compressor := yarpcklauspostgzip.New()
+	for i := 0; i < 128; i++ {
+		buf := bytes.NewBuffer(nil)
+		writer, err := compressor.Compress(buf)
+		require.NoError(t, err)
+
+		_, err = writer.Write(input)
+		require.NoError(t, err)
+		require.NoError(t, writer.Close())
+
+		str, err := compressor.Decompress(buf)
+		require.NoError(t, err)
+
+		output, err := io.ReadAll(str)
+		require.NoError(t, err)
+		require.NoError(t, str.Close())
+
+		assert.Equal(t, input, output)
+	}
+}
+
+func TestEveryCompressionLevel(t *testing.T) {
+	levels := []int{
+		kpgzip.NoCompression,
+		kpgzip.BestSpeed,
+		kpgzip.BestCompression,
+		kpgzip.DefaultCompression,
+		kpgzip.HuffmanOnly,
+		kpgzip.StatelessCompression,
+	}
+
+	for _, level := range levels {
+		t.Run(strconv.Itoa(level), func(t *testing.T) {
+			compressor := yarpcklauspostgzip.New(yarpcklauspostgzip.Level(level))
+
+			buf := bytes.NewBuffer(nil)
+			writer, err := compressor.Compress(buf)
+			require.NoError(t, err)
+
+			_, err = writer.Write(input)
+			require.NoError(t, err)
+			require.NoError(t, writer.Close())
+
+			str, err := compressor.Decompress(buf)
+			require.NoError(t, err)
+
+			output, err := io.ReadAll(str)
+			require.NoError(t, err)
+			require.NoError(t, str.Close())
+
+			assert.Equal(t, input, output)
+		})
+	}
+}
+
+func TestStdlibGzipCompatibility(t *testing.T) {
+	var buf bytes.Buffer
+	writer := stdgzip.NewWriter(&buf)
+	_, err := writer.Write(input)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	str, err := yarpcklauspostgzip.New().Decompress(&buf)
+	require.NoError(t, err)
+
+	output, err := io.ReadAll(str)
+	require.NoError(t, err)
+	require.NoError(t, str.Close())
+
+	assert.Equal(t, input, output)
+}
+
+func TestKlauspostGzipCompatibility(t *testing.T) {
+	compressor := yarpcklauspostgzip.New()
+	compressedData := compressData(t, compressor, input)
+
+	reader, err := stdgzip.NewReader(bytes.NewReader(compressedData))
+	require.NoError(t, err)
+
+	output, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	require.NoError(t, reader.Close())
+
+	assert.Equal(t, input, output)
+}
+
+func TestGzipName(t *testing.T) {
+	assert.Equal(t, "klauspostgzip", yarpcklauspostgzip.New().Name())
+}
+
+func TestDecompressedSize(t *testing.T) {
+	compressor := yarpcklauspostgzip.New(yarpcklauspostgzip.Level(kpgzip.BestCompression))
+
+	buf := bytes.NewBuffer(nil)
+	writer, err := compressor.Compress(buf)
+	require.NoError(t, err)
+
+	_, err = writer.Write(input)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	assert.Equal(t, len(input), compressor.DecompressedSize(buf.Bytes()))
+
+	// Sanity check
+	assert.True(t, buf.Len() < len(input), "one would think the compressed data would be smaller")
+	t.Logf("decompress: %d\n", len(input))
+	t.Logf("compressed: %d\n", buf.Len())
+}
+
+func TestDecompressedSizeError(t *testing.T) {
+	compressor := yarpcklauspostgzip.New(yarpcklauspostgzip.Level(kpgzip.BestCompression))
+	assert.Equal(t, -1, compressor.DecompressedSize([]byte{}))
+}
+
+func BenchmarkDecompressPooling(b *testing.B) {
+	compressor := yarpcklauspostgzip.New()
+
+	// Pre-compress data for decompression.
+	compressedData := compressData(b, compressor, input)
+
+	// Invalid gzip data that will cause Reset to fail.
+	invalidData := []byte("this is not valid gzip data")
+
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{"HappyPath", compressedData},
+		{"ErrorPath", invalidData},
+	}
+
+	for _, tt := range tests {
+		b.Run(tt.name, func(b *testing.B) {
+			// Warm up pool with valid data.
+			r, _ := compressor.Decompress(bytes.NewReader(compressedData))
+			if r != nil {
+				io.Copy(io.Discard, r)
+				r.Close()
+			}
+
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				reader, err := compressor.Decompress(bytes.NewReader(tt.data))
+				if err == nil {
+					io.Copy(io.Discard, reader)
+					reader.Close()
+				}
+			}
+		})
+	}
+}
