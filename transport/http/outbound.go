@@ -473,6 +473,9 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 		"rpc.service":   treq.Service,
 		"rpc.encoding":  treq.Encoding,
 		"rpc.transport": "http",
+		"span.kind":            ext.SpanKindRPCClientEnum,
+		string(ext.PeerService): treq.Service,
+		string(ext.HTTPUrl):     req.URL.String(),
 	}
 	for k, v := range yarpc.OpentracingTags {
 		tags[k] = v
@@ -483,9 +486,6 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 		opentracing.ChildOf(parent),
 		tags,
 	)
-	ext.PeerService.Set(span, treq.Service)
-	ext.SpanKindRPCClient.Set(span)
-	ext.HTTPUrl.Set(span, req.URL.String())
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	err := tracer.Inject(
