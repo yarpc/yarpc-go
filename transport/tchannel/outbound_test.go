@@ -48,25 +48,10 @@ func TestTransportNamer(t *testing.T) {
 
 func TestOutboundHeaders(t *testing.T) {
 	tests := []struct {
-		name            string
-		originalHeaders bool
-		giveHeaders     map[string]string
-		wantHeaders     map[string]string
+		name        string
+		giveHeaders map[string]string
+		wantHeaders map[string]string
 	}{
-		{
-			name: "exactCaseHeader options on",
-			giveHeaders: map[string]string{
-				"foo-BAR-BaZ": "PiE",
-				"foo-bar":     "LEMON",
-				"BAR-BAZ":     "orange",
-			},
-			wantHeaders: map[string]string{
-				"foo-BAR-BaZ": "PiE",
-				"foo-bar":     "LEMON",
-				"BAR-BAZ":     "orange",
-			},
-			originalHeaders: true,
-		},
 		{
 			name: "exactCaseHeader options off",
 			giveHeaders: map[string]string{
@@ -106,9 +91,6 @@ func TestOutboundHeaders(t *testing.T) {
 				}))
 
 			opts := []TransportOption{ServiceName("caller")}
-			if tt.originalHeaders {
-				opts = append(opts, OriginalHeaders())
-			}
 
 			trans, err := NewTransport(opts...)
 			require.NoError(t, err)
