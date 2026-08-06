@@ -137,6 +137,7 @@ func getBenchRequestWith(headers transport.Headers) *transport.Request {
 	return treq
 }
 
+// BenchmarkCreateRequest evaluates performance of outbound.CreateRequest().
 func BenchmarkCreateRequest(b *testing.B) {
 	out := &Outbound{urlTemplate: defaultURLTemplate}
 	var (
@@ -172,6 +173,60 @@ func BenchmarkCreateRequest(b *testing.B) {
 	}
 
 	_ = blackholeReq
+	_ = blackholeErr
+}
+
+// BenchmarkRequestGetBody evaluates performance of http.Request.GetBody() returned by outbound.CreateRequest().
+func BenchmarkRequestGetBody(b *testing.B) {
+	out := &Outbound{urlTemplate: defaultURLTemplate}
+	var (
+		blackholeBytes []byte
+		blackholeErr   error
+	)
+
+	benchs := []struct {
+		name    string
+		reqBody io.Reader
+		execs   int // Number of times to call the GetBody function
+	}{
+		{
+			name:    "happy path: one Body read, no GetBody calls, valid Request.Body",
+			reqBody: strings.NewReader("some-payload"),
+			execs:   0,
+		},
+		{
+			name:    "sad path: one Body read, one GetBody calls, valid Request.Body",
+			reqBody: strings.NewReader("some-payload"),
+			execs:   1,
+		},
+		{
+			name:    "saddest path: one Body read, multiple GetBody calls, valid Request.Body",
+			reqBody: strings.NewReader("some-payload"),
+			execs:   5,
+		},
+	}
+	for _, bb := range benchs {
+		b.Run(bb.name, func(b *testing.B) {
+			treq := getBenchRequest()
+			treq.Body = bb.reqBody
+			hreq, _ := out.createRequest(treq)
+			b.ResetTimer()
+			for range b.N {
+				// Simulate first read of net/http.Request.Body
+				blackholeBytes, blackholeErr = io.ReadAll(hreq.Body)
+
+				// Simulate subsequent reads via GetBody
+				for i := 0; i < bb.execs; i++ {
+					ioCloser, err := hreq.GetBody()
+					blackholeErr = err
+					blackholeBytes, blackholeErr = io.ReadAll(ioCloser)
+				}
+			}
+			b.StopTimer()
+		})
+	}
+
+	_ = blackholeBytes
 	_ = blackholeErr
 }
 
