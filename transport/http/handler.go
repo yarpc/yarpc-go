@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -42,10 +43,68 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	_lowerApplicationHeaderPrefix = "rpc-header-"
+	// Preallocating for eight or fewer headers did not reduce allocations in
+	// benchmarks, so avoid paying for an estimation scan on small requests.
+	_minInboundHeadersForPreallocation = 9
+	// Abandon estimation when unrelated HTTP headers dominate the request.
+	// This bounds scan cost and avoids overallocating both transport maps.
+	_maxIgnoredHeadersForPreallocation = 4
+)
+
 func popHeader(h http.Header, n string) string {
 	v := h.Get(n)
 	h.Del(n)
 	return v
+}
+
+func inboundHeaderCapacity(headers http.Header) int {
+	if len(headers) < _minInboundHeadersForPreallocation {
+		return 0
+	}
+
+	var (
+		capacity       int
+		ignoredHeaders int
+	)
+	for key := range headers {
+		if len(key) > 0 {
+			// net/http normally supplies canonical keys for HTTP/1 and
+			// lowercase keys for HTTP/2. Missing unusual mixed-case keys only
+			// lowers the capacity hint and does not affect propagation.
+			switch key[0] {
+			case 'R':
+				if strings.HasPrefix(key, ApplicationHeaderPrefix) {
+					capacity++
+					continue
+				}
+			case 'r':
+				if strings.HasPrefix(key, _lowerApplicationHeaderPrefix) {
+					capacity++
+					continue
+				}
+			case 'U', 'u':
+				if isTracingHeader(key) {
+					capacity++
+					continue
+				}
+			}
+		}
+
+		ignoredHeaders++
+		if ignoredHeaders > _maxIgnoredHeadersForPreallocation {
+			return 0
+		}
+	}
+	return capacity
+}
+
+func inboundHeaderCapacityWithHint(headers http.Header, hint int) int {
+	if hint > 0 {
+		return hint
+	}
+	return inboundHeaderCapacity(headers)
 }
 
 // handler adapts a transport.Handler into a handler for net/http.
@@ -58,6 +117,7 @@ type handler struct {
 	transport                                *Transport
 	overrideOriginalItemWithCanonicalizedKey bool
 	headerCaseMapping                        map[string][]string
+	headerCapacityHint                       int
 	// duplicate header counter vector
 	duplicateHeaderCounterVec *metrics.CounterVector
 }
@@ -115,7 +175,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		transportName = TransportHTTP2Name
 	}
 
-	transportHeader := transport.NewHeaders()
+	caller := popHeader(req.Header, CallerHeader)
+	encoding := transport.Encoding(popHeader(req.Header, EncodingHeader))
+	shardKey := popHeader(req.Header, ShardKeyHeader)
+	routingKey := popHeader(req.Header, RoutingKeyHeader)
+	routingDelegate := popHeader(req.Header, RoutingDelegateHeader)
+	callerProcedure := popHeader(req.Header, CallerProcedureHeader)
+
+	transportHeader := transport.NewHeadersWithCapacity(
+		inboundHeaderCapacityWithHint(req.Header, h.headerCapacityHint),
+	)
 	if h.overrideOriginalItemWithCanonicalizedKey {
 		transportHeader = transportHeader.EnableOverrideOriginalItemsWithCanonicalizedKeys()
 	}
@@ -123,18 +192,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		transportHeader = transportHeader.WithHeaderCaseMapping(h.headerCaseMapping)
 	}
 
-	caller := popHeader(req.Header, CallerHeader)
-
 	treq := &transport.Request{
 		Caller:          caller,
 		Service:         service,
 		Procedure:       procedure,
-		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
+		Encoding:        encoding,
 		Transport:       transportName,
-		ShardKey:        popHeader(req.Header, ShardKeyHeader),
-		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
-		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
-		CallerProcedure: popHeader(req.Header, CallerProcedureHeader),
+		ShardKey:        shardKey,
+		RoutingKey:      routingKey,
+		RoutingDelegate: routingDelegate,
+		CallerProcedure: callerProcedure,
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transportHeader),
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
