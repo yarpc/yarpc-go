@@ -21,7 +21,6 @@
 package grpc
 
 import (
-	"bytes"
 	"strings"
 	"time"
 
@@ -194,7 +193,7 @@ func (h *handler) handleUnary(
 		return err
 	}
 
-	transportRequest.Body = bytes.NewReader(requestData)
+	transportRequest.Body = newBytesBody(requestData)
 	transportRequest.BodySize = len(requestData)
 
 	responseWriter := newResponseWriter()
