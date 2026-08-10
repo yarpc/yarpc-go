@@ -23,7 +23,8 @@
 // generated from withuuid.proto by protoc-gen-yarpc-go using the same
 // dynamic FQN-based discovery mechanism the production plugin uses, so
 // these tests double as a contract that the generator continues to emit a
-// usable ActorUUID() accessor on every annotated request type.
+// usable ActorUUID() accessor on every declared message with a path to an
+// annotated leaf (request types and non-request messages alike).
 //
 // Mirrors encoding/thrift/thriftrw-plugin-yarpc/uuid_test.go's
 // TestGetGeneratedUUID, adapted to protobuf's getter conventions.
@@ -196,10 +197,39 @@ func TestActorUUIDAccessor_MapMessage(t *testing.T) {
 	})
 }
 
+// TestActorUUIDAccessor_NonRequestMessages pins the emission rule that
+// every message declared in the file with a path to an annotated leaf
+// gets an accessor - not just service request types. The declaring file
+// cannot know which services (possibly in other files or packages,
+// compiled in separate protoc runs) use its messages as request types,
+// so it emits for all of them; the accessors on non-request messages are
+// harmless and return coherent results.
+func TestActorUUIDAccessor_NonRequestMessages(t *testing.T) {
+	t.Run("message_declaring_the_leaf", func(t *testing.T) {
+		assert.Equal(t, []string{"deep-actor"},
+			(&InnerLevel{InnerUuid: "deep-actor"}).ActorUUID())
+	})
+
+	t.Run("intermediate_hops_get_their_own_chain", func(t *testing.T) {
+		assert.Equal(t, []string{"deep-actor"},
+			(&MidLevel{Inner: &InnerLevel{InnerUuid: "deep-actor"}}).ActorUUID())
+		assert.Equal(t, []string{"deep-actor"},
+			(&OuterLevel{Mid: &MidLevel{Inner: &InnerLevel{InnerUuid: "deep-actor"}}}).ActorUUID())
+	})
+
+	t.Run("container_element_type", func(t *testing.T) {
+		assert.Equal(t, []string{"alice"}, (&ActorItem{ActorUuid: "alice"}).ActorUUID())
+	})
+
+	t.Run("self_referencing_node", func(t *testing.T) {
+		assert.Equal(t, []string{"cycle-actor"}, (&CycleNode{Id: "cycle-actor"}).ActorUUID())
+	})
+}
+
 // TestUnannotatedRequestHasNoActorUUID is the negative half of the
 // contract: messages with no valid annotated leaf must not get an
-// accessor. Asserted via reflection so the test fails to compile -> fails
-// to even build the package - if a future regression starts emitting an
+// accessor. Asserted via reflection so the test fails - rather than
+// failing to compile - if a future regression starts emitting an
 // accessor on a message that should be skipped.
 func TestUnannotatedRequestHasNoActorUUID(t *testing.T) {
 	cases := []struct {
@@ -207,14 +237,12 @@ func TestUnannotatedRequestHasNoActorUUID(t *testing.T) {
 		ptr  interface{}
 	}{
 		{"UnannotatedRequest", &UnannotatedRequest{}},
+		{"UnannotatedResponse", &UnannotatedResponse{}},
 		{"DeleteUserResponse", &DeleteUserResponse{}},
+		{"GetUserResponse", &GetUserResponse{}},
+		{"ListUsersResponse", &ListUsersResponse{}},
 		{"IgnoredAnnotationsRequest", &IgnoredAnnotationsRequest{}},
 		{"IgnoredCredsContainer", &IgnoredCredsContainer{}},
-		{"InnerLevel", &InnerLevel{}},
-		{"MidLevel", &MidLevel{}},
-		{"OuterLevel", &OuterLevel{}},
-		{"CycleNode", &CycleNode{}},
-		{"ActorItem", &ActorItem{}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -124,8 +124,94 @@ func TestRunnerEmitsActorUUIDAccessorForNestedRequest(t *testing.T) {
 		"missing accessor on the request type; output was:\n%s", out)
 	assert.Contains(t, out, "t.GetInner().GetUuid()",
 		"chain must walk from request through the nested message hop; output was:\n%s", out)
-	assert.NotContains(t, out, "func (t *Inner) ActorUUID()",
-		"only the request type gets the accessor; nested types must not be re-emitted; output was:\n%s", out)
+	assert.Contains(t, out, "func (t *Inner) ActorUUID()",
+		"every declared message with an annotated path gets an accessor, not just request types; output was:\n%s", out)
+}
+
+// TestRunnerEmitsAccessorForRequestDeclaredInSeparateFile is the
+// regression test for the split layout: the request type lives in
+// types.proto and the service in service.proto (same package, one protoc
+// run). The accessor must be emitted by the generation of the file that
+// DECLARES the message - Go only allows methods from the declaring
+// package, and only the declaring file is an unambiguous owner - while
+// the service file's generation must not emit a duplicate definition.
+func TestRunnerEmitsAccessorForRequestDeclaredInSeparateFile(t *testing.T) {
+	typesFile := &descriptor.FileDescriptorProto{
+		Name:       proto.String("svc/types.proto"),
+		Package:    proto.String("svc"),
+		Syntax:     proto.String("proto3"),
+		Dependency: []string{"uber/security/engsec/utoken/annotations/options.proto"},
+		Options: &descriptor.FileOptions{
+			GoPackage: proto.String("svc/foopb"),
+		},
+		MessageType: []*descriptor.DescriptorProto{
+			{
+				Name: proto.String("DeleteUserRequest"),
+				Field: []*descriptor.FieldDescriptorProto{{
+					Name:    proto.String("actor"),
+					Number:  proto.Int32(1),
+					Type:    descriptor.FieldDescriptorProto_TYPE_STRING.Enum(),
+					Label:   descriptor.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
+					Options: withActorUUIDOption(t, true),
+				}},
+			},
+			{
+				Name: proto.String("DeleteUserResponse"),
+				Field: []*descriptor.FieldDescriptorProto{{
+					Name:   proto.String("ok"),
+					Number: proto.Int32(1),
+					Type:   descriptor.FieldDescriptorProto_TYPE_BOOL.Enum(),
+					Label:  descriptor.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
+				}},
+			},
+		},
+	}
+	serviceFile := &descriptor.FileDescriptorProto{
+		Name:       proto.String("svc/service.proto"),
+		Package:    proto.String("svc"),
+		Syntax:     proto.String("proto3"),
+		Dependency: []string{"svc/types.proto"},
+		Options: &descriptor.FileOptions{
+			GoPackage: proto.String("svc/foopb"),
+		},
+		Service: []*descriptor.ServiceDescriptorProto{{
+			Name: proto.String("UserService"),
+			Method: []*descriptor.MethodDescriptorProto{{
+				Name:       proto.String("DeleteUser"),
+				InputType:  proto.String(".svc.DeleteUserRequest"),
+				OutputType: proto.String(".svc.DeleteUserResponse"),
+			}},
+		}},
+	}
+
+	req := &plugin_go.CodeGeneratorRequest{
+		FileToGenerate: []string{"svc/types.proto", "svc/service.proto"},
+		ProtoFile: []*descriptor.FileDescriptorProto{
+			optionsFileDescriptor(),
+			typesFile,
+			serviceFile,
+		},
+	}
+
+	resp := Runner.Run(req)
+	require.Nil(t, resp.Error, "plugin returned error: %v", resp.GetError())
+	require.Len(t, resp.File, 2)
+
+	outByName := map[string]string{}
+	for _, f := range resp.File {
+		outByName[f.GetName()] = f.GetContent()
+	}
+	typesOut := outByName["svc/types.pb.yarpc.go"]
+	serviceOut := outByName["svc/service.pb.yarpc.go"]
+	require.NotEmpty(t, typesOut)
+	require.NotEmpty(t, serviceOut)
+
+	assert.Contains(t, typesOut, "func (t *DeleteUserRequest) ActorUUID() []string {",
+		"the declaring file must emit the accessor even though it has no services; output was:\n%s", typesOut)
+	assert.NotContains(t, serviceOut, "func (t *DeleteUserRequest) ActorUUID()",
+		"the service file must not emit a duplicate method definition; output was:\n%s", serviceOut)
+	assert.Contains(t, serviceOut, "type UserServiceYARPCClient interface",
+		"sanity check: the service file still emits its client/server code")
 }
 
 // TestRunnerEmitsActorUUIDAccessorForContainers drives the walker and

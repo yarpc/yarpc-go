@@ -49,7 +49,7 @@ const _ActorUUIDFQN = "uber.security.engsec.utoken.annotations.actor_uuid"
 const fieldOptionsExtendee = ".google.protobuf.FieldOptions"
 
 // _maxActorUUIDPaths bounds the total number of actor_uuid paths a single
-// request message may expand to. Every path becomes one expression or
+// message may expand to. Every path becomes one expression or
 // statement in the generated ActorUUID() body, and chained diamond-shaped
 // message references multiply the route count (k chained diamonds yield
 // 2^k routes to the same leaf), so without a bound a pathological .proto
@@ -58,18 +58,23 @@ const fieldOptionsExtendee = ".google.protobuf.FieldOptions"
 // generation with a clear error instead of emitting an enormous file.
 // The walk aborts as soon as the count passes the limit, so the bound
 // caps the work done, not just the output.
+//
+// The cap applies to every message declared in a generated file (each
+// gets its own accessor when it has an annotated path), so a
+// pathological message fails its file's generation even when no service
+// uses it as a request type.
 const _maxActorUUIDPaths = 100
 
-// actorUUIDMethod describes a single ActorUUID() emission on a request
-// message. The template iterates a slice of these to emit one accessor
-// per request type that has at least one path to an annotated field.
+// actorUUIDMethod describes a single ActorUUID() emission on a message.
+// The template iterates a slice of these to emit one accessor per
+// declared message that has at least one path to an annotated field.
 //
 // The embedded protogen.Accessor carries the rendering mode and
 // structured body data (see protogen.Lower); its fields are promoted, so
 // the template reads .Mode / .SliceExpr / .Exprs / .Stmts directly off
 // the entry.
 type actorUUIDMethod struct {
-	// GoTypeName is the Go-name of the request message in the package
+	// GoTypeName is the Go-name of the message in the package
 	// being generated (e.g. "DeleteUserRequest"; "Foo_Bar" for nested).
 	GoTypeName string
 	*protogen.Accessor
@@ -105,11 +110,28 @@ func getUUIDFileInfo(file *protoplugin.File) *uuidFileInfo {
 	return info
 }
 
-// actorUUIDMethods returns one ActorUUID() emission per request message of
-// services in the target file that has at least one path to an
-// actor_uuid-annotated string field. The same request type used by
-// multiple methods is deduped (Go would otherwise refuse to compile two
-// methods with the same name on the same receiver).
+// actorUUIDMethods returns one ActorUUID() emission per message declared
+// in the target file that has at least one path to an actor_uuid-annotated
+// string leaf.
+//
+// Emission is keyed on declaration, not on service usage. Go only allows
+// a method on a type from the type's declaring package, and the declaring
+// package cannot know which services use its messages as request types:
+// the service may live in another file, or in another package compiled by
+// a separate protoc run whose CodeGeneratorRequest never mentions this
+// file. Emitting for every declared message with an annotated path is the
+// only rule that guarantees a request type's accessor exists wherever the
+// service lives; the extra accessors on messages never used as requests
+// are harmless (every proto message has a real generated Go type, unlike
+// thrift's synthesized args structs) and return coherent results.
+//
+// The corollary is that a package declaring annotated messages must
+// itself be generated with protoc-gen-yarpc-go: if it is generated with
+// the base plugin only, no accessor exists anywhere and a service package
+// whose generated handler references it fails to compile.
+//
+// Synthetic map-entry messages are skipped: they appear in the file's
+// message list but have no generated Go struct to carry a method.
 //
 // Returns nil (and no error) when the target file's import graph does not
 // reach the option's declaration, which is the common case and means the
@@ -121,41 +143,26 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 	}
 	pkgPath := info.File.GoPackage.Path
 	conv := newUUIDConverter(fi.num, fi.ctx)
-	seen := map[*protoplugin.Message]bool{}
 	var out []*actorUUIDMethod
-	for _, svc := range info.File.Services {
-		for _, m := range svc.Methods {
-			req := m.RequestType
-			if req == nil {
-				continue
-			}
-			// Methods can only be added to a Go type from the package
-			// that declares it; cross-package request types must get
-			// their accessor when their own file is generated.
-			if req.File != info.File {
-				continue
-			}
-			if seen[req] {
-				continue
-			}
-			seen[req] = true
-
-			node, err := conv.convert(req)
-			if err != nil {
-				return nil, err
-			}
-			paths, count := protogen.Walk(node, _maxActorUUIDPaths)
-			if count > _maxActorUUIDPaths {
-				return nil, fmt.Errorf(
-					"message %s expands to more than %d actor_uuid paths; "+
-						"restructure the message to reduce shared sub-message fan-out",
-					req.GetName(), _maxActorUUIDPaths)
-			}
-			if len(paths) == 0 {
-				continue
-			}
-			out = append(out, newActorUUIDMethod(req.GoType(pkgPath), paths))
+	for _, msg := range info.File.Messages {
+		if msg.GetOptions().GetMapEntry() {
+			continue
 		}
+		node, err := conv.convert(msg)
+		if err != nil {
+			return nil, err
+		}
+		paths, count := protogen.Walk(node, _maxActorUUIDPaths)
+		if count > _maxActorUUIDPaths {
+			return nil, fmt.Errorf(
+				"message %s expands to more than %d actor_uuid paths; "+
+					"restructure the message to reduce shared sub-message fan-out",
+				msg.GetName(), _maxActorUUIDPaths)
+		}
+		if len(paths) == 0 {
+			continue
+		}
+		out = append(out, newActorUUIDMethod(msg.GoType(pkgPath), paths))
 	}
 	return out, nil
 }

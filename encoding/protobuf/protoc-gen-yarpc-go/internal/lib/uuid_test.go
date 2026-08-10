@@ -234,8 +234,8 @@ func stepKinds(p *protogen.Path) []protogen.StepKind {
 // walker together, using synthetic in-memory descriptors so each subtest
 // is independent of the runtime gogo proto registry. The classification
 // (shapes, annotation reads, map entries) lives in the converter; the
-// traversal semantics (order, cycles) live in protogen.Walk, which has
-// its own literal-graph tests. Mirrors the structure of
+// traversal semantics (order, cycles, capping) live in protogen.Walk,
+// which has its own literal-graph tests. Mirrors the structure of
 // encoding/thrift/thriftrw-plugin-yarpc/uuid_test.go's TestUUIDPathInArgs.
 func TestConvertAndWalk(t *testing.T) {
 	t.Run("directLeafField", func(t *testing.T) {
@@ -444,6 +444,13 @@ func TestConvertAndWalk(t *testing.T) {
 	})
 }
 
+// The mode classification and statement lowering tests live with the
+// shared implementation in internal/protogen (TestLower and
+// TestBuildStmts): lowering consumes only neutral Step values, so its
+// tests need no descriptors. newActorUUIDMethod itself is covered
+// through TestActorUUIDMethods below, which asserts the wired-up
+// GoTypeName/Mode/Exprs on real converter+walk output.
+
 // TestActorUUIDMethods exercises the top-level template helper through
 // synthetic services and messages, covering the dedup/skip rules.
 func TestActorUUIDMethods(t *testing.T) {
@@ -480,7 +487,10 @@ func TestActorUUIDMethods(t *testing.T) {
 			"both annotated fields contribute an entry, in declaration order")
 	})
 
-	t.Run("dedupesWhenSameRequestUsedByMultipleMethods", func(t *testing.T) {
+	t.Run("emitsOncePerMessageRegardlessOfMethodCount", func(t *testing.T) {
+		// Emission iterates declared messages, so a request type shared
+		// by many methods contributes exactly one accessor (Go does not
+		// allow two methods with the same name on the same receiver).
 		req := newMessage(t, "Req", stringField(t, "actor", true))
 		info := newTemplateInfoWithServices(t,
 			[]*protoplugin.Message{req},
@@ -491,7 +501,7 @@ func TestActorUUIDMethods(t *testing.T) {
 		)
 		got, err := actorUUIDMethods(info)
 		require.NoError(t, err)
-		assert.Len(t, got, 1, "Go does not allow two methods with the same name on the same receiver; the helper must dedupe")
+		assert.Len(t, got, 1)
 	})
 
 	t.Run("skipsRequestsWithoutAnnotatedPath", func(t *testing.T) {
@@ -505,17 +515,13 @@ func TestActorUUIDMethods(t *testing.T) {
 		assert.Empty(t, got)
 	})
 
-	t.Run("skipsAnnotatedMessageThatIsNotARequestType", func(t *testing.T) {
-		// The accessor is emitted for method args only, mirroring
-		// thriftrw-plugin-yarpc. A message that is directly annotated
-		// (or reaches an annotation) but is never used as a service
-		// method's request type must not get an accessor, even though it
-		// lives in the file and the walker would happily find a path in
-		// it. Regression guard against iterating all file messages
-		// instead of just request types.
+	t.Run("emitsOnAnnotatedNonRequestMessage", func(t *testing.T) {
+		// Emission is keyed on declaration, not service usage: a message
+		// with an annotated path gets an accessor even when no method
+		// uses it as a request type. The declaring file cannot know who
+		// uses its messages (the service may live in another file or
+		// package), so it must emit for every annotated message.
 		req := newMessage(t, "DeleteUserRequest", stringField(t, "actor", true))
-		// sidecar is annotated but only ever referenced as an
-		// intermediate hop, never as a request type.
 		sidecar := newMessage(t, "InnerLevel", stringField(t, "inner_uuid", true))
 		info := newTemplateInfoWithServices(t,
 			[]*protoplugin.Message{req, sidecar},
@@ -523,9 +529,79 @@ func TestActorUUIDMethods(t *testing.T) {
 		)
 		got, err := actorUUIDMethods(info)
 		require.NoError(t, err)
-		require.Len(t, got, 1,
-			"only the request type gets an accessor; the annotated non-request message must be skipped")
+		require.Len(t, got, 2,
+			"every declared message with an annotated path gets an accessor")
 		assert.Equal(t, "DeleteUserRequest", got[0].GoTypeName)
+		assert.Equal(t, "InnerLevel", got[1].GoTypeName)
+		assert.Equal(t, []string{"t.GetInnerUuid()"}, got[1].Exprs)
+	})
+
+	t.Run("emitsForFileWithoutServices", func(t *testing.T) {
+		// The types.proto layout: a file declaring only messages, whose
+		// services live elsewhere. Its generation must still emit the
+		// accessor - this is where the method can legally be defined.
+		req := newMessage(t, "DeleteUserRequest", stringField(t, "actor", true))
+		info := newTemplateInfoWithServices(t, []*protoplugin.Message{req})
+		got, err := actorUUIDMethods(info)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, "DeleteUserRequest", got[0].GoTypeName)
+	})
+
+	t.Run("emitsInDeclaringFileNotInServiceFile", func(t *testing.T) {
+		// Split layout: the request type is declared in types.proto, the
+		// service in service.proto. The accessor must come from the
+		// declaring file's generation; the service file declares no
+		// messages and must emit nothing.
+		req := newMessage(t, "DeleteUserRequest", stringField(t, "actor", true))
+		typesFile := &protoplugin.File{
+			FileDescriptorProto: &descriptor.FileDescriptorProto{
+				Name:    proto.String("svc/types.proto"),
+				Package: proto.String("svc"),
+			},
+			GoPackage:              &protoplugin.GoPackage{Path: "svc/foopb"},
+			Messages:               []*protoplugin.Message{req},
+			TransitiveDependencies: []*protoplugin.File{newOptionsFile()},
+		}
+		req.File = typesFile
+		serviceFile := &protoplugin.File{
+			FileDescriptorProto: &descriptor.FileDescriptorProto{
+				Name:    proto.String("svc/service.proto"),
+				Package: proto.String("svc"),
+			},
+			GoPackage:              &protoplugin.GoPackage{Path: "svc/foopb"},
+			Services:               []*protoplugin.Service{svc(t, "UserService", method(t, "DeleteUser", req, req))},
+			TransitiveDependencies: []*protoplugin.File{typesFile, newOptionsFile()},
+		}
+
+		fromTypes, err := actorUUIDMethods(&protoplugin.TemplateInfo{File: typesFile})
+		require.NoError(t, err)
+		require.Len(t, fromTypes, 1,
+			"the declaring file emits the accessor even with no services in it")
+		assert.Equal(t, "DeleteUserRequest", fromTypes[0].GoTypeName)
+
+		fromService, err := actorUUIDMethods(&protoplugin.TemplateInfo{File: serviceFile})
+		require.NoError(t, err)
+		assert.Empty(t, fromService,
+			"the service file declares no messages and must not re-emit the accessor")
+	})
+
+	t.Run("skipsSyntheticMapEntryMessages", func(t *testing.T) {
+		// Map entry messages appear in the file's message list but gogo
+		// generates no Go struct for them; they must never get a method,
+		// even when their value field would walk to a leaf.
+		item := newMessage(t, "Item", stringField(t, "uuid", true))
+		entry := mapEntryMessage(t, "ItemsByIdEntry", messageValueField(t, item))
+		req := newMessage(t, "Req", mapField(t, "items_by_id", entry, false))
+		info := newTemplateInfoWithServices(t,
+			[]*protoplugin.Message{req, entry, item},
+			svc(t, "S", method(t, "M", req, req)),
+		)
+		got, err := actorUUIDMethods(info)
+		require.NoError(t, err)
+		require.Len(t, got, 2, "Req and Item get accessors; the map entry must not")
+		assert.Equal(t, "Req", got[0].GoTypeName)
+		assert.Equal(t, "Item", got[1].GoTypeName)
 	})
 
 	t.Run("noopWhenExtensionNotInScope", func(t *testing.T) {
@@ -549,6 +625,9 @@ func TestActorUUIDMethods(t *testing.T) {
 	t.Run("pathCountUnderCapSucceeds", func(t *testing.T) {
 		// 6 chained diamonds expand to 2^6 = 64 paths, under the cap of
 		// 100: generation succeeds and every route gets its expression.
+		// Every message on the chain reaches the leaf, so each declared
+		// message gets its own accessor (root, the leaf itself, and the
+		// six diamond levels).
 		root, rest := diamondChain(t, 6)
 		info := newTemplateInfoWithServices(t,
 			append([]*protoplugin.Message{root}, rest...),
@@ -556,7 +635,8 @@ func TestActorUUIDMethods(t *testing.T) {
 		)
 		got, err := actorUUIDMethods(info)
 		require.NoError(t, err)
-		require.Len(t, got, 1)
+		require.Len(t, got, 8)
+		assert.Equal(t, "Req", got[0].GoTypeName)
 		assert.Len(t, got[0].Exprs, 64, "each of the 2^6 routes contributes one expression")
 	})
 
@@ -607,11 +687,13 @@ func TestActorUUIDMethods(t *testing.T) {
 		)
 		got, err := actorUUIDMethods(info)
 		require.NoError(t, err)
-		require.Len(t, got, 1)
-		assert.Equal(t, "Outer", got[0].GoTypeName)
-		assert.Equal(t, protogen.ModeLiteral, got[0].Mode,
+		require.Len(t, got, 2, "both Inner (declares the leaf) and Outer (reaches it) get accessors")
+		assert.Equal(t, "Inner", got[0].GoTypeName)
+		assert.Equal(t, []string{"t.GetUuid()"}, got[0].Exprs)
+		assert.Equal(t, "Outer", got[1].GoTypeName)
+		assert.Equal(t, protogen.ModeLiteral, got[1].Mode,
 			"a scalar message chain collapses to a single return literal")
-		assert.Equal(t, []string{"t.GetInner().GetUuid()"}, got[0].Exprs)
+		assert.Equal(t, []string{"t.GetInner().GetUuid()"}, got[1].Exprs)
 	})
 }
 
@@ -827,7 +909,7 @@ func annotatedMessageField(t *testing.T, name string, target *protoplugin.Messag
 	return f
 }
 
-// messageFQMN returns the FQMN that the uuidConverter's lookup expects:
+// messageFQMN returns the FQMN that walkForUUID's lookup expects:
 // ".pkg.MessageName" for a top-level message in the synthetic test
 // package "svc".
 func messageFQMN(m *protoplugin.Message) string {

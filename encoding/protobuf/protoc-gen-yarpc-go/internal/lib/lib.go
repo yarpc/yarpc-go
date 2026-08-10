@@ -595,7 +595,7 @@ var (
 
 {{range $entry := actorUUIDMethods .}}
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values

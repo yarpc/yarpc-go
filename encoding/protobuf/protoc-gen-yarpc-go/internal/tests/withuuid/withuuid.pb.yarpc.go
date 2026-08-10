@@ -826,7 +826,7 @@ var (
 )
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -836,7 +836,7 @@ func (t *DeleteUserRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -846,7 +846,7 @@ func (t *GetUserRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -856,7 +856,37 @@ func (t *ListUsersRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
+// declaration order. An unset scalar field contributes its zero value
+// (""); container fields (repeated / map) contribute every element or
+// value they hold, so an empty container contributes nothing. Values
+// surfaced from a map appear in non-deterministic order.
+func (t *InnerLevel) ActorUUID() []string {
+	return []string{t.GetInnerUuid()}
+}
+
+// ActorUUID returns the UUID strings from every field annotated with
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
+// declaration order. An unset scalar field contributes its zero value
+// (""); container fields (repeated / map) contribute every element or
+// value they hold, so an empty container contributes nothing. Values
+// surfaced from a map appear in non-deterministic order.
+func (t *MidLevel) ActorUUID() []string {
+	return []string{t.GetInner().GetInnerUuid()}
+}
+
+// ActorUUID returns the UUID strings from every field annotated with
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
+// declaration order. An unset scalar field contributes its zero value
+// (""); container fields (repeated / map) contribute every element or
+// value they hold, so an empty container contributes nothing. Values
+// surfaced from a map appear in non-deterministic order.
+func (t *OuterLevel) ActorUUID() []string {
+	return []string{t.GetMid().GetInner().GetInnerUuid()}
+}
+
+// ActorUUID returns the UUID strings from every field annotated with
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -866,7 +896,17 @@ func (t *NestedRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
+// declaration order. An unset scalar field contributes its zero value
+// (""); container fields (repeated / map) contribute every element or
+// value they hold, so an empty container contributes nothing. Values
+// surfaced from a map appear in non-deterministic order.
+func (t *CycleNode) ActorUUID() []string {
+	return []string{t.GetId()}
+}
+
+// ActorUUID returns the UUID strings from every field annotated with
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -876,7 +916,7 @@ func (t *CycleRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -886,7 +926,7 @@ func (t *MultiAnnotatedRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -896,7 +936,7 @@ func (t *RepeatedActorsRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -910,7 +950,17 @@ func (t *MapActorsRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
+// declaration order. An unset scalar field contributes its zero value
+// (""); container fields (repeated / map) contribute every element or
+// value they hold, so an empty container contributes nothing. Values
+// surfaced from a map appear in non-deterministic order.
+func (t *ActorItem) ActorUUID() []string {
+	return []string{t.GetActorUuid()}
+}
+
+// ActorUUID returns the UUID strings from every field annotated with
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -924,7 +974,7 @@ func (t *RepeatedMessageRequest) ActorUUID() []string {
 }
 
 // ActorUUID returns the UUID strings from every field annotated with
-// uber.security.engsec.utoken.annotations.actor_uuid reachable from this request, in
+// uber.security.engsec.utoken.annotations.actor_uuid reachable from this message, in
 // declaration order. An unset scalar field contributes its zero value
 // (""); container fields (repeated / map) contribute every element or
 // value they hold, so an empty container contributes nothing. Values
@@ -1011,18 +1061,19 @@ var yarpcFileDescriptorClosuref5f8405fd7619e54 = [][]byte{
 	},
 	// encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto
 	[]byte{
-		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x0a, 0x4a, 0xcd, 0x4b, 0xce,
-		0x4f, 0xc9, 0xcc, 0x4b, 0xd7, 0x2f, 0x28, 0xca, 0x2f, 0xc9, 0x4f, 0x2a, 0x4d, 0x83, 0x30, 0x92,
-		0x75, 0xd3, 0x53, 0xf3, 0x74, 0x2b, 0x13, 0x8b, 0x0a, 0x92, 0x75, 0xd3, 0xf3, 0xf5, 0x33, 0xf3,
-		0x4a, 0x52, 0x8b, 0xf2, 0x12, 0x73, 0xf4, 0x4b, 0x52, 0x8b, 0x4b, 0x8a, 0xf5, 0x13, 0xf3, 0xf2,
-		0xf2, 0x4b, 0x12, 0x4b, 0x32, 0xf3, 0xf3, 0x50, 0xd8, 0x7a, 0x60, 0xad, 0x42, 0xa2, 0xa5, 0x49,
-		0xa9, 0x45, 0x7a, 0x89, 0xa5, 0x25, 0x19, 0x7a, 0x48, 0x92, 0x52, 0x0a, 0xe9, 0xf9, 0xf9, 0xe9,
-		0x39, 0xa9, 0x08, 0x8b, 0x52, 0x52, 0x8b, 0x93, 0x8b, 0x32, 0x0b, 0x4a, 0xf2, 0x8b, 0x20, 0x1a,
-		0xad, 0xec, 0xb8, 0xb8, 0x12, 0x93, 0x4b, 0xf2, 0x8b, 0xe2, 0x4b, 0x4b, 0x33, 0x53, 0x84, 0x64,
-		0xf5, 0x20, 0x1a, 0xf4, 0x60, 0x1a, 0xf4, 0xdc, 0x32, 0x53, 0x73, 0x52, 0xfc, 0x0b, 0xc0, 0xc6,
-		0x49, 0x5c, 0x6c, 0x63, 0x56, 0x60, 0xd4, 0xe0, 0x08, 0xe2, 0x04, 0x6b, 0x09, 0x2d, 0xcd, 0x4c,
-		0x71, 0xe2, 0x8d, 0xe2, 0x46, 0xb2, 0x30, 0x89, 0x0d, 0xac, 0xd1, 0x18, 0x10, 0x00, 0x00, 0xff,
-		0xff, 0xbd, 0x6d, 0x15, 0x1e, 0xe4, 0x00, 0x00, 0x00,
+		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x54, 0xcd, 0xb1, 0x4a, 0xc6, 0x40,
+		0x10, 0x04, 0x60, 0x44, 0x10, 0x8d, 0xd8, 0xa4, 0x12, 0x41, 0x48, 0xa7, 0x4d, 0xf6, 0x0a, 0x3b,
+		0x0b, 0x0b, 0x0b, 0x5b, 0x21, 0x60, 0x63, 0x23, 0x97, 0xbb, 0xf5, 0x58, 0x0c, 0xbb, 0xc7, 0xde,
+		0x5e, 0x91, 0x17, 0xf0, 0xfd, 0x7c, 0x23, 0xe1, 0xc2, 0xcf, 0x9f, 0xbf, 0x9b, 0x62, 0xbe, 0x99,
+		0x6e, 0x42, 0x0e, 0x12, 0x89, 0x93, 0xcb, 0x2a, 0x26, 0x73, 0xfd, 0xde, 0x42, 0x18, 0x13, 0xf2,
+		0xb8, 0x7a, 0xcd, 0x61, 0x4c, 0xe2, 0x88, 0x0d, 0x95, 0xfd, 0xe2, 0x0c, 0x8b, 0x15, 0xe7, 0x99,
+		0xc5, 0xbc, 0x91, 0xf0, 0x49, 0x86, 0x46, 0xfb, 0x87, 0x3a, 0xa3, 0x42, 0xc1, 0x50, 0x95, 0x6c,
+		0x05, 0xe4, 0x54, 0x30, 0x40, 0x35, 0xf9, 0x41, 0x86, 0x5d, 0xfd, 0x6e, 0x48, 0x22, 0x69, 0xc1,
+		0xe3, 0x75, 0xc4, 0x12, 0x94, 0xb2, 0x89, 0x6e, 0x53, 0xcf, 0x2f, 0x5d, 0xe7, 0x83, 0x89, 0x7e,
+		0xd5, 0x4a, 0xb1, 0xbf, 0x87, 0x0d, 0xc0, 0x01, 0xc0, 0x1b, 0xe1, 0x12, 0xdf, 0x73, 0x9b, 0xbb,
+		0xfd, 0xfb, 0x3d, 0x1f, 0xce, 0x1e, 0x2f, 0xa7, 0xab, 0x46, 0x3e, 0x2a, 0xc5, 0xd7, 0x9b, 0xcf,
+		0xeb, 0xdd, 0xe1, 0x7c, 0xd1, 0xe0, 0xd3, 0x7f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xbf, 0x87, 0xfa,
+		0x47, 0xf6, 0x00, 0x00, 0x00,
 	},
 	// google/protobuf/descriptor.proto
 	[]byte{
