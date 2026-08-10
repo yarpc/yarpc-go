@@ -21,7 +21,7 @@
 package lib
 
 import (
-	"math"
+	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -485,6 +485,35 @@ func TestActorUUIDMethods(t *testing.T) {
 		assert.Empty(t, got)
 	})
 
+	t.Run("pathCountUnderCapSucceeds", func(t *testing.T) {
+		// 6 chained diamonds expand to 2^6 = 64 paths, under the cap of
+		// 100: generation succeeds and every route gets its expression.
+		root, rest := diamondChain(t, 6)
+		info := newTemplateInfoWithServices(t,
+			append([]*protoplugin.Message{root}, rest...),
+			svc(t, "S", method(t, "M", root, root)),
+		)
+		got, err := actorUUIDMethods(info)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Len(t, got[0].Exprs, 64, "each of the 2^6 routes contributes one expression")
+	})
+
+	t.Run("pathCountOverCapFailsGeneration", func(t *testing.T) {
+		// 7 chained diamonds expand to 2^7 = 128 paths, over the cap of
+		// 100: generation must fail with a clear error instead of
+		// emitting an enormous accessor.
+		root, rest := diamondChain(t, 7)
+		info := newTemplateInfoWithServices(t,
+			append([]*protoplugin.Message{root}, rest...),
+			svc(t, "S", method(t, "M", root, root)),
+		)
+		_, err := actorUUIDMethods(info)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "actor_uuid paths")
+		assert.Contains(t, err.Error(), "Req")
+	})
+
 	t.Run("rendersChainForNestedRequest", func(t *testing.T) {
 		inner := newMessage(t, "Inner", stringField(t, "uuid", true))
 		req := newMessage(t, "Outer", messageField(t, "inner", inner))
@@ -751,8 +780,30 @@ func walkPathOf(t *testing.T, req *protoplugin.Message, others ...*protoplugin.M
 		m.File = file
 	}
 	ctx := newUUIDContext(file)
-	paths, _ := protogen.Walk(newUUIDConverter(_testActorUUIDFieldNumber, ctx).convert(req), math.MaxInt)
+	paths, _ := protogen.Walk(newUUIDConverter(_testActorUUIDFieldNumber, ctx).convert(req), _maxActorUUIDPaths)
 	return paths
+}
+
+// diamondChain builds a chain of `levels` diamond-shaped messages: each
+// level has two fields (`a`, `b`) of the next level's type, and the last
+// level funnels into a single leaf message with an annotated uuid field.
+// A request walking the chain expands to 2^levels paths. Returns the root
+// message followed by every other message needed to index the context.
+func diamondChain(t *testing.T, levels int) (*protoplugin.Message, []*protoplugin.Message) {
+	t.Helper()
+	leaf := newMessage(t, "Leaf", stringField(t, "uuid", true))
+	all := []*protoplugin.Message{leaf}
+	next := leaf
+	for i := levels; i >= 1; i-- {
+		m := newMessage(t, fmt.Sprintf("D%d", i),
+			messageField(t, "a", next),
+			messageField(t, "b", next),
+		)
+		all = append(all, m)
+		next = m
+	}
+	root := newMessage(t, "Req", messageField(t, "root", next))
+	return root, all
 }
 
 // svc builds a synthetic *protoplugin.Service with the given methods.

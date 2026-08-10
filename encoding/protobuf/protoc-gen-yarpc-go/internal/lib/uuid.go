@@ -22,7 +22,6 @@ package lib
 
 import (
 	"fmt"
-	"math"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -48,6 +47,18 @@ const _ActorUUIDFQN = "uber.security.engsec.utoken.annotations.actor_uuid"
 // fieldOptionsExtendee is the Extendee value that
 // FieldDescriptorProto carries for any extension of google.protobuf.FieldOptions.
 const fieldOptionsExtendee = ".google.protobuf.FieldOptions"
+
+// _maxActorUUIDPaths bounds the total number of actor_uuid paths a single
+// request message may expand to. Every path becomes one expression or
+// statement in the generated ActorUUID() body, and chained diamond-shaped
+// message references multiply the route count (k chained diamonds yield
+// 2^k routes to the same leaf), so without a bound a pathological .proto
+// could make the walk and the generated file exponentially large. No
+// realistic schema comes anywhere near this limit; exceeding it fails
+// generation with a clear error instead of emitting an enormous file.
+// The walk aborts as soon as the count passes the limit, so the bound
+// caps the work done, not just the output.
+const _maxActorUUIDPaths = 100
 
 // actorUUIDMethod describes a single ActorUUID() emission on a request
 // message. The template iterates a slice of these to emit one accessor
@@ -129,7 +140,13 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 			}
 			seen[req] = true
 
-			paths, _ := protogen.Walk(conv.convert(req), math.MaxInt)
+			paths, count := protogen.Walk(conv.convert(req), _maxActorUUIDPaths)
+			if count > _maxActorUUIDPaths {
+				return nil, fmt.Errorf(
+					"message %s expands to more than %d actor_uuid paths; "+
+						"restructure the message to reduce shared sub-message fan-out",
+					req.GetName(), _maxActorUUIDPaths)
+			}
 			if len(paths) == 0 {
 				continue
 			}
