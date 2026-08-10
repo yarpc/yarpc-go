@@ -49,8 +49,39 @@ var _testActorUUIDExt = &proto.ExtensionDesc{
 	Filename:      "uber/security/engsec/utoken/annotations/options_test.proto",
 }
 
+// _testUnrelatedExtFieldNumber hosts an extension that is NOT actor_uuid,
+// simulating the collision scenario: the descriptor set assigns actor_uuid
+// a field number at which the plugin binary's registry already holds an
+// unrelated extension (as gogoproto's init() does for 65001-65013).
+const _testUnrelatedExtFieldNumber = 99998
+
+var _testUnrelatedExt = &proto.ExtensionDesc{
+	ExtendedType:  (*descriptor.FieldOptions)(nil),
+	ExtensionType: (*string)(nil),
+	Field:         _testUnrelatedExtFieldNumber,
+	Name:          "some.other.pkg.custom_option",
+	Tag:           "bytes,99998,opt,name=custom_option",
+	Filename:      "some/other/pkg/options_test.proto",
+}
+
+// _testWrongTypeExtFieldNumber hosts an extension registered under
+// actor_uuid's own name but with a non-bool type, exercising the type leg
+// of the registry validation.
+const _testWrongTypeExtFieldNumber = 99997
+
+var _testWrongTypeExt = &proto.ExtensionDesc{
+	ExtendedType:  (*descriptor.FieldOptions)(nil),
+	ExtensionType: (*string)(nil),
+	Field:         _testWrongTypeExtFieldNumber,
+	Name:          _ActorUUIDFQN,
+	Tag:           "bytes,99997,opt,name=actor_uuid",
+	Filename:      "uber/security/engsec/utoken/annotations/options_test.proto",
+}
+
 func init() {
 	proto.RegisterExtension(_testActorUUIDExt)
+	proto.RegisterExtension(_testUnrelatedExt)
+	proto.RegisterExtension(_testWrongTypeExt)
 }
 
 func TestFindActorUUIDFieldNumber(t *testing.T) {
@@ -111,25 +142,55 @@ func TestFindActorUUIDFieldNumber(t *testing.T) {
 func TestHasActorUUID(t *testing.T) {
 	t.Run("true", func(t *testing.T) {
 		opts := withActorUUIDOption(t, true)
-		assert.True(t, hasActorUUID(opts, _testActorUUIDFieldNumber))
+		got, err := hasActorUUID(opts, _testActorUUIDFieldNumber)
+		require.NoError(t, err)
+		assert.True(t, got)
 	})
 
 	t.Run("explicit_false", func(t *testing.T) {
 		opts := withActorUUIDOption(t, false)
-		assert.False(t, hasActorUUID(opts, _testActorUUIDFieldNumber))
+		got, err := hasActorUUID(opts, _testActorUUIDFieldNumber)
+		require.NoError(t, err)
+		assert.False(t, got)
 	})
 
 	t.Run("not_set", func(t *testing.T) {
-		assert.False(t, hasActorUUID(&descriptor.FieldOptions{}, _testActorUUIDFieldNumber))
+		got, err := hasActorUUID(&descriptor.FieldOptions{}, _testActorUUIDFieldNumber)
+		require.NoError(t, err)
+		assert.False(t, got)
 	})
 
 	t.Run("nil_options", func(t *testing.T) {
-		assert.False(t, hasActorUUID(nil, _testActorUUIDFieldNumber))
+		got, err := hasActorUUID(nil, _testActorUUIDFieldNumber)
+		require.NoError(t, err)
+		assert.False(t, got)
 	})
 
 	t.Run("zero_field_number", func(t *testing.T) {
 		opts := withActorUUIDOption(t, true)
-		assert.False(t, hasActorUUID(opts, 0))
+		got, err := hasActorUUID(opts, 0)
+		require.NoError(t, err)
+		assert.False(t, got)
+	})
+
+	t.Run("unrelated_extension_at_number_errors", func(t *testing.T) {
+		// The registry entry at this number is a different extension
+		// entirely: the lookup must fail loudly, never silently report
+		// the field as unannotated.
+		got, err := hasActorUUID(withActorUUIDOption(t, true), _testUnrelatedExtFieldNumber)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "collision")
+		assert.Contains(t, err.Error(), "some.other.pkg.custom_option")
+		assert.False(t, got)
+	})
+
+	t.Run("wrong_typed_extension_at_number_errors", func(t *testing.T) {
+		// Right name, wrong Go type: reading it as a bool would be a
+		// wiretype mismatch, so the descriptor is rejected up front.
+		got, err := hasActorUUID(withActorUUIDOption(t, true), _testWrongTypeExtFieldNumber)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "expected *bool")
+		assert.False(t, got)
 	})
 }
 
@@ -514,6 +575,29 @@ func TestActorUUIDMethods(t *testing.T) {
 		assert.Contains(t, err.Error(), "Req")
 	})
 
+	t.Run("registryCollisionFailsGeneration", func(t *testing.T) {
+		// The descriptor set declares actor_uuid at a field number the
+		// plugin binary's extension registry already assigns to an
+		// unrelated extension. Generation must fail loudly: silently
+		// emitting no accessors would drop the security annotation.
+		req := newMessage(t, "DeleteUserRequest", stringField(t, "actor", true))
+		target := &protoplugin.File{
+			FileDescriptorProto: &descriptor.FileDescriptorProto{
+				Name:    proto.String("svc/foo.proto"),
+				Package: proto.String("svc"),
+			},
+			GoPackage:              &protoplugin.GoPackage{Path: "svc/foopb"},
+			Messages:               []*protoplugin.Message{req},
+			Services:               []*protoplugin.Service{svc(t, "UserService", method(t, "DeleteUser", req, req))},
+			TransitiveDependencies: []*protoplugin.File{newOptionsFileAt(_testUnrelatedExtFieldNumber)},
+		}
+		req.File = target
+		_, err := actorUUIDMethods(&protoplugin.TemplateInfo{File: target})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "collision")
+		assert.Contains(t, err.Error(), "some.other.pkg.custom_option")
+	})
+
 	t.Run("rendersChainForNestedRequest", func(t *testing.T) {
 		inner := newMessage(t, "Inner", stringField(t, "uuid", true))
 		req := newMessage(t, "Outer", messageField(t, "inner", inner))
@@ -536,13 +620,20 @@ func TestActorUUIDMethods(t *testing.T) {
 // newOptionsFile builds a synthetic protoplugin.File that mirrors the shape
 // of the monorepo's uber/security/engsec/utoken/annotations/options.proto.
 func newOptionsFile() *protoplugin.File {
+	return newOptionsFileAt(_testActorUUIDFieldNumber)
+}
+
+// newOptionsFileAt is newOptionsFile with the actor_uuid extension declared
+// at an arbitrary field number, used to simulate a declaration colliding
+// with an unrelated extension in the plugin binary's registry.
+func newOptionsFileAt(num int32) *protoplugin.File {
 	return &protoplugin.File{
 		FileDescriptorProto: &descriptor.FileDescriptorProto{
 			Name:    proto.String("uber/security/engsec/utoken/annotations/options.proto"),
 			Package: proto.String("uber.security.engsec.utoken.annotations"),
 			Extension: []*descriptor.FieldDescriptorProto{{
 				Name:     proto.String("actor_uuid"),
-				Number:   proto.Int32(_testActorUUIDFieldNumber),
+				Number:   proto.Int32(num),
 				Type:     descriptor.FieldDescriptorProto_TYPE_BOOL.Enum(),
 				Label:    descriptor.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
 				Extendee: proto.String(fieldOptionsExtendee),
@@ -780,7 +871,9 @@ func walkPathOf(t *testing.T, req *protoplugin.Message, others ...*protoplugin.M
 		m.File = file
 	}
 	ctx := newUUIDContext(file)
-	paths, _ := protogen.Walk(newUUIDConverter(_testActorUUIDFieldNumber, ctx).convert(req), _maxActorUUIDPaths)
+	node, err := newUUIDConverter(_testActorUUIDFieldNumber, ctx).convert(req)
+	require.NoError(t, err)
+	paths, _ := protogen.Walk(node, _maxActorUUIDPaths)
 	return paths
 }
 

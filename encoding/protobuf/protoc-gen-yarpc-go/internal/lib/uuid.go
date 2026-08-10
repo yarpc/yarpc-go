@@ -140,7 +140,11 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 			}
 			seen[req] = true
 
-			paths, count := protogen.Walk(conv.convert(req), _maxActorUUIDPaths)
+			node, err := conv.convert(req)
+			if err != nil {
+				return nil, err
+			}
+			paths, count := protogen.Walk(node, _maxActorUUIDPaths)
 			if count > _maxActorUUIDPaths {
 				return nil, fmt.Errorf(
 					"message %s expands to more than %d actor_uuid paths; "+
@@ -188,6 +192,9 @@ func newActorUUIDMethod(goType string, paths []*protogen.Path) *actorUUIDMethod 
 // fields are still descended into looking for string leaves inside.
 // Message-typed fields whose type reference does not resolve are
 // likewise dropped.
+//
+// An annotation-read failure (see hasActorUUID) aborts the conversion:
+// the error propagates up and the caller fails generation with it.
 type uuidConverter struct {
 	num  int32
 	ctx  *uuidContext
@@ -204,43 +211,54 @@ func newUUIDConverter(num int32, ctx *uuidContext) *uuidConverter {
 
 // convert returns the memoized Node for msg, building it (and,
 // transitively, every message reachable from it) on first access.
-func (c *uuidConverter) convert(msg *protoplugin.Message) *protogen.Node {
+func (c *uuidConverter) convert(msg *protoplugin.Message) (*protogen.Node, error) {
 	if n, ok := c.memo[msg]; ok {
-		return n
+		return n, nil
 	}
 	n := &protogen.Node{}
 	// Memoize before filling in the fields so a cyclic reference back to
 	// msg resolves to n instead of recursing forever.
 	c.memo[msg] = n
 	for _, f := range msg.Fields {
-		if nf := c.convertField(f); nf != nil {
+		nf, err := c.convertField(f)
+		if err != nil {
+			return nil, err
+		}
+		if nf != nil {
 			n.Fields = append(n.Fields, nf)
 		}
 	}
-	return n
+	return n, nil
 }
 
 // convertField returns the neutral field for f, or nil when f is not
 // walk-relevant (see the uuidConverter doc for what is dropped).
-func (c *uuidConverter) convertField(f *protoplugin.Field) *protogen.Field {
+func (c *uuidConverter) convertField(f *protoplugin.Field) (*protogen.Field, error) {
 	isRepeated := f.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED
 
 	if f.GetType() != descriptor.FieldDescriptorProto_TYPE_MESSAGE {
 		// Scalar field. Only a string (or repeated string) carrying the
 		// annotation is a valid leaf; any other scalar is dropped.
-		if f.GetType() != descriptor.FieldDescriptorProto_TYPE_STRING || !hasActorUUID(f.GetOptions(), c.num) {
-			return nil
+		if f.GetType() != descriptor.FieldDescriptorProto_TYPE_STRING {
+			return nil, nil
+		}
+		annotated, err := hasActorUUID(f.GetOptions(), c.num)
+		if err != nil {
+			return nil, err
+		}
+		if !annotated {
+			return nil, nil
 		}
 		kind := protogen.StepStringLeaf
 		if isRepeated {
 			kind = protogen.StepRepeatedStringLeaf
 		}
-		return c.newField(f, kind, nil)
+		return c.newField(f, kind, nil), nil
 	}
 
 	inner := c.ctx.lookupMessage(f.GetTypeName())
 	if inner == nil {
-		return nil
+		return nil, nil
 	}
 
 	// A map<K, V> is encoded as a repeated synthetic entry message
@@ -254,35 +272,47 @@ func (c *uuidConverter) convertField(f *protoplugin.Field) *protogen.Field {
 	if isRepeated {
 		kind = protogen.StepRepeatedMessage
 	}
-	return c.newField(f, kind, c.convert(inner))
+	child, err := c.convert(inner)
+	if err != nil {
+		return nil, err
+	}
+	return c.newField(f, kind, child), nil
 }
 
 // convertMapField returns the neutral field for a map field f whose
 // synthetic entry message is `entry`. A map<K, string> surfaces its
 // values as a single leaf when annotated; a map<K, Msg> is a hop into
 // the value message.
-func (c *uuidConverter) convertMapField(f *protoplugin.Field, entry *protoplugin.Message) *protogen.Field {
+func (c *uuidConverter) convertMapField(f *protoplugin.Field, entry *protoplugin.Message) (*protogen.Field, error) {
 	val := mapValueField(entry)
 	if val == nil {
-		return nil
+		return nil, nil
 	}
 	switch val.GetType() {
 	case descriptor.FieldDescriptorProto_TYPE_STRING:
 		// map<K, string>: the values are the leaves. The annotation
 		// lives on the map field itself, not the synthetic entry.
-		if !hasActorUUID(f.GetOptions(), c.num) {
-			return nil
+		annotated, err := hasActorUUID(f.GetOptions(), c.num)
+		if err != nil {
+			return nil, err
 		}
-		return c.newField(f, protogen.StepMapStringLeaf, nil)
+		if !annotated {
+			return nil, nil
+		}
+		return c.newField(f, protogen.StepMapStringLeaf, nil), nil
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
 		// map<K, Msg>: hop into the value message.
 		valMsg := c.ctx.lookupMessage(val.GetTypeName())
 		if valMsg == nil {
-			return nil
+			return nil, nil
 		}
-		return c.newField(f, protogen.StepMapMessage, c.convert(valMsg))
+		child, err := c.convert(valMsg)
+		if err != nil {
+			return nil, err
+		}
+		return c.newField(f, protogen.StepMapMessage, child), nil
 	}
-	return nil
+	return nil, nil
 }
 
 // newField packages f into a neutral field of the given kind. The GoName
@@ -422,34 +452,35 @@ func findActorUUIDInNestedExtensions(parentScope string, msg *descriptor.Descrip
 // hasActorUUID reports whether opts carries the FieldOptions extension
 // with the given field number set to true.
 //
-// The plugin must operate without a build-time dependency on the Go
-// package generated for the extension. To do that:
-//
-//   - If gogo proto already has an ExtensionDesc registered at this field
-//     number on FieldOptions (because some imported package happens to
-//     have registered it - e.g. a test binary, or a downstream binary
-//     that does import the option's .pb.go), reuse it. gogo rejects two
-//     non-identical descriptors at the same field number ("proto:
-//     descriptor conflict"), so we have no choice but to defer to the
-//     registered one.
-//   - Otherwise build an ExtensionDesc on the fly that matches what the
-//     option's .pb.go would have generated (varint-typed bool at the
-//     given field number) and cache it for the lifetime of the process.
-//     Reusing the same *ExtensionDesc on every call is required: gogo
-//     proto caches the descriptor pointer on first GetExtension and
-//     refuses to accept a different pointer at the same field number on
-//     later calls.
-func hasActorUUID(opts *descriptor.FieldOptions, num int32) bool {
+// A non-nil error means the annotation's presence could not be
+// determined - the descriptor at this field number belongs to an
+// unrelated extension, or the option bytes do not decode as the expected
+// bool. Callers must fail generation on it: treating an annotated field
+// as unannotated would silently drop the security annotation, which is
+// exactly the fail-open this error exists to prevent. Only a genuinely
+// absent extension reports (false, nil).
+func hasActorUUID(opts *descriptor.FieldOptions, num int32) (bool, error) {
 	if opts == nil || num == 0 {
-		return false
+		return false, nil
 	}
-	desc := actorUUIDExtensionDesc(num)
-	v, err := proto.GetExtension(opts, desc)
+	desc, err := actorUUIDExtensionDesc(num)
 	if err != nil {
-		return false
+		return false, err
+	}
+	v, err := proto.GetExtension(opts, desc)
+	if err == proto.ErrMissingExtension {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf(
+			"reading actor_uuid annotation (FieldOptions extension %d): %v", num, err)
 	}
 	b, ok := v.(*bool)
-	return ok && b != nil && *b
+	if !ok {
+		return false, fmt.Errorf(
+			"actor_uuid annotation (FieldOptions extension %d) decoded to %T, expected *bool", num, v)
+	}
+	return b != nil && *b, nil
 }
 
 // actorUUIDExtensionCache memoises the *ExtensionDesc used to read the
@@ -460,15 +491,41 @@ var (
 	actorUUIDExtensionCache = map[int32]*proto.ExtensionDesc{}
 )
 
-func actorUUIDExtensionDesc(num int32) *proto.ExtensionDesc {
+// actorUUIDExtensionDesc returns the *ExtensionDesc used to read the
+// actor_uuid extension at the given field number.
+//
+// The plugin must operate without a build-time dependency on the Go
+// package generated for the extension. To do that:
+//
+//   - If gogo proto already has an ExtensionDesc registered at this field
+//     number on FieldOptions (because some linked package happens to
+//     have registered it - e.g. a test binary, or a downstream binary
+//     that does import the option's .pb.go), reuse it - but only after
+//     verifying it actually describes this extension (same
+//     fully-qualified name, bool-typed). gogo rejects two non-identical
+//     descriptors at the same field number ("proto: descriptor
+//     conflict"), so an unrelated extension parked at the number cannot
+//     be worked around: it fails generation loudly instead of silently
+//     misreading (or dropping) the annotation.
+//   - Otherwise build an ExtensionDesc on the fly that matches what the
+//     option's .pb.go would have generated (varint-typed bool at the
+//     given field number) and cache it for the lifetime of the process.
+//     Reusing the same *ExtensionDesc on every call is required: gogo
+//     proto caches the descriptor pointer on first GetExtension and
+//     refuses to accept a different pointer at the same field number on
+//     later calls.
+func actorUUIDExtensionDesc(num int32) (*proto.ExtensionDesc, error) {
 	actorUUIDExtensionMu.Lock()
 	defer actorUUIDExtensionMu.Unlock()
 	if desc, ok := actorUUIDExtensionCache[num]; ok {
-		return desc
+		return desc, nil
 	}
 	if desc := proto.RegisteredExtensions((*descriptor.FieldOptions)(nil))[num]; desc != nil {
+		if err := validateRegisteredExtensionDesc(desc, num); err != nil {
+			return nil, err
+		}
 		actorUUIDExtensionCache[num] = desc
-		return desc
+		return desc, nil
 	}
 	desc := &proto.ExtensionDesc{
 		ExtendedType:  (*descriptor.FieldOptions)(nil),
@@ -478,5 +535,37 @@ func actorUUIDExtensionDesc(num int32) *proto.ExtensionDesc {
 		Tag:           fmt.Sprintf("varint,%d,opt,name=actor_uuid", num),
 	}
 	actorUUIDExtensionCache[num] = desc
-	return desc
+	return desc, nil
+}
+
+// validateRegisteredExtensionDesc checks that a descriptor found in gogo's
+// global extension registry at actor_uuid's field number really describes
+// the actor_uuid extension (same fully-qualified name, bool-typed).
+//
+// The check is needed because the registry is keyed by bare field number
+// and holds every FieldOptions extension registered by packages linked
+// into this binary (notably gogoproto's, at 65001-65013), so the entry at
+// actor_uuid's number is not necessarily actor_uuid. If the option's
+// .proto declared actor_uuid at a number one of those unrelated
+// extensions also uses, reading the option through the registered
+// descriptor would misdecode it under the wrong name and type. Nor can
+// the plugin fall back to its own descriptor: gogo refuses to read the
+// same field number through a second, different descriptor pointer
+// ("proto: descriptor conflict"). With no safe way to read the
+// annotation, the collision must fail generation.
+func validateRegisteredExtensionDesc(desc *proto.ExtensionDesc, num int32) error {
+	if desc.Name != _ActorUUIDFQN {
+		return fmt.Errorf(
+			"actor_uuid extension field number collision: the descriptor set assigns "+
+				"field number %d to %s, but this plugin binary has the unrelated extension "+
+				"%s registered at that number on google.protobuf.FieldOptions; "+
+				"declare actor_uuid at a field number no linked extension uses",
+			num, _ActorUUIDFQN, desc.Name)
+	}
+	if _, ok := desc.ExtensionType.(*bool); !ok {
+		return fmt.Errorf(
+			"actor_uuid extension registered at field number %d has type %T, expected *bool",
+			num, desc.ExtensionType)
+	}
+	return nil
 }
