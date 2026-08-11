@@ -967,7 +967,7 @@ func annotatedMessageField(t *testing.T, name string, target *protoplugin.Messag
 	return f
 }
 
-// messageFQMN returns the FQMN that walkForUUID's lookup expects:
+// messageFQMN returns the FQMN that the uuidConverter's lookup expects:
 // ".pkg.MessageName" for a top-level message in the synthetic test
 // package "svc".
 func messageFQMN(m *protoplugin.Message) string {

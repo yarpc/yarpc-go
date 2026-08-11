@@ -81,12 +81,22 @@ type actorUUIDMethod struct {
 }
 
 // uuidFileInfo caches the per-file UUID discovery results so that
-// findActorUUIDFieldNumber and newUUIDContext are each computed at most
-// once per file generation, regardless of how many times the template
-// invokes UUID-related helpers for the same file.
+// findActorUUIDFieldNumber, newUUIDContext, and the per-message
+// convert-and-walk are each computed at most once per file generation,
+// regardless of how many times the template invokes UUID-related
+// helpers for the same file.
 type uuidFileInfo struct {
-	num int32        // 0 means the annotation is not in scope
-	ctx *uuidContext // nil when num == 0
+	num            int32        // 0 means the annotation is not in scope
+	ctx            *uuidContext // nil when num == 0
+	methods        []*actorUUIDMethod
+	serviceHasUUID map[*protoplugin.Service]bool
+	methodHasUUID  map[*protoplugin.Method]bool
+	// err records a failure of the file's UUID analysis - a message
+	// exceeding _maxActorUUIDPaths, or an annotation-read
+	// failure (see hasActorUUID) such as an extension registry
+	// collision; actorUUIDMethods surfaces it to fail the file's
+	// generation.
+	err error
 }
 
 var (
@@ -94,25 +104,25 @@ var (
 	uuidFileInfoCache = map[*protoplugin.File]*uuidFileInfo{}
 )
 
+// getUUIDFileInfo returns the cached UUID analysis for file, computing
+// it on first access.
 func getUUIDFileInfo(file *protoplugin.File) *uuidFileInfo {
 	uuidFileInfoMu.Lock()
 	defer uuidFileInfoMu.Unlock()
 	if info, ok := uuidFileInfoCache[file]; ok {
 		return info
 	}
-	num := findActorUUIDFieldNumber(file)
-	var ctx *uuidContext
-	if num != 0 {
-		ctx = newUUIDContext(file)
-	}
-	info := &uuidFileInfo{num: num, ctx: ctx}
+	info := buildUUIDFileInfo(file)
 	uuidFileInfoCache[file] = info
 	return info
 }
 
-// actorUUIDMethods returns one ActorUUID() emission per message declared
-// in the target file that has at least one path to an actor_uuid-annotated
-// string leaf.
+// buildUUIDFileInfo runs the file's UUID analysis once: it locates the
+// actor_uuid extension, computes one ActorUUID() emission per message
+// declared in the file that has at least one path to an annotated string
+// leaf, and records which services and methods have a request type that
+// reaches such a leaf (the server template gates validator wiring on
+// those).
 //
 // Emission is keyed on declaration, not on service usage. Go only allows
 // a method on a type from the type's declaring package, and the declaring
@@ -132,21 +142,20 @@ func getUUIDFileInfo(file *protoplugin.File) *uuidFileInfo {
 //
 // Synthetic map-entry messages are skipped: they appear in the file's
 // message list but have no generated Go struct to carry a method.
-//
-// Returns nil (and no error) when the target file's import graph does not
-// reach the option's declaration, which is the common case and means the
-// plugin should not emit any accessors.
-func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error) {
-	fi := getUUIDFileInfo(info.File)
-	if fi.num == 0 {
-		return nil, nil
+func buildUUIDFileInfo(file *protoplugin.File) *uuidFileInfo {
+	num := findActorUUIDFieldNumber(file)
+	if num == 0 {
+		return &uuidFileInfo{}
 	}
-	pkgPath := info.File.GoPackage.Path
-	conv := newUUIDConverter(fi.num, fi.ctx)
-	var out []*actorUUIDMethod
-	for _, msg := range info.File.Messages {
-		if msg.GetOptions().GetMapEntry() {
-			continue
+	ctx := newUUIDContext(file)
+	pkgPath := file.GoPackage.Path
+	serviceHas := make(map[*protoplugin.Service]bool)
+	methodHas := make(map[*protoplugin.Method]bool)
+	conv := newUUIDConverter(num, ctx)
+	seen := map[*protoplugin.Message][]*protogen.Path{}
+	walk := func(msg *protoplugin.Message) ([]*protogen.Path, error) {
+		if paths, ok := seen[msg]; ok {
+			return paths, nil
 		}
 		node, err := conv.convert(msg)
 		if err != nil {
@@ -159,12 +168,68 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 					"restructure the message to reduce shared sub-message fan-out",
 				msg.GetName(), _maxActorUUIDPaths)
 		}
-		if len(paths) == 0 {
+		seen[msg] = paths
+		return paths, nil
+	}
+
+	var methods []*actorUUIDMethod
+	for _, msg := range file.Messages {
+		if msg.GetOptions().GetMapEntry() {
 			continue
 		}
-		out = append(out, newActorUUIDMethod(msg.GoType(pkgPath), paths))
+		paths, err := walk(msg)
+		if err != nil {
+			return &uuidFileInfo{num: num, ctx: ctx, err: err}
+		}
+		if len(paths) > 0 {
+			methods = append(methods, newActorUUIDMethod(msg.GoType(pkgPath), paths))
+		}
 	}
-	return out, nil
+
+	// A request type declared in another file gets no accessor here (its
+	// declaring file emits it) but still drives the validator gating for
+	// this file's services; walk memoizes messages shared with the
+	// emission loop above.
+	for _, svc := range file.Services {
+		for _, m := range svc.Methods {
+			req := m.RequestType
+			if req == nil {
+				continue
+			}
+			paths, err := walk(req)
+			if err != nil {
+				return &uuidFileInfo{num: num, ctx: ctx, err: err}
+			}
+			hasUUID := len(paths) > 0
+			methodHas[m] = hasUUID
+			if hasUUID {
+				serviceHas[svc] = true
+			}
+		}
+	}
+	return &uuidFileInfo{
+		num:            num,
+		ctx:            ctx,
+		methods:        methods,
+		serviceHasUUID: serviceHas,
+		methodHasUUID:  methodHas,
+	}
+}
+
+// actorUUIDMethods returns one ActorUUID() emission per message declared
+// in the target file that has at least one path to an actor_uuid-annotated
+// string leaf; see buildUUIDFileInfo for why emission is keyed on
+// declaration rather than service usage.
+//
+// Returns nil (and no error) when the target file's import graph does not
+// reach the option's declaration, which is the common case and means the
+// plugin should not emit any accessors.
+func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error) {
+	fi := getUUIDFileInfo(info.File)
+	if fi.err != nil {
+		return nil, fi.err
+	}
+	return fi.methods, nil
 }
 
 // serviceHasActorUUID reports whether any method of the given service has
@@ -174,15 +239,7 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 // points.
 func serviceHasActorUUID(info *protoplugin.TemplateInfo, service *protoplugin.Service) bool {
 	fi := getUUIDFileInfo(info.File)
-	if fi.num == 0 {
-		return false
-	}
-	for _, m := range service.Methods {
-		if methodHasActorUUIDNum(m, fi.num, fi.ctx) {
-			return true
-		}
-	}
-	return false
+	return fi.serviceHasUUID[service]
 }
 
 // methodHasActorUUID reports whether the given method's request type
@@ -192,32 +249,7 @@ func serviceHasActorUUID(info *protoplugin.TemplateInfo, service *protoplugin.Se
 // emission in actorUUIDMethods.
 func methodHasActorUUID(info *protoplugin.TemplateInfo, method *protoplugin.Method) bool {
 	fi := getUUIDFileInfo(info.File)
-	if fi.num == 0 {
-		return false
-	}
-	return methodHasActorUUIDNum(method, fi.num, fi.ctx)
-}
-
-// methodHasActorUUIDNum is the shared core of serviceHasActorUUID and
-// methodHasActorUUID: it reports whether the method's request type has at
-// least one path to an annotated leaf, reusing an already-resolved field
-// number and context. A conversion failure reports false here; the same
-// failure surfaces as a hard error through actorUUIDMethods, which fails
-// the file's generation.
-func methodHasActorUUIDNum(method *protoplugin.Method, num int32, ctx *uuidContext) bool {
-	if method == nil {
-		return false
-	}
-	req := method.RequestType
-	if req == nil {
-		return false
-	}
-	node, err := newUUIDConverter(num, ctx).convert(req)
-	if err != nil {
-		return false
-	}
-	paths, _ := protogen.Walk(node, _maxActorUUIDPaths)
-	return len(paths) > 0
+	return fi.methodHasUUID[method]
 }
 
 // newActorUUIDMethod lowers the given non-empty set of paths into the
