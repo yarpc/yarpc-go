@@ -28,6 +28,8 @@ import (
 	"time"
 
 	opentracing "github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/propagation"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
@@ -113,6 +115,33 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 func TracingInterceptorEnabled(enabled bool) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.tracingInterceptorEnabled = enabled
+	}
+}
+
+// OTelTracingInterceptorEnabled opts the transport into OpenTelemetry-native
+// tracing. When enabled, the transport installs the OTel tracing interceptor
+// and disables both the legacy OpenTracing tracer and the OpenTracing
+// interceptor.
+func OTelTracingInterceptorEnabled(enabled bool) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.otelTracingEnabled = enabled
+	}
+}
+
+// OTelTracerProvider sets the provider used to start spans when
+// OTelTracingInterceptorEnabled is set. Defaults to otel.GetTracerProvider().
+func OTelTracerProvider(provider oteltrace.TracerProvider) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.otelTracerProvider = provider
+	}
+}
+
+// OTelPropagator sets the propagator used to inject and extract trace context
+// when OTelTracingInterceptorEnabled is set. Defaults to
+// otel.GetTextMapPropagator().
+func OTelPropagator(propagator propagation.TextMapPropagator) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.otelPropagator = propagator
 	}
 }
 
@@ -430,6 +459,9 @@ type transportOptions struct {
 	backoffStrategy           backoff.Strategy
 	tracer                    opentracing.Tracer
 	tracingInterceptorEnabled bool
+	otelTracingEnabled        bool
+	otelTracerProvider        oteltrace.TracerProvider
+	otelPropagator            propagation.TextMapPropagator
 	logger                    *zap.Logger
 	meter                     *metrics.Scope
 	serviceName               string
@@ -485,7 +517,19 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 		unaryInbounds  []interceptor.UnaryInbound
 		streamInbounds []interceptor.StreamInbound
 	)
-	if transportOptions.tracingInterceptorEnabled {
+	if transportOptions.otelTracingEnabled {
+		ti := tracinginterceptor.NewOTel(tracinginterceptor.OTelParams{
+			TracerProvider: transportOptions.otelTracerProvider,
+			Propagator:     transportOptions.otelPropagator,
+			Transport:      TransportName,
+			Logger:         transportOptions.logger,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		streamInbounds = append(streamInbounds, ti)
+		transportOptions.unaryOutboundInterceptor = []interceptor.UnaryOutbound{ti}
+		transportOptions.streamOutboundInterceptor = []interceptor.StreamOutbound{ti}
+		transportOptions.tracer = opentracing.NoopTracer{}
+	} else if transportOptions.tracingInterceptorEnabled {
 		ti := tracinginterceptor.New(tracinginterceptor.Params{
 			Tracer:    transportOptions.tracer,
 			Transport: TransportName,
