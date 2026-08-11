@@ -64,9 +64,10 @@ func (o *outboundChannel) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) 
 // This is invoked by the transport when it is started.
 func (o *outboundChannel) start() (err error) {
 	o.ch, err = tchannel.NewChannel(o.t.name, &tchannel.ChannelOptions{
-		Dialer:              o.dialer,
-		OnPeerStatusChanged: o.t.onPeerStatusChanged,
-		Tracer:              o.t.tracer,
+		DefaultConnectionOptions: o.t.channelConnectionOptions(),
+		Dialer:                   o.dialer,
+		OnPeerStatusChanged:      o.t.onPeerStatusChanged,
+		Tracer:                   o.t.tracer,
 	})
 	return err
 }

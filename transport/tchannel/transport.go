@@ -73,10 +73,12 @@ type Transport struct {
 	dialer            func(ctx context.Context, network, hostPort string) (net.Conn, error)
 	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 
-	connTimeout         time.Duration
-	connectorsGroup     sync.WaitGroup
-	connBackoffStrategy backoffapi.Strategy
-	headerCase          headerCase
+	connTimeout                 time.Duration
+	connectorsGroup             sync.WaitGroup
+	connBackoffStrategy         backoffapi.Strategy
+	propagateCancel             bool
+	sendCancelOnContextCanceled bool
+	headerCase                  headerCase
 
 	peers map[string]*tchannelPeer
 
@@ -148,6 +150,8 @@ func (o transportOptions) newTransport() *Transport {
 		dialer:                         o.dialer,
 		connTimeout:                    o.connTimeout,
 		connBackoffStrategy:            o.connBackoffStrategy,
+		propagateCancel:                o.propagateCancel,
+		sendCancelOnContextCanceled:    o.sendCancelOnContextCanceled,
 		peers:                          make(map[string]*tchannelPeer),
 		tracer:                         tracer,
 		logger:                         logger,
@@ -244,7 +248,8 @@ func (t *Transport) start() error {
 	}
 
 	chopts := tchannel.ChannelOptions{
-		Tracer: t.tracer,
+		DefaultConnectionOptions: t.channelConnectionOptions(),
+		Tracer:                   t.tracer,
 		Handler: handler{
 			router:                         t.router,
 			tracer:                         t.tracer,
@@ -319,6 +324,13 @@ func (t *Transport) start() error {
 		}
 	}
 	return nil
+}
+
+func (t *Transport) channelConnectionOptions() tchannel.ConnectionOptions {
+	return tchannel.ConnectionOptions{
+		PropagateCancel:             t.propagateCancel,
+		SendCancelOnContextCanceled: t.sendCancelOnContextCanceled,
+	}
 }
 
 // Stop stops the TChannel transport. It starts rejecting incoming requests
