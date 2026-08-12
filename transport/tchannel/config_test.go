@@ -45,6 +45,95 @@ func TestTransportSpecInvalidOption(t *testing.T) {
 	})
 }
 
+func TestTransportConfigCancellationOptions(t *testing.T) {
+	type attrs map[string]interface{}
+
+	tests := []struct {
+		name                        string
+		transportConfig             attrs
+		options                     []Option
+		wantPropagateCancel         bool
+		wantSendCancelOnCtxCanceled bool
+	}{
+		{
+			name: "defaults",
+		},
+		{
+			name: "propagate cancel",
+			transportConfig: attrs{
+				"propagateCancel": true,
+			},
+			wantPropagateCancel: true,
+		},
+		{
+			name: "send cancel on context canceled",
+			transportConfig: attrs{
+				"sendCancelOnContextCanceled": true,
+			},
+			wantSendCancelOnCtxCanceled: true,
+		},
+		{
+			name: "both configured",
+			transportConfig: attrs{
+				"propagateCancel":             true,
+				"sendCancelOnContextCanceled": true,
+			},
+			wantPropagateCancel:         true,
+			wantSendCancelOnCtxCanceled: true,
+		},
+		{
+			name: "transport options preserved when config omitted",
+			options: []Option{
+				PropagateCancel(true),
+				SendCancelOnContextCanceled(true),
+			},
+			wantPropagateCancel:         true,
+			wantSendCancelOnCtxCanceled: true,
+		},
+		{
+			name: "config takes precedence over transport options",
+			transportConfig: attrs{
+				"propagateCancel":             false,
+				"sendCancelOnContextCanceled": false,
+			},
+			options: []Option{
+				PropagateCancel(true),
+				SendCancelOnContextCanceled(true),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configurator := yarpcconfig.New()
+			require.NoError(t, configurator.RegisterTransport(TransportSpec(tt.options...)))
+
+			cfgData := attrs{
+				"outbounds": attrs{
+					"myservice": attrs{
+						"tchannel": attrs{
+							"peer": "127.0.0.1:4040",
+						},
+					},
+				},
+			}
+			if tt.transportConfig != nil {
+				cfgData["transports"] = attrs{
+					"tchannel": tt.transportConfig,
+				}
+			}
+
+			cfg, err := configurator.LoadConfig("foo", cfgData)
+			require.NoError(t, err)
+
+			outbound, ok := cfg.Outbounds["myservice"].Unary.(*Outbound)
+			require.True(t, ok)
+			assert.Equal(t, tt.wantPropagateCancel, outbound.transport.propagateCancel)
+			assert.Equal(t, tt.wantSendCancelOnCtxCanceled, outbound.transport.sendCancelOnContextCanceled)
+		})
+	}
+}
+
 type fakeOutboundTLSConfigProvider struct {
 	returnErr         error
 	expectedSpiffeIDs []string
