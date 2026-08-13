@@ -42,8 +42,8 @@ type Outbound interface {
 // Namer is an additional interface that Outbounds may implement in order
 // properly set the transport.Request#Transport field.
 //
-// This interface is not embeded into Outbound to preserve backwards
-// compatiblity.
+// This interface is not embedded into Outbound to preserve backwards
+// compatibility.
 type Namer interface {
 	TransportName() string
 }
