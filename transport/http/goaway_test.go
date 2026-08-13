@@ -70,18 +70,18 @@ func TestHTTP2GoAwayReplay(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "one GOAWAY: no-op middleware, invalid Request.Body; replay fails",
+			name:    "one GOAWAY: no-op middleware, invalid Request.Body; replay succeeds",
 			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
 			mw:      middleware.NopUnaryOutbound,
 			reqBody: getH2InvalidBody(),
-			wantErr: true,
+			wantErr: false,
 		},
 		{
-			name:    "one GOAWAY: custom middleware, valid Request.Body becomes invalid; replay fails",
+			name:    "one GOAWAY: custom middleware, valid Request.Body becomes invalid; replay succeeds",
 			rejects: 1, // 1 means reject the first request with GOAWAY, then accept the next ones
 			mw:      someCustomMiddleware{},
 			reqBody: getH2ValidBody(),
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
