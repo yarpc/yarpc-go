@@ -800,7 +800,6 @@ func needGetBodyHelper(treq *transport.Request) bool {
 // newGetBodyHelper is a constructor for getBodyHelper.
 // Returns an instance of getBodyHelper with the provided raw buffer, or an error on failures.
 func newGetBodyHelper(treq *transport.Request) (*getBodyHelper, error) {
-	// TODO: data races / consistency between first Body read & GetBody calls ?
 	if treq.Body == nil {
 		return nil, errors.New("request body is nil, cannot create getBodyHelper")
 	}
@@ -870,14 +869,10 @@ func (h *getBodyHelper) Read(p []byte) (int, error) {
 	if err := h.Init(); err != nil {
 		return 0, err
 	}
-
 	// Ensure next GetBody call will rewind the reader
 	defer func() {
-		// TODO: err check from Read ?
 		h.mustRewind = true
 	}()
-
-	// TODO: read & seek ops might need data race protection
 	return h.reader.Read(p)
 }
 
@@ -914,7 +909,6 @@ func (h *getBodyHelper) EnsureGetBody(hreq *http.Request) error {
 		return nil
 	}
 	if h.treq.Body == nil {
-		// TODO: silently ignore nil body ?
 		return nil
 	}
 	hreq.GetBody = h.NewGetBody()
