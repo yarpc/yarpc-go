@@ -350,8 +350,8 @@ func TestNeedGetBodyHelper(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			needed := needGetBodyHelper(tt.treq)
-			require.Equal(t, tt.outcome, needed, "unexpected outcome from needGetBodyHelper")
+			needed := needBodyHelper(tt.treq)
+			require.Equal(t, tt.outcome, needed, "unexpected outcome from needBodyHelper")
 
 			if tt.treq == nil || tt.treq.Body == nil {
 				return
@@ -361,15 +361,15 @@ func TestNeedGetBodyHelper(t *testing.T) {
 			hreq, err := http.NewRequest("POST", defaultURLTemplate.String(), tt.treq.Body)
 			require.NoError(t, err)
 			if needed {
-				require.Nil(t, hreq.GetBody, "GetBody needed by needGetBodyHelper() but found on net/http.Request")
+				require.Nil(t, hreq.GetBody, "GetBody needed by needBodyHelper() but found on net/http.Request")
 			} else {
-				require.NotNil(t, hreq.GetBody, "GetBody not needed by needGetBodyHelper() but not found on net/http.Request")
+				require.NotNil(t, hreq.GetBody, "GetBody not needed by needBodyHelper() but not found on net/http.Request")
 			}
 		})
 	}
 }
 
-// TestNewGetBodyHelper validates constructor for getBodyHelper.
+// TestNewGetBodyHelper validates constructor for bodyHelper.
 func TestNewGetBodyHelper(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -410,7 +410,7 @@ func TestNewGetBodyHelper(t *testing.T) {
 
 			// Store original body
 			ogBody := tt.treq.Body
-			h, err := newGetBodyHelper(tt.treq)
+			h, err := newBodyHelper(tt.treq)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Nil(t, h)
@@ -434,7 +434,7 @@ func TestNewGetBodyHelper(t *testing.T) {
 	}
 }
 
-// TestGetBodyHelper_Init validates initialization of getBodyHelper.
+// TestGetBodyHelper_Init validates initialization of bodyHelper.
 func TestGetBodyHelper_Init(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -493,7 +493,7 @@ func TestGetBodyHelper_Init(t *testing.T) {
 
 			// Store original body
 			ogBody := tt.treq.Body
-			h, err := newGetBodyHelper(tt.treq)
+			h, err := newBodyHelper(tt.treq)
 			require.NotNil(t, h)
 			require.NoError(t, err)
 			seenErrs := 0
@@ -527,7 +527,7 @@ func TestGetBodyHelper_Init(t *testing.T) {
 	}
 }
 
-// TestGetBodyHelper_Read validates read & rewind functionalities from getBodyHelper.
+// TestGetBodyHelper_Read validates read & rewind functionalities from bodyHelper.
 func TestGetBodyHelper_Read(t *testing.T) {
 	const (
 		somePayload = "some-payload"
@@ -536,8 +536,8 @@ func TestGetBodyHelper_Read(t *testing.T) {
 	tests := []struct {
 		name    string
 		treq    *transport.Request
-		reads   int    // Number of Read calls to make on a getBodyHelper
-		wantEOF []bool // Expected EOF status from io.ReadAll on a getBodyHelper; must be same length as "reads"
+		reads   int    // Number of Read calls to make on a bodyHelper
+		wantEOF []bool // Expected EOF status from io.ReadAll on a bodyHelper; must be same length as "reads"
 	}{
 		{
 			name: "io.ReadSeeker: single read",
@@ -593,7 +593,7 @@ func TestGetBodyHelper_Read(t *testing.T) {
 
 			// Store original body
 			ogBody := tt.treq.Body
-			h, err := newGetBodyHelper(tt.treq)
+			h, err := newBodyHelper(tt.treq)
 			require.NotNil(t, h)
 			require.NoError(t, err)
 			for i := 0; i < tt.reads; i++ {
@@ -684,7 +684,7 @@ func TestGetBodyHelper_NewGetBody(t *testing.T) {
 
 			// Store original body
 			ogBody := tt.treq.Body
-			h, err := newGetBodyHelper(tt.treq)
+			h, err := newBodyHelper(tt.treq)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Nil(t, h)
@@ -776,9 +776,9 @@ func TestGetBodyHelper_EnsureGetBody(t *testing.T) {
 			t.Parallel()
 
 			// Create helper if needed
-			var helper *getBodyHelper
-			if needGetBodyHelper(tt.treq) {
-				h, err := newGetBodyHelper(tt.treq)
+			var helper *bodyHelper
+			if needBodyHelper(tt.treq) {
+				h, err := newBodyHelper(tt.treq)
 				require.NoError(t, err)
 				require.NotNil(t, h)
 				helper = h
