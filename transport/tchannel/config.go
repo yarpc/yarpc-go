@@ -42,9 +42,16 @@ import (
 //	      exponential:
 //	        first: 10ms
 //	        max: 30s
+//	    propagateCancel: true
+//	    sendCancelOnContextCanceled: true
 type TransportConfig struct {
 	ConnTimeout time.Duration       `config:"connTimeout"`
 	ConnBackoff yarpcconfig.Backoff `config:"connBackoff"`
+	// PropagateCancel overrides the PropagateCancel transport option when set.
+	PropagateCancel *bool `config:"propagateCancel"`
+	// SendCancelOnContextCanceled overrides the
+	// SendCancelOnContextCanceled transport option when set.
+	SendCancelOnContextCanceled *bool `config:"sendCancelOnContextCanceled"`
 }
 
 // InboundConfig configures a TChannel inbound.
@@ -161,6 +168,13 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 
 	for _, opt := range ts.transportOptions {
 		opt(&options)
+	}
+
+	if tc.PropagateCancel != nil {
+		options.propagateCancel = *tc.PropagateCancel
+	}
+	if tc.SendCancelOnContextCanceled != nil {
+		options.sendCancelOnContextCanceled = *tc.SendCancelOnContextCanceled
 	}
 
 	if tc.ConnTimeout != 0 {

@@ -106,3 +106,46 @@ func TestOutboundChannelFailure(t *testing.T) {
 	_, err = transport.createOutboundChannel(nil)
 	assert.EqualError(t, err, "tchannel outbound channel cannot be created after starting transport")
 }
+
+func TestOutboundChannelCancellationOptions(t *testing.T) {
+	tests := []struct {
+		name                        string
+		options                     []TransportOption
+		wantPropagateCancel         bool
+		wantSendCancelOnCtxCanceled bool
+	}{
+		{
+			name: "defaults",
+		},
+		{
+			name: "configured",
+			options: []TransportOption{
+				PropagateCancel(true),
+				SendCancelOnContextCanceled(true),
+			},
+			wantPropagateCancel:         true,
+			wantSendCancelOnCtxCanceled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			options := append([]TransportOption{ServiceName("test")}, tt.options...)
+			transport, err := NewTransport(options...)
+			require.NoError(t, err)
+
+			peerTransport, err := transport.createOutboundChannel(nil)
+			require.NoError(t, err)
+			outboundChannel := peerTransport.(*outboundChannel)
+
+			require.NoError(t, transport.Start())
+			t.Cleanup(func() {
+				assert.NoError(t, transport.Stop())
+			})
+
+			connectionOptions := outboundChannel.ch.ConnectionOptions()
+			assert.Equal(t, tt.wantPropagateCancel, connectionOptions.PropagateCancel)
+			assert.Equal(t, tt.wantSendCancelOnCtxCanceled, connectionOptions.SendCancelOnContextCanceled)
+		})
+	}
+}
