@@ -110,23 +110,6 @@ func TestInboundStartErrorBadGrabHeader(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(i.Start()).Code())
 }
 
-func TestInboundHeaderCapacityHint(t *testing.T) {
-	x := NewTransport()
-	i := x.NewInbound("127.0.0.1:0", InboundHeaderCapacityHint(24))
-
-	assert.Equal(t, 24, i.headerCapacityHint)
-}
-
-func TestInboundStartErrorNegativeHeaderCapacityHint(t *testing.T) {
-	x := NewTransport()
-	i := x.NewInbound("127.0.0.1:0", InboundHeaderCapacityHint(-1))
-	i.SetRouter(new(transporttest.MockRouter))
-
-	err := i.Start()
-	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(err).Code())
-	assert.Contains(t, err.Error(), "header capacity hint must not be negative")
-}
-
 func TestInboundStopWithoutStarting(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound("127.0.0.1:8000")

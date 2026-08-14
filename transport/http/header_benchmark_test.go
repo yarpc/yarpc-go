@@ -41,9 +41,10 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 		name                string
 		applicationHeaders  int
 		tracingHeaders      int
+		proxyHeaders        int
+		grabbedHeaders      int
 		ignoredHeaders      int
 		poppedSystemHeaders int
-		useCapacityHint     bool
 		modes               []headerMode
 	}
 
@@ -79,11 +80,21 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 			},
 		},
 		{
+			name:                "proxy-and-grabbed",
+			applicationHeaders:  2,
+			proxyHeaders:        7,
+			grabbedHeaders:      4,
+			ignoredHeaders:      4,
+			poppedSystemHeaders: 7,
+			modes:               []headerMode{defaultMode},
+		},
+		{
 			name:                "header-heavy",
 			applicationHeaders:  25,
 			tracingHeaders:      8,
-			poppedSystemHeaders: 6,
-			useCapacityHint:     true,
+			proxyHeaders:        7,
+			grabbedHeaders:      12,
+			poppedSystemHeaders: 7,
 			modes:               []headerMode{defaultMode},
 		},
 		{
@@ -97,12 +108,17 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 	}
 
 	for _, scenario := range scenarios {
-		from := makeBenchmarkInboundHeaders(
+		from, grabHeaders := makeBenchmarkInboundHeaders(
 			scenario.applicationHeaders,
 			scenario.tracingHeaders,
+			scenario.proxyHeaders,
+			scenario.grabbedHeaders,
 			scenario.ignoredHeaders,
 		)
-		eligibleHeaders := scenario.applicationHeaders + scenario.tracingHeaders
+		eligibleHeaders := scenario.applicationHeaders +
+			scenario.tracingHeaders +
+			scenario.proxyHeaders +
+			scenario.grabbedHeaders
 
 		for _, mode := range scenario.modes {
 			mode := mode
@@ -119,21 +135,9 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 						},
 					},
 					{
-						name:     "after-system-pop",
+						name:     "automatic",
 						capacity: func() int { return len(from) },
 					},
-					{
-						name:     "estimated",
-						capacity: func() int { return inboundHeaderCapacity(from) },
-					},
-				}
-				if scenario.useCapacityHint {
-					benchmarks = append(benchmarks, capacityMode{
-						name: "hinted",
-						capacity: func() int {
-							return inboundHeaderCapacityWithHint(from, eligibleHeaders)
-						},
-					})
 				}
 
 				for _, benchmark := range benchmarks {
@@ -146,6 +150,11 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 							got = transport.NewHeadersWithCapacity(benchmark.capacity())
 							got = mode.prepare(got)
 							got = applicationHeaders.FromHTTPHeaders(from, got)
+							for header := range grabHeaders {
+								if value := from.Get(header); value != "" {
+									got = got.With(header, value)
+								}
+							}
 						}
 
 						if got.Len() != eligibleHeaders {
@@ -158,9 +167,15 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 	}
 }
 
-func makeBenchmarkInboundHeaders(application, tracing, ignored int) http.Header {
-	headers := make(http.Header, application+tracing+ignored+1)
-	headers.Set(TTLMSHeader, "1000")
+func makeBenchmarkInboundHeaders(
+	application int,
+	tracing int,
+	proxy int,
+	grabbed int,
+	ignored int,
+) (http.Header, map[string]struct{}) {
+	headers := make(http.Header, application+tracing+proxy+grabbed+ignored)
+	grabHeaders := make(map[string]struct{}, grabbed)
 
 	for i := 0; i < application; i++ {
 		headers.Set(fmt.Sprintf("%sApplication-%d", ApplicationHeaderPrefix, i), "application-value")
@@ -171,9 +186,29 @@ func makeBenchmarkInboundHeaders(application, tracing, ignored int) http.Header 
 	for i := 1; i < tracing; i++ {
 		headers.Set(fmt.Sprintf("%sBenchmark-%d", UberBaggageHeaderKeyPrefix, i), "baggage-value")
 	}
+	proxyHeaderValues := []struct {
+		name  string
+		value string
+	}{
+		{XForwardedForHeader, "203.0.113.42"},
+		{XForwardedProtoHeader, "https"},
+		{XForwardedPortHeader, "443"},
+		{XRequestIDHeader, "request-id"},
+		{XUberSourceHeader, "source"},
+		{ViaHeader, "1.1 proxy"},
+		{UserAgentHeader, "yarpc/1.0"},
+	}
+	for _, header := range proxyHeaderValues[:proxy] {
+		headers.Set(header.name, header.value)
+	}
+	for i := 0; i < grabbed; i++ {
+		header := fmt.Sprintf("x-grabbed-%d", i)
+		grabHeaders[header] = struct{}{}
+		headers.Set(header, "grabbed-value")
+	}
 	for i := 0; i < ignored; i++ {
 		headers.Set(fmt.Sprintf("X-Ignored-%d", i), "ignored-value")
 	}
 
-	return headers
+	return headers, grabHeaders
 }
