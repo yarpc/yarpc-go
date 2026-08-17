@@ -1,0 +1,21 @@
+// Annotations test fixture for protoc-gen-yarpc-go.
+//
+// Declares the FieldOptions extension that protoc-gen-yarpc-go discovers by
+// fully-qualified name (uber.security.engsec.utoken.annotations.actor_uuid).
+//
+// The plugin does not depend on this file at build time. It locates the
+// extension at code-generation time by walking the descriptor closure of
+// the .proto being generated and matching by FQN. See
+// encoding/protobuf/protoc-gen-yarpc-go/internal/lib/uuid.go.
+syntax = "proto3";
+
+package uber.security.engsec.utoken.annotations;
+
+option go_package = "annotations";
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FieldOptions {
+  // actor_uuid marks the request field that carries the caller's UUID.
+  bool actor_uuid = 50001;
+}
