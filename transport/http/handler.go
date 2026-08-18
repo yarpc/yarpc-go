@@ -115,7 +115,15 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		transportName = TransportHTTP2Name
 	}
 
-	transportHeader := transport.NewHeaders()
+	caller := popHeader(req.Header, CallerHeader)
+	encoding := transport.Encoding(popHeader(req.Header, EncodingHeader))
+	shardKey := popHeader(req.Header, ShardKeyHeader)
+	routingKey := popHeader(req.Header, RoutingKeyHeader)
+	routingDelegate := popHeader(req.Header, RoutingDelegateHeader)
+	callerProcedure := popHeader(req.Header, CallerProcedureHeader)
+	ttl := popHeader(req.Header, TTLMSHeader)
+
+	transportHeader := transport.NewHeadersWithCapacity(len(req.Header))
 	if h.overrideOriginalItemWithCanonicalizedKey {
 		transportHeader = transportHeader.EnableOverrideOriginalItemsWithCanonicalizedKeys()
 	}
@@ -123,18 +131,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		transportHeader = transportHeader.WithHeaderCaseMapping(h.headerCaseMapping)
 	}
 
-	caller := popHeader(req.Header, CallerHeader)
-
 	treq := &transport.Request{
 		Caller:          caller,
 		Service:         service,
 		Procedure:       procedure,
-		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
+		Encoding:        encoding,
 		Transport:       transportName,
-		ShardKey:        popHeader(req.Header, ShardKeyHeader),
-		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
-		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
-		CallerProcedure: popHeader(req.Header, CallerProcedureHeader),
+		ShardKey:        shardKey,
+		RoutingKey:      routingKey,
+		RoutingDelegate: routingDelegate,
+		CallerProcedure: callerProcedure,
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transportHeader),
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
@@ -167,7 +173,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	}()
 
 	ctx := req.Context()
-	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, ttl)
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
 	ctx, span := h.createSpan(ctx, req, treq, start)
