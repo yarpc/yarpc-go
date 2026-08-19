@@ -170,6 +170,7 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 //	      x-bar:
 //	        - X-Bar
 //	        - X-BAR
+//	    headerPreallocation: scan
 //	    shutdownTimeout: 5s
 //	    readHeaderTimeout: 5s
 //	    readTimeout: 10s
@@ -205,6 +206,10 @@ type InboundConfig struct {
 	// Keys must be lowercase. Values are the desired original casings.
 	// Ignored if CanonicalizeHeaderKeys is true.
 	HeaderCaseMapping map[string][]string `config:"headerCaseMapping"`
+	// HeaderPreallocation controls how inbound transport header maps are
+	// preallocated. Supported values are "remaining" (default), "scan", and
+	// "disabled".
+	HeaderPreallocation string `config:"headerPreallocation"`
 }
 
 // TLSConfig specifies the TLS configuration of the HTTP inbound.
@@ -275,9 +280,33 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 		}
 	}
 
+	if ic.HeaderPreallocation != "" {
+		strategy, err := parseHeaderPreallocationStrategy(ic.HeaderPreallocation)
+		if err != nil {
+			return nil, err
+		}
+		inboundOptions = append(inboundOptions, InboundHeaderPreallocation(strategy))
+	}
+
 	inboundOptions = append(inboundOptions, DisableHTTP2(ic.DisableHTTP2))
 
 	return t.(*Transport).NewInbound(ic.Address, inboundOptions...), nil
+}
+
+func parseHeaderPreallocationStrategy(value string) (HeaderPreallocationStrategy, error) {
+	switch value {
+	case "remaining":
+		return HeaderPreallocationRemaining, nil
+	case "scan":
+		return HeaderPreallocationScan, nil
+	case "disabled":
+		return HeaderPreallocationDisabled, nil
+	default:
+		return 0, fmt.Errorf(
+			"headerPreallocation must be one of remaining, scan, or disabled, got %q",
+			value,
+		)
+	}
 }
 
 // OutboundConfig configures an HTTP outbound.

@@ -119,6 +119,7 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 			scenario.tracingHeaders +
 			scenario.proxyHeaders +
 			scenario.grabbedHeaders
+		preallocationGrabHeaders := newHeaderPreallocationGrabHeaders(grabHeaders)
 
 		for _, mode := range scenario.modes {
 			mode := mode
@@ -135,8 +136,18 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 						},
 					},
 					{
-						name:     "automatic",
+						name:     "remaining",
 						capacity: func() int { return len(from) },
+					},
+					{
+						name: "scan",
+						capacity: func() int {
+							return inboundHeaderCapacity(
+								HeaderPreallocationScan,
+								from,
+								preallocationGrabHeaders,
+							)
+						},
 					},
 				}
 

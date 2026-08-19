@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -42,10 +43,143 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// Preallocating for eight or fewer headers did not reduce allocations in
+	// benchmarks, so avoid paying for a scan on small eligible header sets.
+	_minInboundHeadersForPreallocation = 9
+)
+
 func popHeader(h http.Header, n string) string {
 	v := h.Get(n)
 	h.Del(n)
 	return v
+}
+
+func inboundHeaderCapacity(
+	strategy HeaderPreallocationStrategy,
+	headers http.Header,
+	grabHeaders []headerPreallocationGrabHeader,
+) int {
+	switch strategy {
+	case HeaderPreallocationRemaining:
+		return len(headers)
+	case HeaderPreallocationScan:
+		return scannedInboundHeaderCapacity(headers, grabHeaders)
+	case HeaderPreallocationDisabled:
+		return 0
+	default:
+		// Inbounds validate the strategy before installing the handler.
+		return 0
+	}
+}
+
+type headerPreallocationGrabHeader struct {
+	key                  string
+	canonicalKey         string
+	prefixedCanonicalKey string
+	prefixedLowerKey     string
+}
+
+func newHeaderPreallocationGrabHeaders(
+	grabHeaders map[string]struct{},
+) []headerPreallocationGrabHeader {
+	headers := make([]headerPreallocationGrabHeader, 0, len(grabHeaders))
+	lowerApplicationHeaderPrefix := strings.ToLower(ApplicationHeaderPrefix)
+	for key := range grabHeaders {
+		headers = append(headers, headerPreallocationGrabHeader{
+			key:                  key,
+			canonicalKey:         http.CanonicalHeaderKey(key),
+			prefixedCanonicalKey: http.CanonicalHeaderKey(ApplicationHeaderPrefix + key),
+			prefixedLowerKey:     lowerApplicationHeaderPrefix + key,
+		})
+	}
+	return headers
+}
+
+func scannedInboundHeaderCapacity(
+	headers http.Header,
+	grabHeaders []headerPreallocationGrabHeader,
+) int {
+	capacity := 0
+	for key, values := range headers {
+		if len(values) == 0 {
+			continue
+		}
+
+		if hasPrefixFold(key, ApplicationHeaderPrefix) ||
+			isTracingHeader(key) ||
+			isProxyHeader(key) {
+			capacity++
+		}
+	}
+
+	for _, header := range grabHeaders {
+		if isTracingHeader(header.key) || isProxyHeader(header.key) {
+			continue
+		}
+		if headerValue(headers, header.canonicalKey, header.key) != "" &&
+			!hasHeaderValues(
+				headers,
+				header.prefixedCanonicalKey,
+				header.prefixedLowerKey,
+			) {
+			capacity++
+		}
+	}
+
+	// FromHTTPHeaders and the GrabHeaders loop can write the same canonical
+	// transport key through different HTTP header forms. Remove those
+	// collisions from the capacity estimate.
+	for key, values := range headers {
+		if len(values) == 0 || !hasPrefixFold(key, ApplicationHeaderPrefix) {
+			continue
+		}
+
+		suffix := key[len(ApplicationHeaderPrefix):]
+		if (isTracingHeader(suffix) || isProxyHeader(suffix)) &&
+			hasUnprefixedPropagatedHeader(headers, suffix) {
+			capacity--
+		}
+	}
+
+	if capacity < _minInboundHeadersForPreallocation {
+		return 0
+	}
+	return capacity
+}
+
+func hasUnprefixedPropagatedHeader(headers http.Header, key string) bool {
+	for candidate, values := range headers {
+		if len(values) > 0 &&
+			!hasPrefixFold(candidate, ApplicationHeaderPrefix) &&
+			strings.EqualFold(candidate, key) &&
+			(isTracingHeader(candidate) || isProxyHeader(candidate)) {
+			return true
+		}
+	}
+	return false
+}
+
+func headerValue(headers http.Header, canonicalKey, lowerKey string) string {
+	if values, ok := headers[canonicalKey]; ok {
+		if len(values) > 0 {
+			return values[0]
+		}
+		return ""
+	}
+	if lowerKey != canonicalKey {
+		if values := headers[lowerKey]; len(values) > 0 {
+			return values[0]
+		}
+	}
+	return ""
+}
+
+func hasHeaderValues(headers http.Header, canonicalKey, lowerKey string) bool {
+	if values, ok := headers[canonicalKey]; ok {
+		return len(values) > 0
+	}
+	return lowerKey != canonicalKey && len(headers[lowerKey]) > 0
 }
 
 // handler adapts a transport.Handler into a handler for net/http.
@@ -58,6 +192,8 @@ type handler struct {
 	transport                                *Transport
 	overrideOriginalItemWithCanonicalizedKey bool
 	headerCaseMapping                        map[string][]string
+	headerPreallocationStrategy              HeaderPreallocationStrategy
+	headerPreallocationGrabHeaders           []headerPreallocationGrabHeader
 	// duplicate header counter vector
 	duplicateHeaderCounterVec *metrics.CounterVector
 }
@@ -123,7 +259,11 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	callerProcedure := popHeader(req.Header, CallerProcedureHeader)
 	ttl := popHeader(req.Header, TTLMSHeader)
 
-	transportHeader := transport.NewHeadersWithCapacity(len(req.Header))
+	transportHeader := transport.NewHeadersWithCapacity(inboundHeaderCapacity(
+		h.headerPreallocationStrategy,
+		req.Header,
+		h.headerPreallocationGrabHeaders,
+	))
 	if h.overrideOriginalItemWithCanonicalizedKey {
 		transportHeader = transportHeader.EnableOverrideOriginalItemsWithCanonicalizedKeys()
 	}
