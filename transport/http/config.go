@@ -207,7 +207,7 @@ type InboundConfig struct {
 	// Ignored if CanonicalizeHeaderKeys is true.
 	HeaderCaseMapping map[string][]string `config:"headerCaseMapping"`
 	// HeaderPreallocation controls how inbound transport header maps are
-	// preallocated. Supported values are "remaining" (default), "scan", and
+	// preallocated. Supported values are "unfiltered" (default), "scan", and
 	// "disabled".
 	HeaderPreallocation string `config:"headerPreallocation"`
 }
@@ -295,15 +295,15 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 
 func parseHeaderPreallocationStrategy(value string) (HeaderPreallocationStrategy, error) {
 	switch value {
-	case "remaining":
-		return HeaderPreallocationRemaining, nil
+	case "unfiltered":
+		return HeaderPreallocationUnfiltered, nil
 	case "scan":
 		return HeaderPreallocationScan, nil
 	case "disabled":
 		return HeaderPreallocationDisabled, nil
 	default:
 		return 0, fmt.Errorf(
-			"headerPreallocation must be one of remaining, scan, or disabled, got %q",
+			"headerPreallocation must be one of unfiltered, scan, or disabled, got %q",
 			value,
 		)
 	}

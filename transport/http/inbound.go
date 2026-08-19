@@ -62,9 +62,9 @@ func (InboundOption) httpOption() {}
 type HeaderPreallocationStrategy uint8
 
 const (
-	// HeaderPreallocationRemaining uses the number of HTTP headers remaining
-	// after YARPC system headers are removed. This is the default.
-	HeaderPreallocationRemaining HeaderPreallocationStrategy = iota
+	// HeaderPreallocationUnfiltered uses the unfiltered number of HTTP headers
+	// remaining after YARPC system headers are removed. This is the default.
+	HeaderPreallocationUnfiltered HeaderPreallocationStrategy = iota
 
 	// HeaderPreallocationScan scans the remaining HTTP headers and preallocates
 	// only for headers that YARPC will propagate.
@@ -177,7 +177,7 @@ func HeaderCaseMapping(mapping map[string][]string) InboundOption {
 // InboundHeaderPreallocation returns an InboundOption that controls how the
 // inbound sizes the two transport header maps built for each request.
 //
-// HeaderPreallocationRemaining preserves the default behavior and uses the
+// HeaderPreallocationUnfiltered preserves the default behavior and uses the
 // number of HTTP headers remaining after YARPC system headers are removed.
 // HeaderPreallocationScan performs an additional scan to count only headers
 // that YARPC will propagate, and HeaderPreallocationDisabled skips
@@ -229,7 +229,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		grabHeaders:                 make(map[string]struct{}),
 		bothResponseError:           true,
 		disableHTTP2:                false,
-		headerPreallocationStrategy: HeaderPreallocationRemaining,
+		headerPreallocationStrategy: HeaderPreallocationUnfiltered,
 	}
 	server := &http.Server{
 		Addr: i.addr,
@@ -300,7 +300,7 @@ func (i *Inbound) start() error {
 		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "no router configured for transport inbound")
 	}
 	switch i.headerPreallocationStrategy {
-	case HeaderPreallocationRemaining, HeaderPreallocationScan, HeaderPreallocationDisabled:
+	case HeaderPreallocationUnfiltered, HeaderPreallocationScan, HeaderPreallocationDisabled:
 	default:
 		return yarpcerrors.Newf(
 			yarpcerrors.CodeInvalidArgument,

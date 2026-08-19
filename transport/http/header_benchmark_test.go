@@ -136,7 +136,7 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 						},
 					},
 					{
-						name:     "remaining",
+						name:     "unfiltered",
 						capacity: func() int { return len(from) },
 					},
 					{

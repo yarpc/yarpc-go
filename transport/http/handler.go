@@ -43,12 +43,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// Preallocating for eight or fewer headers did not reduce allocations in
-	// benchmarks, so avoid paying for a scan on small eligible header sets.
-	_minInboundHeadersForPreallocation = 9
-)
-
 func popHeader(h http.Header, n string) string {
 	v := h.Get(n)
 	h.Del(n)
@@ -61,7 +55,7 @@ func inboundHeaderCapacity(
 	grabHeaders []headerPreallocationGrabHeader,
 ) int {
 	switch strategy {
-	case HeaderPreallocationRemaining:
+	case HeaderPreallocationUnfiltered:
 		return len(headers)
 	case HeaderPreallocationScan:
 		return scannedInboundHeaderCapacity(headers, grabHeaders)
@@ -142,9 +136,6 @@ func scannedInboundHeaderCapacity(
 		}
 	}
 
-	if capacity < _minInboundHeadersForPreallocation {
-		return 0
-	}
 	return capacity
 }
 

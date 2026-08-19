@@ -46,10 +46,10 @@ import (
 )
 
 func TestInboundHeaderCapacity(t *testing.T) {
-	t.Run("remaining", func(t *testing.T) {
+	t.Run("unfiltered", func(t *testing.T) {
 		headers := makeInboundPreallocationTestHeaders(2, 3)
 		assert.Equal(t, len(headers), inboundHeaderCapacity(
-			HeaderPreallocationRemaining,
+			HeaderPreallocationUnfiltered,
 			headers,
 			nil,
 		))
@@ -63,9 +63,9 @@ func TestInboundHeaderCapacity(t *testing.T) {
 		))
 	})
 
-	t.Run("scan applies threshold to eligible headers", func(t *testing.T) {
+	t.Run("scan uses eligible count for small header sets", func(t *testing.T) {
 		headers := makeInboundPreallocationTestHeaders(8, 20)
-		assert.Zero(t, inboundHeaderCapacity(
+		assert.Equal(t, 8, inboundHeaderCapacity(
 			HeaderPreallocationScan,
 			headers,
 			nil,

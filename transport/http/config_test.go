@@ -378,7 +378,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "header preallocation config overrides option",
 			cfg: attrs{
 				"address":             ":8080",
-				"headerPreallocation": "remaining",
+				"headerPreallocation": "unfiltered",
 			},
 			opts: []Option{
 				InboundHeaderPreallocation(HeaderPreallocationScan),
@@ -386,7 +386,7 @@ func TestTransportSpec(t *testing.T) {
 			wantInbound: &wantInbound{
 				Address:             ":8080",
 				ShutdownTimeout:     defaultShutdownTimeout,
-				HeaderPreallocation: HeaderPreallocationRemaining,
+				HeaderPreallocation: HeaderPreallocationUnfiltered,
 			},
 		},
 		{
@@ -396,7 +396,7 @@ func TestTransportSpec(t *testing.T) {
 				"headerPreallocation": "unknown",
 			},
 			wantErrors: []string{
-				`headerPreallocation must be one of remaining, scan, or disabled, got "unknown"`,
+				`headerPreallocation must be one of unfiltered, scan, or disabled, got "unknown"`,
 			},
 		},
 	}

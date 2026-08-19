@@ -115,7 +115,7 @@ func TestInboundHeaderPreallocation(t *testing.T) {
 		name     string
 		strategy HeaderPreallocationStrategy
 	}{
-		{name: "remaining", strategy: HeaderPreallocationRemaining},
+		{name: "unfiltered", strategy: HeaderPreallocationUnfiltered},
 		{name: "scan", strategy: HeaderPreallocationScan},
 		{name: "disabled", strategy: HeaderPreallocationDisabled},
 	}
