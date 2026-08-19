@@ -110,6 +110,41 @@ func TestInboundStartErrorBadGrabHeader(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(i.Start()).Code())
 }
 
+func TestInboundHeaderPreallocation(t *testing.T) {
+	tests := []struct {
+		name     string
+		strategy HeaderPreallocationStrategy
+	}{
+		{name: "unfiltered", strategy: HeaderPreallocationUnfiltered},
+		{name: "scan", strategy: HeaderPreallocationScan},
+		{name: "disabled", strategy: HeaderPreallocationDisabled},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			x := NewTransport()
+			i := x.NewInbound(
+				"127.0.0.1:0",
+				InboundHeaderPreallocation(tt.strategy),
+			)
+			assert.Equal(t, tt.strategy, i.headerPreallocationStrategy)
+		})
+	}
+}
+
+func TestInboundStartErrorInvalidHeaderPreallocation(t *testing.T) {
+	x := NewTransport()
+	i := x.NewInbound(
+		"127.0.0.1:0",
+		InboundHeaderPreallocation(HeaderPreallocationStrategy(255)),
+	)
+	i.SetRouter(new(transporttest.MockRouter))
+
+	err := i.Start()
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(err).Code())
+	assert.Contains(t, err.Error(), "unknown header preallocation strategy")
+}
+
 func TestInboundStopWithoutStarting(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound("127.0.0.1:8000")

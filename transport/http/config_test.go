@@ -88,6 +88,7 @@ func TestTransportSpec(t *testing.T) {
 		IdleTimeout            time.Duration
 		CanonicalizeHeaderKeys bool
 		HeaderCaseMapping      map[string][]string
+		HeaderPreallocation    HeaderPreallocationStrategy
 	}
 
 	type inboundTest struct {
@@ -347,6 +348,55 @@ func TestTransportSpec(t *testing.T) {
 				Address:                ":8080",
 				ShutdownTimeout:        defaultShutdownTimeout,
 				CanonicalizeHeaderKeys: true,
+			},
+		},
+		{
+			desc: "header preallocation scan",
+			cfg: attrs{
+				"address":             ":8080",
+				"headerPreallocation": "scan",
+			},
+			wantInbound: &wantInbound{
+				Address:             ":8080",
+				ShutdownTimeout:     defaultShutdownTimeout,
+				HeaderPreallocation: HeaderPreallocationScan,
+			},
+		},
+		{
+			desc: "header preallocation disabled",
+			cfg: attrs{
+				"address":             ":8080",
+				"headerPreallocation": "disabled",
+			},
+			wantInbound: &wantInbound{
+				Address:             ":8080",
+				ShutdownTimeout:     defaultShutdownTimeout,
+				HeaderPreallocation: HeaderPreallocationDisabled,
+			},
+		},
+		{
+			desc: "header preallocation config overrides option",
+			cfg: attrs{
+				"address":             ":8080",
+				"headerPreallocation": "unfiltered",
+			},
+			opts: []Option{
+				InboundHeaderPreallocation(HeaderPreallocationScan),
+			},
+			wantInbound: &wantInbound{
+				Address:             ":8080",
+				ShutdownTimeout:     defaultShutdownTimeout,
+				HeaderPreallocation: HeaderPreallocationUnfiltered,
+			},
+		},
+		{
+			desc: "invalid header preallocation",
+			cfg: attrs{
+				"address":             ":8080",
+				"headerPreallocation": "unknown",
+			},
+			wantErrors: []string{
+				`headerPreallocation must be one of unfiltered, scan, or disabled, got "unknown"`,
 			},
 		},
 	}
@@ -696,6 +746,7 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, want.ReadTimeout, ib.server.ReadTimeout, "ReadTimeout should match")
 				assert.Equal(t, want.IdleTimeout, ib.server.IdleTimeout, "IdleTimeout should match")
 				assert.Equal(t, want.CanonicalizeHeaderKeys, ib.overrideOriginalItemWithCanonicalizedKey, "canonicalizeHeaderKeys should match")
+				assert.Equal(t, want.HeaderPreallocation, ib.headerPreallocationStrategy, "headerPreallocation should match")
 				if len(want.HeaderCaseMapping) > 0 {
 					assert.Equal(t, want.HeaderCaseMapping, ib.headerCaseMapping, "headerCaseMapping should match")
 				} else {
