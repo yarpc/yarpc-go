@@ -27,8 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"context"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
@@ -37,6 +35,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/net/context"
 )
 
 // Different ways in which outbounds can be constructed from a client Channel
