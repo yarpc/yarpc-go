@@ -1,0 +1,116 @@
+name: PR Description Check
+
+# Validates that every pull request has a meaningful Description, a Test Plan,
+# and a filled-in RELEASE NOTES block. Runs on GitHub Actions (not Buildkite)
+# because it needs the `edited` event so it re-runs when an author fixes the
+# description without pushing new commits.
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+# Only needs to read the event payload; no checkout, no secrets.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validate description and test plan
+    runs-on: ubuntu-latest
+    # Drafts can't be merged; the job re-runs on `ready_for_review`.
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Validate PR body
+        env:
+          # Pass untrusted PR text through env, never interpolated into the shell.
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+
+          body = os.environ.get("PR_BODY") or ""
+          author = os.environ.get("PR_AUTHOR", "")
+
+          # Automated authors skip the check.
+          SKIP_AUTHORS = {"dependabot[bot]", "renovate[bot]"}
+          if author in SKIP_AUTHORS:
+              print(f"Skipping description check for bot author: {author}")
+              sys.exit(0)
+
+          # Drop HTML comments (the template's guidance) and CRs before parsing.
+          text = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL).replace("\r", "")
+
+          def section(name):
+              """Text under a `## <name>` heading, up to the next heading,
+              the RELEASE NOTES block, or EOF."""
+              m = re.search(
+                  rf"^\#{{1,6}}\s*{re.escape(name)}\s*$(.*?)"
+                  rf"(?=^\#{{1,6}}\s|^RELEASE NOTES:|\Z)",
+                  text, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+              return m.group(1).strip() if m else None
+
+          # Anything matching this is treated as "no real content".
+          PLACEHOLDER = re.compile(r"^(n/?a|none|tbd|todo|\?+|xxx|\.|-)*$", re.IGNORECASE)
+          # Explicit "intentionally skipped" — allowed for Test Plan (docs-only PRs).
+          SKIP_OK = re.compile(r"^(n/?a|none)$", re.IGNORECASE)
+
+          def content(s):
+              """Section text with checkbox lines removed, for length/placeholder checks."""
+              if s is None:
+                  return None
+              return "\n".join(
+                  ln for ln in s.splitlines()
+                  if not re.match(r"^\s*[-*]\s*\[[ xX]\]", ln)
+              ).strip()
+
+          def meaningful(s, min_len):
+              c = content(s)
+              return c is not None and len(c) >= min_len and not PLACEHOLDER.fullmatch(c)
+
+          errors = []
+
+          if not meaningful(section("Description"), 20):
+              errors.append(
+                  "Missing or too-short **## Description** section — explain what "
+                  "the change does and why (at least 20 characters).")
+
+          tp = content(section("Test Plan"))
+          if tp is None:
+              errors.append(
+                  "Missing **## Test Plan** section — describe how you verified the "
+                  "change, or write `N/a` for docs-only changes.")
+          elif not tp:
+              errors.append("**## Test Plan** section is empty.")
+          elif PLACEHOLDER.fullmatch(tp) and not SKIP_OK.fullmatch(tp):
+              errors.append(
+                  "**## Test Plan** is a placeholder (`tbd`/`todo`) — describe how "
+                  "you verified the change, or write `N/a` for docs-only changes.")
+
+          # yarpc-go convention: RELEASE NOTES must be present and filled ("N/a" ok).
+          rn = re.search(r"RELEASE NOTES:(.*)\Z", text, flags=re.IGNORECASE | re.DOTALL)
+          if rn is None:
+              errors.append(
+                  "Missing **RELEASE NOTES:** block — add release notes or `N/a`.")
+          elif not rn.group(1).strip():
+              errors.append(
+                  "**RELEASE NOTES:** block is empty — add notes or write `N/a`.")
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+
+          def emit(md):
+              if summary_path:
+                  with open(summary_path, "a") as f:
+                      f.write(md + "\n")
+              print(md)
+
+          if errors:
+              emit("### ❌ PR description check failed\n")
+              for e in errors:
+                  emit(f"- {e}")
+              emit("\nEdit the PR description to fix these — the check re-runs "
+                   "automatically on every edit.")
+              sys.exit(1)
+
+          emit("### ✅ PR description check passed")
+          PY

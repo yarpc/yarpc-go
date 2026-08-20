@@ -64,6 +64,8 @@ type transportOptions struct {
 	name                           string
 	connTimeout                    time.Duration
 	connBackoffStrategy            backoffapi.Strategy
+	propagateCancel                bool
+	sendCancelOnContextCanceled    bool
 	originalHeaders                bool
 	nativeTChannelMethods          NativeTChannelMethods
 	excludeServiceHeaderInResponse bool
@@ -221,6 +223,26 @@ func ConnTimeout(d time.Duration) TransportOption {
 func ConnBackoff(s backoffapi.Strategy) TransportOption {
 	return func(options *transportOptions) {
 		options.connBackoffStrategy = s
+	}
+}
+
+// PropagateCancel specifies whether cancel messages should cancel inbound
+// request contexts.
+//
+// The default is false.
+func PropagateCancel(enabled bool) TransportOption {
+	return func(options *transportOptions) {
+		options.propagateCancel = enabled
+	}
+}
+
+// SendCancelOnContextCanceled specifies whether cancel messages should be sent
+// when an outbound request context is canceled before receiving a response.
+//
+// The default is false.
+func SendCancelOnContextCanceled(enabled bool) TransportOption {
+	return func(options *transportOptions) {
+		options.sendCancelOnContextCanceled = enabled
 	}
 }
 

@@ -115,7 +115,15 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		transportName = TransportHTTP2Name
 	}
 
-	transportHeader := transport.NewHeaders()
+	caller := popHeader(req.Header, CallerHeader)
+	encoding := transport.Encoding(popHeader(req.Header, EncodingHeader))
+	shardKey := popHeader(req.Header, ShardKeyHeader)
+	routingKey := popHeader(req.Header, RoutingKeyHeader)
+	routingDelegate := popHeader(req.Header, RoutingDelegateHeader)
+	callerProcedure := popHeader(req.Header, CallerProcedureHeader)
+	ttl := popHeader(req.Header, TTLMSHeader)
+
+	transportHeader := transport.NewHeadersWithCapacity(len(req.Header))
 	if h.overrideOriginalItemWithCanonicalizedKey {
 		transportHeader = transportHeader.EnableOverrideOriginalItemsWithCanonicalizedKeys()
 	}
@@ -123,18 +131,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		transportHeader = transportHeader.WithHeaderCaseMapping(h.headerCaseMapping)
 	}
 
-	caller := popHeader(req.Header, CallerHeader)
-
 	treq := &transport.Request{
 		Caller:          caller,
 		Service:         service,
 		Procedure:       procedure,
-		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
+		Encoding:        encoding,
 		Transport:       transportName,
-		ShardKey:        popHeader(req.Header, ShardKeyHeader),
-		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
-		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
-		CallerProcedure: popHeader(req.Header, CallerProcedureHeader),
+		ShardKey:        shardKey,
+		RoutingKey:      routingKey,
+		RoutingDelegate: routingDelegate,
+		CallerProcedure: callerProcedure,
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transportHeader),
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
@@ -167,7 +173,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	}()
 
 	ctx := req.Context()
-	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, ttl)
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
 	ctx, span := h.createSpan(ctx, req, treq, start)
@@ -333,8 +339,17 @@ func (rw *responseWriter) SetApplicationErrorMeta(meta *transport.ApplicationErr
 		return
 	}
 	rw.appErrorMeta = meta
-	if meta.Code != nil {
+	switch {
+	case meta.Code != nil:
 		rw.w.Header().Set(_applicationErrorCodeHeader, strconv.Itoa(int(*meta.Code)))
+	case rw.isApplicationError:
+		// Application errors without an explicit code (e.g. unannotated Thrift
+		// exceptions) still need an on-the-wire failure signal. TChannel conveys
+		// this via the application-error frame bit; HTTP has no equivalent, so
+		// downstream relays rely on the Rpc-Application-Error-Code header to
+		// classify success vs. failure. Default to CodeUnknown so unannotated
+		// errors are still classified as failures.
+		rw.w.Header().Set(_applicationErrorCodeHeader, strconv.Itoa(int(yarpcerrors.CodeUnknown)))
 	}
 	if meta.Name != "" {
 		rw.w.Header().Set(_applicationErrorNameHeader, meta.Name)

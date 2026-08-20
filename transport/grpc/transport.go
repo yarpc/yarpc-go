@@ -35,10 +35,10 @@ var emptyDialOpts = &dialOptions{}
 // This currently does not have any additional functionality over creating
 // an Inbound or Outbound separately, but may in the future.
 type Transport struct {
-	lock          sync.Mutex
-	once          *lifecycle.Once
-	options       *transportOptions
-	addressToPeer map[string]*grpcPeer
+	lock    sync.Mutex
+	once    *lifecycle.Once
+	options *transportOptions
+	peers   map[peerKey]*grpcPeer
 	// metrics are the connection pool metrics shared by all peers of this
 	// transport. They are not tagged by peer: gauges hold the aggregate count
 	// across peers and counters accumulate pool-wide scaling events, keeping
@@ -51,6 +51,16 @@ type Transport struct {
 	releasedCleanupWg sync.WaitGroup
 }
 
+// peerKey identifies a peer in the transport's peer map.
+//
+// Peers are keyed by the address they dial. Dialers that opt into connection
+// isolation add a stable scope to the key so they do not share peers,
+// connections, or connection pools with other dialers.
+type peerKey struct {
+	address         string
+	connectionScope *connectionScope
+}
+
 // NewTransport returns a new Transport.
 func NewTransport(options ...TransportOption) *Transport {
 	return newTransport(newTransportOptions(options))
@@ -58,9 +68,9 @@ func NewTransport(options ...TransportOption) *Transport {
 
 func newTransport(transportOptions *transportOptions) *Transport {
 	return &Transport{
-		once:          lifecycle.NewOnce(),
-		options:       transportOptions,
-		addressToPeer: make(map[string]*grpcPeer),
+		once:    lifecycle.NewOnce(),
+		options: transportOptions,
+		peers:   make(map[peerKey]*grpcPeer),
 		metrics: newConnPoolMetrics(connPoolMetricsParams{
 			Meter:       transportOptions.meter,
 			Logger:      transportOptions.logger,
@@ -78,16 +88,16 @@ func (t *Transport) Start() error {
 func (t *Transport) Stop() error {
 	return t.once.Stop(func() error {
 		t.lock.Lock()
-		for _, grpcPeer := range t.addressToPeer {
+		for _, grpcPeer := range t.peers {
 			grpcPeer.stop()
 		}
-		peers := make([]*grpcPeer, 0, len(t.addressToPeer))
-		for _, p := range t.addressToPeer {
-			peers = append(peers, p)
+		toWait := make([]*grpcPeer, 0, len(t.peers))
+		for _, p := range t.peers {
+			toWait = append(toWait, p)
 		}
 		t.lock.Unlock()
 
-		for _, p := range peers {
+		for _, p := range toWait {
 			p.wait()
 		}
 		// Wait for peers released via ReleasePeer whose cleanup goroutines
@@ -124,21 +134,27 @@ func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOpt
 // peer.Transport that supports custom DialOptions instead of using the
 // grpc.Transport as a peer.Transport.
 func (t *Transport) RetainPeer(pid peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
-	return t.retainPeer(pid, emptyDialOpts, ps)
+	return t.retainPeer(pid, emptyDialOpts, nil, ps)
 }
 
-func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps peer.Subscriber) (peer.Peer, error) {
+func (t *Transport) retainPeer(
+	pid peer.Identifier,
+	options *dialOptions,
+	connectionScope *connectionScope,
+	ps peer.Subscriber,
+) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	address := pid.Identifier()
-	p, ok := t.addressToPeer[address]
+	key := peerKey{address: address, connectionScope: connectionScope}
+	p, ok := t.peers[key]
 	if !ok {
 		var err error
 		p, err = t.newPeer(address, options)
 		if err != nil {
 			return nil, err
 		}
-		t.addressToPeer[address] = p
+		t.peers[key] = p
 	}
 	p.Subscribe(ps)
 	return p, nil
@@ -150,10 +166,19 @@ func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps pee
 // peer.Transport that supports custom DialOptions instead of using the
 // grpc.Transport as a peer.Transport.
 func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
+	return t.releasePeer(pid, nil, ps)
+}
+
+func (t *Transport) releasePeer(
+	pid peer.Identifier,
+	connectionScope *connectionScope,
+	ps peer.Subscriber,
+) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	address := pid.Identifier()
-	p, ok := t.addressToPeer[address]
+	key := peerKey{address: address, connectionScope: connectionScope}
+	p, ok := t.peers[key]
 	if !ok {
 		return peer.ErrTransportHasNoReferenceToPeer{
 			TransportName:  "grpc.Transport",
@@ -164,7 +189,7 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 		return err
 	}
 	if p.NumSubscribers() == 0 {
-		delete(t.addressToPeer, address)
+		delete(t.peers, key)
 		p.stop()
 		// Do not call p.wait() here: abstractlist.stop() holds list.lock while
 		// calling ReleasePeer, and monitorConnWrapper needs list.lock to exit.

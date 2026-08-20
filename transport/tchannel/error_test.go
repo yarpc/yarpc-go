@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -101,4 +102,16 @@ func TestGetResponseErrorMeta(t *testing.T) {
 			assert.Equal(t, tt.want, GetResponseErrorMeta(tt.give), "unexpected")
 		})
 	}
+}
+
+func TestYtchanErrorUnwrap(t *testing.T) {
+	// fromSystemError wraps the tchannel.SystemError transparently; Unwrap on
+	// ytchanError lets errors.As reach it through the YARPC error chain.
+	sysErr := tchannel.NewSystemError(tchannel.ErrCodeTimeout, "timeout").(tchannel.SystemError)
+	err := fromSystemError(sysErr)
+
+	var got tchannel.SystemError
+	require.True(t, errors.As(err, &got), "expected errors.As to reach tchannel.SystemError")
+	assert.Equal(t, tchannel.ErrCodeTimeout, got.Code())
+	assert.Equal(t, "timeout", got.Message())
 }
