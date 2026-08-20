@@ -43,9 +43,7 @@ import (
 // encoding/thrift/options.go), adapted to protobuf's []string accessor.
 type ActorUUIDValidator func(ctx context.Context, actorUUIDs []string) error
 
-// registerConfig holds the settings a slice of RegisterOptions resolves
-// to. It is threaded to generated server code via the option helpers
-// below.
+// registerConfig holds the settings collected from RegisterOptions.
 type registerConfig struct {
 	ActorUUIDValidator ActorUUIDValidator
 }

@@ -232,11 +232,9 @@ func actorUUIDMethods(info *protoplugin.TemplateInfo) ([]*actorUUIDMethod, error
 	return fi.methods, nil
 }
 
-// serviceHasActorUUID reports whether any method of the given service has
-// a request type that reaches at least one actor_uuid-annotated leaf. The
-// server template uses it to gate the service-wide handler struct's
-// validator field and the validator extraction in the Build/Fx entry
-// points.
+// serviceHasActorUUID reports whether any method on the service takes a request
+// type with an actor_uuid annotation (including nested fields). Services that
+// do get validator wiring; services where no RPC request is annotated do not.
 func serviceHasActorUUID(info *protoplugin.TemplateInfo, service *protoplugin.Service) bool {
 	fi := getUUIDFileInfo(info.File)
 	return fi.serviceHasUUID[service]
