@@ -115,6 +115,7 @@ func TestInboundHeaderPreallocation(t *testing.T) {
 		name     string
 		strategy HeaderPreallocationStrategy
 	}{
+		{name: "zero value", strategy: HeaderPreallocationStrategy("")},
 		{name: "unfiltered", strategy: HeaderPreallocationUnfiltered},
 		{name: "scan", strategy: HeaderPreallocationScan},
 		{name: "disabled", strategy: HeaderPreallocationDisabled},
@@ -136,7 +137,7 @@ func TestInboundStartErrorInvalidHeaderPreallocation(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound(
 		"127.0.0.1:0",
-		InboundHeaderPreallocation(HeaderPreallocationStrategy(255)),
+		InboundHeaderPreallocation(HeaderPreallocationStrategy("unknown")),
 	)
 	i.SetRouter(new(transporttest.MockRouter))
 

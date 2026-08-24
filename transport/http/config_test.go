@@ -390,6 +390,18 @@ func TestTransportSpec(t *testing.T) {
 			},
 		},
 		{
+			desc: "header preallocation option without config",
+			cfg:  attrs{"address": ":8080"},
+			opts: []Option{
+				InboundHeaderPreallocation(HeaderPreallocationScan),
+			},
+			wantInbound: &wantInbound{
+				Address:             ":8080",
+				ShutdownTimeout:     defaultShutdownTimeout,
+				HeaderPreallocation: HeaderPreallocationScan,
+			},
+		},
+		{
 			desc: "invalid header preallocation",
 			cfg: attrs{
 				"address":             ":8080",

@@ -55,7 +55,7 @@ func inboundHeaderCapacity(
 	grabHeaders []headerPreallocationGrabHeader,
 ) int {
 	switch strategy {
-	case HeaderPreallocationUnfiltered:
+	case "", HeaderPreallocationUnfiltered:
 		return len(headers)
 	case HeaderPreallocationScan:
 		return scannedInboundHeaderCapacity(headers, grabHeaders)

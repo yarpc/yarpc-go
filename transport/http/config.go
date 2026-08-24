@@ -209,7 +209,7 @@ type InboundConfig struct {
 	// HeaderPreallocation controls how inbound transport header maps are
 	// preallocated. Supported values are "unfiltered" (default), "scan", and
 	// "disabled".
-	HeaderPreallocation string `config:"headerPreallocation"`
+	HeaderPreallocation *HeaderPreallocationStrategy `config:"headerPreallocation"`
 }
 
 // TLSConfig specifies the TLS configuration of the HTTP inbound.
@@ -280,33 +280,22 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 		}
 	}
 
-	if ic.HeaderPreallocation != "" {
-		strategy, err := parseHeaderPreallocationStrategy(ic.HeaderPreallocation)
-		if err != nil {
-			return nil, err
+	if ic.HeaderPreallocation != nil {
+		if !ic.HeaderPreallocation.valid() {
+			return nil, fmt.Errorf(
+				"headerPreallocation must be one of unfiltered, scan, or disabled, got %q",
+				*ic.HeaderPreallocation,
+			)
 		}
-		inboundOptions = append(inboundOptions, InboundHeaderPreallocation(strategy))
+		inboundOptions = append(
+			inboundOptions,
+			InboundHeaderPreallocation(*ic.HeaderPreallocation),
+		)
 	}
 
 	inboundOptions = append(inboundOptions, DisableHTTP2(ic.DisableHTTP2))
 
 	return t.(*Transport).NewInbound(ic.Address, inboundOptions...), nil
-}
-
-func parseHeaderPreallocationStrategy(value string) (HeaderPreallocationStrategy, error) {
-	switch value {
-	case "unfiltered":
-		return HeaderPreallocationUnfiltered, nil
-	case "scan":
-		return HeaderPreallocationScan, nil
-	case "disabled":
-		return HeaderPreallocationDisabled, nil
-	default:
-		return 0, fmt.Errorf(
-			"headerPreallocation must be one of unfiltered, scan, or disabled, got %q",
-			value,
-		)
-	}
 }
 
 // OutboundConfig configures an HTTP outbound.

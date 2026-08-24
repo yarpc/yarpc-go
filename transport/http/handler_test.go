@@ -46,6 +46,15 @@ import (
 )
 
 func TestInboundHeaderCapacity(t *testing.T) {
+	t.Run("zero value uses unfiltered", func(t *testing.T) {
+		headers := makeInboundPreallocationTestHeaders(2, 3)
+		assert.Equal(t, len(headers), inboundHeaderCapacity(
+			HeaderPreallocationStrategy(""),
+			headers,
+			nil,
+		))
+	})
+
 	t.Run("unfiltered", func(t *testing.T) {
 		headers := makeInboundPreallocationTestHeaders(2, 3)
 		assert.Equal(t, len(headers), inboundHeaderCapacity(

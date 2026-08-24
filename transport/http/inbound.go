@@ -58,22 +58,32 @@ type InboundOption func(*Inbound)
 func (InboundOption) httpOption() {}
 
 // HeaderPreallocationStrategy controls how an HTTP inbound sizes the
-// transport header maps built for each request.
-type HeaderPreallocationStrategy uint8
+// transport header maps built for each request. Its zero value uses the
+// unfiltered strategy.
+type HeaderPreallocationStrategy string
 
 const (
 	// HeaderPreallocationUnfiltered uses the unfiltered number of HTTP headers
 	// remaining after YARPC system headers are removed. This is the default.
-	HeaderPreallocationUnfiltered HeaderPreallocationStrategy = iota
+	HeaderPreallocationUnfiltered HeaderPreallocationStrategy = "unfiltered"
 
 	// HeaderPreallocationScan scans the remaining HTTP headers and preallocates
 	// only for headers that YARPC will propagate.
-	HeaderPreallocationScan
+	HeaderPreallocationScan HeaderPreallocationStrategy = "scan"
 
 	// HeaderPreallocationDisabled disables inbound transport header
 	// preallocation.
-	HeaderPreallocationDisabled
+	HeaderPreallocationDisabled HeaderPreallocationStrategy = "disabled"
 )
+
+func (s HeaderPreallocationStrategy) valid() bool {
+	switch s {
+	case "", HeaderPreallocationUnfiltered, HeaderPreallocationScan, HeaderPreallocationDisabled:
+		return true
+	default:
+		return false
+	}
+}
 
 // Mux specifies that the HTTP server should make the YARPC endpoint available
 // under the given pattern on the given ServeMux. By default, the YARPC
@@ -220,16 +230,15 @@ func IdleTimeout(timeout time.Duration) InboundOption {
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
-		once:                        lifecycle.NewOnce(),
-		addr:                        addr,
-		shutdownTimeout:             defaultShutdownTimeout,
-		tracer:                      t.tracer,
-		logger:                      t.logger,
-		transport:                   t,
-		grabHeaders:                 make(map[string]struct{}),
-		bothResponseError:           true,
-		disableHTTP2:                false,
-		headerPreallocationStrategy: HeaderPreallocationUnfiltered,
+		once:              lifecycle.NewOnce(),
+		addr:              addr,
+		shutdownTimeout:   defaultShutdownTimeout,
+		tracer:            t.tracer,
+		logger:            t.logger,
+		transport:         t,
+		grabHeaders:       make(map[string]struct{}),
+		bothResponseError: true,
+		disableHTTP2:      false,
 	}
 	server := &http.Server{
 		Addr: i.addr,
@@ -299,12 +308,10 @@ func (i *Inbound) start() error {
 	if i.router == nil {
 		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "no router configured for transport inbound")
 	}
-	switch i.headerPreallocationStrategy {
-	case HeaderPreallocationUnfiltered, HeaderPreallocationScan, HeaderPreallocationDisabled:
-	default:
+	if !i.headerPreallocationStrategy.valid() {
 		return yarpcerrors.Newf(
 			yarpcerrors.CodeInvalidArgument,
-			"unknown header preallocation strategy: %d",
+			"unknown header preallocation strategy: %q",
 			i.headerPreallocationStrategy,
 		)
 	}
