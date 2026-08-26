@@ -68,7 +68,8 @@ const (
 	HeaderPreallocationUnfiltered HeaderPreallocationStrategy = "unfiltered"
 
 	// HeaderPreallocationScan scans the remaining HTTP headers and preallocates
-	// only for headers that YARPC will propagate.
+	// for header forms that YARPC will propagate. Duplicate raw and prefixed
+	// forms may cause a small overestimate.
 	HeaderPreallocationScan HeaderPreallocationStrategy = "scan"
 
 	// HeaderPreallocationDisabled disables inbound transport header
@@ -189,9 +190,9 @@ func HeaderCaseMapping(mapping map[string][]string) InboundOption {
 //
 // HeaderPreallocationUnfiltered preserves the default behavior and uses the
 // number of HTTP headers remaining after YARPC system headers are removed.
-// HeaderPreallocationScan performs an additional scan to count only headers
-// that YARPC will propagate, and HeaderPreallocationDisabled skips
-// preallocation.
+// HeaderPreallocationScan performs an additional scan to count header forms
+// that YARPC will propagate. Duplicate raw and prefixed forms may cause a small
+// overestimate. HeaderPreallocationDisabled skips preallocation.
 func InboundHeaderPreallocation(strategy HeaderPreallocationStrategy) InboundOption {
 	return func(i *Inbound) {
 		i.headerPreallocationStrategy = strategy

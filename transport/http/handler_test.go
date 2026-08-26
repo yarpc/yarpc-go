@@ -94,14 +94,15 @@ func TestInboundHeaderCapacity(t *testing.T) {
 			"x-grabbed":         {},
 			XForwardedForHeader: {},
 		}
-		assert.Equal(t, 9, inboundHeaderCapacity(
+		// Count both raw and prefixed grabbed forms.
+		assert.Equal(t, 10, inboundHeaderCapacity(
 			HeaderPreallocationScan,
 			headers,
 			newHeaderPreallocationGrabHeaders(grabHeaders),
 		))
 	})
 
-	t.Run("scan counts propagated categories without collisions", func(t *testing.T) {
+	t.Run("scan allows small overestimate for duplicate forms", func(t *testing.T) {
 		headers := makeInboundPreallocationTestHeaders(9, 1)
 		headers.Set(UberTraceContextHeaderKey, "trace")
 		headers.Set(UberBaggageHeaderKeyPrefix+"test", "baggage")
@@ -119,7 +120,8 @@ func TestInboundHeaderCapacity(t *testing.T) {
 			headers.Set(key, value)
 		}
 
-		// Both forms produce one canonical transport header.
+		// Both pairs produce one canonical item; the grabbed pair also preserves
+		// two differently-cased original items.
 		headers.Set(ApplicationHeaderPrefix+XForwardedForHeader, "prefixed-proxy")
 		headers.Set("X-Grabbed", "raw-grabbed")
 		headers.Set(ApplicationHeaderPrefix+"X-Grabbed", "prefixed-grabbed")
@@ -134,7 +136,7 @@ func TestInboundHeaderCapacity(t *testing.T) {
 			"x-empty":           {},
 		}
 
-		assert.Equal(t, 20, inboundHeaderCapacity(
+		assert.Equal(t, 22, inboundHeaderCapacity(
 			HeaderPreallocationScan,
 			headers,
 			newHeaderPreallocationGrabHeaders(grabHeaders),

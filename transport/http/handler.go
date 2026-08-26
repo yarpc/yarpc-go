@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -68,23 +67,18 @@ func inboundHeaderCapacity(
 }
 
 type headerPreallocationGrabHeader struct {
-	key                  string
-	canonicalKey         string
-	prefixedCanonicalKey string
-	prefixedLowerKey     string
+	key          string
+	canonicalKey string
 }
 
 func newHeaderPreallocationGrabHeaders(
 	grabHeaders map[string]struct{},
 ) []headerPreallocationGrabHeader {
 	headers := make([]headerPreallocationGrabHeader, 0, len(grabHeaders))
-	lowerApplicationHeaderPrefix := strings.ToLower(ApplicationHeaderPrefix)
 	for key := range grabHeaders {
 		headers = append(headers, headerPreallocationGrabHeader{
-			key:                  key,
-			canonicalKey:         http.CanonicalHeaderKey(key),
-			prefixedCanonicalKey: http.CanonicalHeaderKey(ApplicationHeaderPrefix + key),
-			prefixedLowerKey:     lowerApplicationHeaderPrefix + key,
+			key:          key,
+			canonicalKey: http.CanonicalHeaderKey(key),
 		})
 	}
 	return headers
@@ -111,44 +105,15 @@ func scannedInboundHeaderCapacity(
 		if isTracingHeader(header.key) || isProxyHeader(header.key) {
 			continue
 		}
-		if headerValue(headers, header.canonicalKey, header.key) != "" &&
-			!hasHeaderValues(
-				headers,
-				header.prefixedCanonicalKey,
-				header.prefixedLowerKey,
-			) {
+		if headerValue(headers, header.canonicalKey, header.key) != "" {
 			capacity++
 		}
 	}
 
-	// FromHTTPHeaders and the GrabHeaders loop can write the same canonical
-	// transport key through different HTTP header forms. Remove those
-	// collisions from the capacity estimate.
-	for key, values := range headers {
-		if len(values) == 0 || !hasPrefixFold(key, ApplicationHeaderPrefix) {
-			continue
-		}
-
-		suffix := key[len(ApplicationHeaderPrefix):]
-		if (isTracingHeader(suffix) || isProxyHeader(suffix)) &&
-			hasUnprefixedPropagatedHeader(headers, suffix) {
-			capacity--
-		}
-	}
-
+	// Raw and prefixed forms can produce the same canonical transport key.
+	// Count both forms: the estimate is an upper bound for items and may be
+	// required by originalItems, which preserves both original key forms.
 	return capacity
-}
-
-func hasUnprefixedPropagatedHeader(headers http.Header, key string) bool {
-	for candidate, values := range headers {
-		if len(values) > 0 &&
-			!hasPrefixFold(candidate, ApplicationHeaderPrefix) &&
-			strings.EqualFold(candidate, key) &&
-			(isTracingHeader(candidate) || isProxyHeader(candidate)) {
-			return true
-		}
-	}
-	return false
 }
 
 func headerValue(headers http.Header, canonicalKey, lowerKey string) string {
@@ -164,13 +129,6 @@ func headerValue(headers http.Header, canonicalKey, lowerKey string) string {
 		}
 	}
 	return ""
-}
-
-func hasHeaderValues(headers http.Header, canonicalKey, lowerKey string) bool {
-	if values, ok := headers[canonicalKey]; ok {
-		return len(values) > 0
-	}
-	return lowerKey != canonicalKey && len(headers[lowerKey]) > 0
 }
 
 // handler adapts a transport.Handler into a handler for net/http.
