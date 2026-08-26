@@ -58,8 +58,7 @@ type InboundOption func(*Inbound)
 func (InboundOption) httpOption() {}
 
 // HeaderPreallocationStrategy controls how an HTTP inbound sizes the
-// transport header maps built for each request. Its zero value uses the
-// unfiltered strategy.
+// transport header maps built for each request.
 type HeaderPreallocationStrategy string
 
 const (
@@ -73,13 +72,13 @@ const (
 	HeaderPreallocationScan HeaderPreallocationStrategy = "scan"
 
 	// HeaderPreallocationDisabled disables inbound transport header
-	// preallocation.
+	// preallocation. Header maps are allocated lazily when first populated.
 	HeaderPreallocationDisabled HeaderPreallocationStrategy = "disabled"
 )
 
 func (s HeaderPreallocationStrategy) valid() bool {
 	switch s {
-	case "", HeaderPreallocationUnfiltered, HeaderPreallocationScan, HeaderPreallocationDisabled:
+	case HeaderPreallocationUnfiltered, HeaderPreallocationScan, HeaderPreallocationDisabled:
 		return true
 	default:
 		return false
@@ -231,15 +230,16 @@ func IdleTimeout(timeout time.Duration) InboundOption {
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
-		once:              lifecycle.NewOnce(),
-		addr:              addr,
-		shutdownTimeout:   defaultShutdownTimeout,
-		tracer:            t.tracer,
-		logger:            t.logger,
-		transport:         t,
-		grabHeaders:       make(map[string]struct{}),
-		bothResponseError: true,
-		disableHTTP2:      false,
+		once:                        lifecycle.NewOnce(),
+		addr:                        addr,
+		shutdownTimeout:             defaultShutdownTimeout,
+		tracer:                      t.tracer,
+		logger:                      t.logger,
+		transport:                   t,
+		grabHeaders:                 make(map[string]struct{}),
+		bothResponseError:           true,
+		disableHTTP2:                false,
+		headerPreallocationStrategy: HeaderPreallocationUnfiltered,
 	}
 	server := &http.Server{
 		Addr: i.addr,

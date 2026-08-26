@@ -54,14 +54,15 @@ func inboundHeaderCapacity(
 	grabHeaders []headerPreallocationGrabHeader,
 ) int {
 	switch strategy {
-	case "", HeaderPreallocationUnfiltered:
+	case HeaderPreallocationUnfiltered:
 		return len(headers)
 	case HeaderPreallocationScan:
 		return scannedInboundHeaderCapacity(headers, grabHeaders)
 	case HeaderPreallocationDisabled:
 		return 0
 	default:
-		// Inbounds validate the strategy before installing the handler.
+		// Unreachable: inbounds validate the strategy before installing the
+		// handler.
 		return 0
 	}
 }
@@ -89,6 +90,8 @@ func scannedInboundHeaderCapacity(
 	grabHeaders []headerPreallocationGrabHeader,
 ) int {
 	capacity := 0
+	// Count eligible wire forms independently to keep the scan linear.
+	// Raw and prefixed forms may therefore slightly overestimate capacity.
 	for key, values := range headers {
 		if len(values) == 0 {
 			continue
@@ -110,18 +113,12 @@ func scannedInboundHeaderCapacity(
 		}
 	}
 
-	// Raw and prefixed forms can produce the same canonical transport key.
-	// Count both forms: the estimate is an upper bound for items and may be
-	// required by originalItems, which preserves both original key forms.
 	return capacity
 }
 
 func headerValue(headers http.Header, canonicalKey, lowerKey string) string {
-	if values, ok := headers[canonicalKey]; ok {
-		if len(values) > 0 {
-			return values[0]
-		}
-		return ""
+	if values := headers[canonicalKey]; len(values) > 0 && values[0] != "" {
+		return values[0]
 	}
 	if lowerKey != canonicalKey {
 		if values := headers[lowerKey]; len(values) > 0 {

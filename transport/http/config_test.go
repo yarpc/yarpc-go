@@ -411,6 +411,16 @@ func TestTransportSpec(t *testing.T) {
 				`headerPreallocation must be one of unfiltered, scan, or disabled, got "unknown"`,
 			},
 		},
+		{
+			desc: "empty header preallocation",
+			cfg: attrs{
+				"address":             ":8080",
+				"headerPreallocation": "",
+			},
+			wantErrors: []string{
+				`headerPreallocation must be one of unfiltered, scan, or disabled, got ""`,
+			},
+		},
 	}
 
 	outboundTests := []outboundTest{
@@ -758,7 +768,11 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, want.ReadTimeout, ib.server.ReadTimeout, "ReadTimeout should match")
 				assert.Equal(t, want.IdleTimeout, ib.server.IdleTimeout, "IdleTimeout should match")
 				assert.Equal(t, want.CanonicalizeHeaderKeys, ib.overrideOriginalItemWithCanonicalizedKey, "canonicalizeHeaderKeys should match")
-				assert.Equal(t, want.HeaderPreallocation, ib.headerPreallocationStrategy, "headerPreallocation should match")
+				wantHeaderPreallocation := want.HeaderPreallocation
+				if wantHeaderPreallocation == "" {
+					wantHeaderPreallocation = HeaderPreallocationUnfiltered
+				}
+				assert.Equal(t, wantHeaderPreallocation, ib.headerPreallocationStrategy, "headerPreallocation should match")
 				if len(want.HeaderCaseMapping) > 0 {
 					assert.Equal(t, want.HeaderCaseMapping, ib.headerCaseMapping, "headerCaseMapping should match")
 				} else {
