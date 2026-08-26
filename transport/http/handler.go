@@ -48,6 +48,86 @@ func popHeader(h http.Header, n string) string {
 	return v
 }
 
+func inboundHeaderCapacity(
+	strategy HeaderPreallocationStrategy,
+	headers http.Header,
+	grabHeaders []headerPreallocationGrabHeader,
+) int {
+	switch strategy {
+	case HeaderPreallocationUnfiltered:
+		return len(headers)
+	case HeaderPreallocationScan:
+		return scannedInboundHeaderCapacity(headers, grabHeaders)
+	case HeaderPreallocationDisabled:
+		return 0
+	default:
+		// Unreachable: inbounds validate the strategy before installing the
+		// handler.
+		return 0
+	}
+}
+
+type headerPreallocationGrabHeader struct {
+	key          string
+	canonicalKey string
+}
+
+func newHeaderPreallocationGrabHeaders(
+	grabHeaders map[string]struct{},
+) []headerPreallocationGrabHeader {
+	headers := make([]headerPreallocationGrabHeader, 0, len(grabHeaders))
+	for key := range grabHeaders {
+		headers = append(headers, headerPreallocationGrabHeader{
+			key:          key,
+			canonicalKey: http.CanonicalHeaderKey(key),
+		})
+	}
+	return headers
+}
+
+func scannedInboundHeaderCapacity(
+	headers http.Header,
+	grabHeaders []headerPreallocationGrabHeader,
+) int {
+	capacity := 0
+	// Count eligible wire forms independently to keep the scan linear.
+	// Raw and prefixed forms may therefore slightly overestimate capacity.
+	for key, values := range headers {
+		if len(values) == 0 {
+			continue
+		}
+
+		if hasPrefixFold(key, ApplicationHeaderPrefix) ||
+			isTracingHeader(key) ||
+			isProxyHeader(key) {
+			capacity++
+		}
+	}
+
+	for _, header := range grabHeaders {
+		if isTracingHeader(header.key) || isProxyHeader(header.key) {
+			continue
+		}
+		if headerValue(headers, header.canonicalKey, header.key) != "" {
+			capacity++
+		}
+	}
+
+	return capacity
+}
+
+func headerValue(headers http.Header, canonicalKey, lowerKey string) string {
+	if values := headers[canonicalKey]; len(values) > 0 && values[0] != "" {
+		return values[0]
+	}
+	if lowerKey != canonicalKey {
+		if values := headers[lowerKey]; len(values) > 0 {
+			return values[0]
+		}
+	}
+	return ""
+}
+
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
 	router                                   transport.Router
@@ -58,6 +138,8 @@ type handler struct {
 	transport                                *Transport
 	overrideOriginalItemWithCanonicalizedKey bool
 	headerCaseMapping                        map[string][]string
+	headerPreallocationStrategy              HeaderPreallocationStrategy
+	headerPreallocationGrabHeaders           []headerPreallocationGrabHeader
 	// duplicate header counter vector
 	duplicateHeaderCounterVec *metrics.CounterVector
 }
@@ -123,7 +205,11 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	callerProcedure := popHeader(req.Header, CallerProcedureHeader)
 	ttl := popHeader(req.Header, TTLMSHeader)
 
-	transportHeader := transport.NewHeadersWithCapacity(len(req.Header))
+	transportHeader := transport.NewHeadersWithCapacity(inboundHeaderCapacity(
+		h.headerPreallocationStrategy,
+		req.Header,
+		h.headerPreallocationGrabHeaders,
+	))
 	if h.overrideOriginalItemWithCanonicalizedKey {
 		transportHeader = transportHeader.EnableOverrideOriginalItemsWithCanonicalizedKeys()
 	}

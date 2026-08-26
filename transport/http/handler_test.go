@@ -45,6 +45,126 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
+func TestInboundHeaderCapacity(t *testing.T) {
+	t.Run("unfiltered", func(t *testing.T) {
+		headers := makeInboundPreallocationTestHeaders(2, 3)
+		assert.Equal(t, len(headers), inboundHeaderCapacity(
+			HeaderPreallocationUnfiltered,
+			headers,
+			nil,
+		))
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		assert.Zero(t, inboundHeaderCapacity(
+			HeaderPreallocationDisabled,
+			makeInboundPreallocationTestHeaders(20, 0),
+			nil,
+		))
+	})
+
+	t.Run("scan uses eligible count for small header sets", func(t *testing.T) {
+		headers := makeInboundPreallocationTestHeaders(8, 20)
+		assert.Equal(t, 8, inboundHeaderCapacity(
+			HeaderPreallocationScan,
+			headers,
+			nil,
+		))
+	})
+
+	t.Run("scan supports lowercase HTTP2 headers", func(t *testing.T) {
+		headers := make(http.Header, 10)
+		for i := 0; i < 7; i++ {
+			headers[fmt.Sprintf("rpc-header-application-%d", i)] = []string{"value"}
+		}
+		headers["rpc-header-x-grabbed"] = []string{"prefixed"}
+		headers["x-grabbed"] = []string{"raw"}
+		headers[XForwardedForHeader] = []string{"203.0.113.42"}
+
+		grabHeaders := map[string]struct{}{
+			"x-grabbed":         {},
+			XForwardedForHeader: {},
+		}
+		// Count both raw and prefixed grabbed forms.
+		assert.Equal(t, 10, inboundHeaderCapacity(
+			HeaderPreallocationScan,
+			headers,
+			newHeaderPreallocationGrabHeaders(grabHeaders),
+		))
+	})
+
+	t.Run("scan checks lowercase value after empty canonical value", func(t *testing.T) {
+		headers := http.Header{
+			"X-Grabbed": {""},
+			"x-grabbed": {"raw"},
+		}
+		grabHeaders := map[string]struct{}{
+			"x-grabbed": {},
+		}
+
+		assert.Equal(t, 1, inboundHeaderCapacity(
+			HeaderPreallocationScan,
+			headers,
+			newHeaderPreallocationGrabHeaders(grabHeaders),
+		))
+	})
+
+	t.Run("scan allows small overestimate for duplicate forms", func(t *testing.T) {
+		headers := makeInboundPreallocationTestHeaders(9, 1)
+		headers.Set(UberTraceContextHeaderKey, "trace")
+		headers.Set(UberBaggageHeaderKeyPrefix+"test", "baggage")
+
+		proxyHeaders := map[string]string{
+			XForwardedForHeader:   "203.0.113.42",
+			XForwardedProtoHeader: "https",
+			XForwardedPortHeader:  "443",
+			XRequestIDHeader:      "request-id",
+			XUberSourceHeader:     "source",
+			ViaHeader:             "1.1 proxy",
+			UserAgentHeader:       "yarpc/1.0",
+		}
+		for key, value := range proxyHeaders {
+			headers.Set(key, value)
+		}
+
+		// Both pairs produce one canonical item; the grabbed pair also preserves
+		// two differently-cased original items.
+		headers.Set(ApplicationHeaderPrefix+XForwardedForHeader, "prefixed-proxy")
+		headers.Set("X-Grabbed", "raw-grabbed")
+		headers.Set(ApplicationHeaderPrefix+"X-Grabbed", "prefixed-grabbed")
+		headers.Set("X-Grabbed-Only", "raw-grabbed")
+		headers.Set("X-Empty", "")
+		headers["Rpc-Header-No-Values"] = nil
+
+		grabHeaders := map[string]struct{}{
+			XForwardedForHeader: {},
+			"x-grabbed":         {},
+			"x-grabbed-only":    {},
+			"x-empty":           {},
+		}
+
+		assert.Equal(t, 22, inboundHeaderCapacity(
+			HeaderPreallocationScan,
+			headers,
+			newHeaderPreallocationGrabHeaders(grabHeaders),
+		))
+	})
+}
+
+func makeInboundPreallocationTestHeaders(application, ignored int) http.Header {
+	headers := make(http.Header, application+ignored)
+	for i := 0; i < application; i++ {
+		headers.Set(
+			fmt.Sprintf("%sApplication-%d", ApplicationHeaderPrefix, i),
+			"application-value",
+		)
+	}
+	for i := 0; i < ignored; i++ {
+		headers.Set(fmt.Sprintf("X-Ignored-%d", i), "ignored-value")
+	}
+	return headers
+}
+
 func TestHandlerSuccess(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()

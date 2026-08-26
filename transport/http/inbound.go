@@ -60,6 +60,34 @@ type InboundOption func(*Inbound)
 
 func (InboundOption) httpOption() {}
 
+// HeaderPreallocationStrategy controls how an HTTP inbound sizes the
+// transport header maps built for each request.
+type HeaderPreallocationStrategy string
+
+const (
+	// HeaderPreallocationUnfiltered uses the unfiltered number of HTTP headers
+	// remaining after YARPC system headers are removed. This is the default.
+	HeaderPreallocationUnfiltered HeaderPreallocationStrategy = "unfiltered"
+
+	// HeaderPreallocationScan scans the remaining HTTP headers and preallocates
+	// for header forms that YARPC will propagate. Duplicate raw and prefixed
+	// forms may cause a small overestimate.
+	HeaderPreallocationScan HeaderPreallocationStrategy = "scan"
+
+	// HeaderPreallocationDisabled disables inbound transport header
+	// preallocation. Header maps are allocated lazily when first populated.
+	HeaderPreallocationDisabled HeaderPreallocationStrategy = "disabled"
+)
+
+func (s HeaderPreallocationStrategy) valid() bool {
+	switch s {
+	case HeaderPreallocationUnfiltered, HeaderPreallocationScan, HeaderPreallocationDisabled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Mux specifies that the HTTP server should make the YARPC endpoint available
 // under the given pattern on the given ServeMux. By default, the YARPC
 // service is made available on all paths of the HTTP server. By specifying a
@@ -159,6 +187,20 @@ func HeaderCaseMapping(mapping map[string][]string) InboundOption {
 	}
 }
 
+// InboundHeaderPreallocation returns an InboundOption that controls how the
+// inbound sizes the two transport header maps built for each request.
+//
+// HeaderPreallocationUnfiltered preserves the default behavior and uses the
+// number of HTTP headers remaining after YARPC system headers are removed.
+// HeaderPreallocationScan performs an additional scan to count header forms
+// that YARPC will propagate. Duplicate raw and prefixed forms may cause a small
+// overestimate. HeaderPreallocationDisabled skips preallocation.
+func InboundHeaderPreallocation(strategy HeaderPreallocationStrategy) InboundOption {
+	return func(i *Inbound) {
+		i.headerPreallocationStrategy = strategy
+	}
+}
+
 // ReadHeaderTimeout returns an InboundOption that sets the http.Server ReadHeaderTimeout
 func ReadHeaderTimeout(timeout time.Duration) InboundOption {
 	return func(i *Inbound) {
@@ -191,15 +233,16 @@ func IdleTimeout(timeout time.Duration) InboundOption {
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
-		once:              lifecycle.NewOnce(),
-		addr:              addr,
-		shutdownTimeout:   defaultShutdownTimeout,
-		tracer:            t.tracer,
-		logger:            t.logger,
-		transport:         t,
-		grabHeaders:       make(map[string]struct{}),
-		bothResponseError: true,
-		disableHTTP2:      false,
+		once:                        lifecycle.NewOnce(),
+		addr:                        addr,
+		shutdownTimeout:             defaultShutdownTimeout,
+		tracer:                      t.tracer,
+		logger:                      t.logger,
+		transport:                   t,
+		grabHeaders:                 make(map[string]struct{}),
+		bothResponseError:           true,
+		disableHTTP2:                false,
+		headerPreallocationStrategy: HeaderPreallocationUnfiltered,
 	}
 	server := &http.Server{
 		Addr: i.addr,
@@ -238,6 +281,7 @@ type Inbound struct {
 	disableHTTP2                             bool
 	overrideOriginalItemWithCanonicalizedKey bool
 	headerCaseMapping                        map[string][]string
+	headerPreallocationStrategy              HeaderPreallocationStrategy
 }
 
 // Tracer configures a tracer on this inbound.
@@ -267,6 +311,13 @@ func (i *Inbound) Start() error {
 func (i *Inbound) start() error {
 	if i.router == nil {
 		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "no router configured for transport inbound")
+	}
+	if !i.headerPreallocationStrategy.valid() {
+		return yarpcerrors.Newf(
+			yarpcerrors.CodeInvalidArgument,
+			"unknown header preallocation strategy: %q",
+			i.headerPreallocationStrategy,
+		)
 	}
 	for header := range i.grabHeaders {
 		if !strings.HasPrefix(header, "x-") {
@@ -300,6 +351,8 @@ func (i *Inbound) start() error {
 		logger:                                   i.logger,
 		overrideOriginalItemWithCanonicalizedKey: i.overrideOriginalItemWithCanonicalizedKey,
 		headerCaseMapping:                        i.headerCaseMapping,
+		headerPreallocationStrategy:              i.headerPreallocationStrategy,
+		headerPreallocationGrabHeaders:           newHeaderPreallocationGrabHeaders(i.grabHeaders),
 		duplicateHeaderCounterVec:                duplicateHeaderCounterVec,
 	}
 
