@@ -47,7 +47,7 @@ type OutboundCall struct {
 func NewOutboundCall(options ...CallOption) *OutboundCall {
 	var call OutboundCall
 	for _, opt := range options {
-		opt.opt.apply(&call)
+		opt.apply(&call)
 	}
 	return &call
 }
