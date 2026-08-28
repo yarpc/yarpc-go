@@ -32,6 +32,8 @@ import (
 	"golang.org/x/net/http2"
 
 	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/propagation"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/net/metrics"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
@@ -60,6 +62,9 @@ type transportOptions struct {
 	jitter                    func(int64) int64
 	tracer                    opentracing.Tracer
 	tracingInterceptorEnabled bool
+	otelTracingEnabled        bool
+	otelTracerProvider        oteltrace.TracerProvider
+	otelPropagator            propagation.TextMapPropagator
 	buildClient               func(*transportOptions) *http.Client
 	logger                    *zap.Logger
 	meter                     *metrics.Scope
@@ -226,6 +231,33 @@ func TracingInterceptorEnabled(enabled bool) TransportOption {
 	}
 }
 
+// OTelTracingInterceptorEnabled opts the transport into OpenTelemetry-native
+// tracing. When enabled, the transport installs the OTel tracing interceptor
+// and disables both the legacy OpenTracing tracer and the OpenTracing
+// interceptor.
+func OTelTracingInterceptorEnabled(enabled bool) TransportOption {
+	return func(options *transportOptions) {
+		options.otelTracingEnabled = enabled
+	}
+}
+
+// OTelTracerProvider sets the provider used to start spans when
+// OTelTracingInterceptorEnabled is set. Defaults to otel.GetTracerProvider().
+func OTelTracerProvider(provider oteltrace.TracerProvider) TransportOption {
+	return func(options *transportOptions) {
+		options.otelTracerProvider = provider
+	}
+}
+
+// OTelPropagator sets the propagator used to inject and extract trace context
+// when OTelTracingInterceptorEnabled is set. Defaults to
+// otel.GetTextMapPropagator().
+func OTelPropagator(propagator propagation.TextMapPropagator) TransportOption {
+	return func(options *transportOptions) {
+		options.otelPropagator = propagator
+	}
+}
+
 // Logger sets a logger to use for internal logging.
 //
 // The default is to not write any logs.
@@ -289,7 +321,20 @@ func (o *transportOptions) newTransport() *Transport {
 		onewayOutbounds []interceptor.OnewayOutbound
 	)
 	tracer := o.tracer
-	if o.tracingInterceptorEnabled {
+	if o.otelTracingEnabled {
+		ti := tracinginterceptor.NewOTel(tracinginterceptor.OTelParams{
+			TracerProvider: o.otelTracerProvider,
+			Propagator:     o.otelPropagator,
+			Transport:      TransportName,
+			Logger:         logger,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		unaryOutbounds = append(unaryOutbounds, ti)
+		onewayInbounds = append(onewayInbounds, ti)
+		onewayOutbounds = append(onewayOutbounds, ti)
+
+		tracer = opentracing.NoopTracer{}
+	} else if o.tracingInterceptorEnabled {
 		ti := tracinginterceptor.New(tracinginterceptor.Params{
 			Tracer:    tracer,
 			Transport: TransportName,
