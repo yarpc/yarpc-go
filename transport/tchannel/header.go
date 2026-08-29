@@ -93,7 +93,8 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 		// JSON is special
 		var headers map[string]string
 		err := tchannel.NewArgReader(getReader()).ReadJSON(&headers)
-		return transport.HeadersFromMap(headers), err
+		h := transport.HeadersFromMap(headers)
+		return stripTChannelProtocolHeaders(h), err
 	}
 
 	r, err := getReader()
@@ -106,6 +107,7 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 		return headers, err
 	}
 
+	headers = stripTChannelProtocolHeaders(headers)
 	return headers, r.Close()
 }
 
@@ -180,6 +182,17 @@ func headerCallerProcedureToRequest(req *transport.Request, headers *transport.H
 		return req
 	}
 	return req
+}
+
+// stripTChannelProtocolHeaders removes transport-internal TChannel headers from application headers.
+// Currently, this filters out tracing headers prefixed with "$tracing$" so they never propagate to other transports.
+func stripTChannelProtocolHeaders(h transport.Headers) transport.Headers {
+	for k := range h.Items() {
+		if strings.HasPrefix(k, "$tracing$") {
+			h.Del(k)
+		}
+	}
+	return h
 }
 
 // requestCallerProcedureToHeader add callerProcedure header as an application header.
