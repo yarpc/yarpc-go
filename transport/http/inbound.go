@@ -26,6 +26,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -39,9 +40,14 @@ import (
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 const (
+	// http11NextProtoTLS is the ALPN protocol name for HTTP/1.1.
+	http11NextProtoTLS = "http/1.1"
+
 	// We want a value that's around 5 seconds, but slightly higher than how
 	// long a successful HTTP shutdown can take.
 	// There's a specific path in the HTTP shutdown path that can take 5 seconds:
@@ -372,6 +378,14 @@ func (i *Inbound) start() error {
 		protos.SetHTTP2(true)
 		protos.SetUnencryptedHTTP2(true)
 		i.server.Protocols = &protos
+
+		// http.Server.Protocols decides at the connection layer: over TLS it
+		// selects HTTP/2 from ALPN only, and SetUnencryptedHTTP2 applies just
+		// to non-TLS connections. The mux listener hands the server an already
+		// established *tls.Conn, so a prior-knowledge HTTP/2 client offering no
+		// ALPN would be served HTTP/1.1. h2c restores the pre-Go-1.26 preface
+		// detection at the request layer for those connections.
+		i.server.Handler = h2c.NewHandler(httpHandler, &http2.Server{})
 	}
 
 	addr := i.addr
@@ -389,9 +403,16 @@ func (i *Inbound) start() error {
 			return errors.New("HTTP TLS enabled but configuration not provided")
 		}
 
+		tlsConfig := i.tlsConfig
+		if !i.disableHTTP2 {
+			// The mux listener terminates TLS with this config, not with
+			// http.Server.TLSConfig, so "h2" must be advertised here.
+			tlsConfig = withHTTP2ALPN(tlsConfig)
+		}
+
 		listener = muxlistener.NewListener(muxlistener.Config{
 			Listener:      listener,
-			TLSConfig:     i.tlsConfig,
+			TLSConfig:     tlsConfig,
 			ServiceName:   i.transport.serviceName,
 			TransportName: TransportName,
 			Meter:         i.transport.meter,
@@ -410,6 +431,63 @@ func (i *Inbound) start() error {
 		i.logger.Warn("no procedures specified for HTTP inbound")
 	}
 	return nil
+}
+
+// withHTTP2ALPN returns a TLS configuration advertising "h2" over ALPN, always
+// ranked below "http/1.1".
+//
+// Go's TLS server picks the first of its own protocols that the client also
+// offers, so whichever of the two is listed first decides the protocol for any
+// client offering both. Offering "h2" does not mean a client can speak it over
+// TLS: the HTTP/1.1 outbound of this package advertises both yet always speaks
+// HTTP/1.1, and answering it in HTTP/2 breaks the connection. Ranking
+// "http/1.1" first protects those peers, while clients offering only "h2" still
+// match it. Clients using HTTP/2 with prior knowledge send no ALPN at all and
+// are handled by the h2c handler instead.
+//
+// An "h2"-first configuration is therefore rewritten rather than honored. The
+// relative order of every other protocol is preserved.
+func withHTTP2ALPN(config *tls.Config) *tls.Config {
+	h2Index := slices.Index(config.NextProtos, http2.NextProtoTLS)
+	http11Index := slices.Index(config.NextProtos, http11NextProtoTLS)
+
+	// "http/1.1" already outranks "h2", nothing to do.
+	if h2Index >= 0 && http11Index >= 0 && http11Index < h2Index {
+		return config
+	}
+
+	// Clone leaves the caller's config untouched, but it copies the NextProtos
+	// slice header, so build a fresh slice rather than appending in place.
+	newConfig := config.Clone()
+
+	if h2Index < 0 {
+		// "h2" is ours to add, so it goes last and outranks nothing.
+		protos := make([]string, 0, len(config.NextProtos)+2)
+		protos = append(protos, config.NextProtos...)
+		if http11Index < 0 {
+			protos = append(protos, http11NextProtoTLS)
+		}
+		newConfig.NextProtos = append(protos, http2.NextProtoTLS)
+		return newConfig
+	}
+
+	// Move, or add, "http/1.1" immediately before the configured "h2".
+	protos := make([]string, 0, len(config.NextProtos)+1)
+	for _, proto := range config.NextProtos {
+		switch proto {
+		case http11NextProtoTLS:
+			// Re-inserted below, immediately before "h2".
+		case http2.NextProtoTLS:
+			if !slices.Contains(protos, http11NextProtoTLS) {
+				protos = append(protos, http11NextProtoTLS)
+			}
+			protos = append(protos, proto)
+		default:
+			protos = append(protos, proto)
+		}
+	}
+	newConfig.NextProtos = protos
+	return newConfig
 }
 
 // Stop the inbound using Shutdown.
