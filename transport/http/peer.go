@@ -76,6 +76,8 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		<-timer.C
 	}
 
+	h2Transport := t.newH2Transport()
+
 	return &httpPeer{
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport:             t,
@@ -84,6 +86,8 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		released:              make(chan struct{}),
 		timer:                 timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
+		h2Transport:           h2Transport,
+		h2Client:              &http.Client{Transport: h2Transport},
 	}
 }
 
