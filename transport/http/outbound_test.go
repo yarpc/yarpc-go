@@ -69,6 +69,12 @@ func TestTransportNamer(t *testing.T) {
 	})
 }
 
+func TestNewOutboundHTTP2WithTLSPanics(t *testing.T) {
+	require.Panics(t, func() {
+		NewOutbound(nil, UseHTTP2(), OutboundTLSConfiguration(&tls.Config{}))
+	}, "http2 with tls should panic as unsupported")
+}
+
 func TestNewSingleOutboundPanic(t *testing.T) {
 	require.Panics(t, func() {
 		// invalid url should cause panic
@@ -849,7 +855,6 @@ func TestCallWithHTTP2(t *testing.T) {
 			if err := out.Stop(); err != nil {
 				t.Logf("failed to stop outbound: %v", err)
 			}
-			out.client.CloseIdleConnections()
 		})
 
 		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
@@ -982,7 +987,6 @@ func TestCallWithHTTP2(t *testing.T) {
 			if err := out.Stop(); err != nil {
 				t.Logf("failed to stop outbound: %v", err)
 			}
-			out.client.CloseIdleConnections()
 		})
 
 		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)

@@ -155,14 +155,18 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		opt(o)
 	}
 
-	var client *http.Client
 	if o.useHTTP2 {
-		client = createHTTP2Client(o)
+		if o.tlsConfig != nil {
+			panic("http2 with tls is not supported")
+		}
+		// HTTP/2 requests are sent through the chosen peer's own dedicated
+		// *http2.Transport (see doWithPeer), so there's no outbound-wide
+		// client to build here.
 	} else {
-		client = createHTTP1Client(o)
+		client := createHTTP1Client(o)
+		o.client = client
+		o.sender = &transportSender{Client: client}
 	}
-	o.client = client
-	o.sender = &transportSender{Client: client}
 	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
 	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
 	return o
@@ -200,20 +204,6 @@ func createHTTP1TLSClient(o *Outbound) *http.Client {
 	return &http.Client{
 		Transport: h1transport,
 	}
-}
-
-func createHTTP2Client(o *Outbound) *http.Client {
-	if o.tlsConfig != nil {
-		return createHTTP2TLSClient(o)
-	}
-
-	return &http.Client{
-		Transport: o.transport.h2Transport,
-	}
-}
-
-func createHTTP2TLSClient(o *Outbound) *http.Client {
-	panic("http2 with tls is not supported")
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
@@ -703,6 +693,13 @@ func (o *Outbound) doWithPeer(
 	sender sender,
 ) (*http.Response, error) {
 	hreq.URL.Host = p.HostPort()
+
+	if o.useHTTP2 {
+		// Route through the peer's own dedicated *http2.Transport so
+		// duplicate peers for the same address get independent HTTP/2
+		// connections instead of sharing one.
+		sender = p.h2Client
+	}
 
 	response, err := sender.Do(hreq.WithContext(ctx))
 	if err != nil {
