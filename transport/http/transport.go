@@ -433,6 +433,11 @@ func (a *Transport) closeIdlePeerH2Connections() {
 	defer a.lock.Unlock()
 
 	for _, p := range a.peers {
+		a.logger.Info("http2: closing idle connections for peer",
+			zap.String("peer", p.addr),
+			zap.Int64("h2TransportID", p.h2ID),
+			zap.Int64("dialCount", p.h2DialCount.Load()),
+		)
 		p.h2Transport.CloseIdleConnections()
 	}
 }
@@ -456,10 +461,19 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
 	addr := pid.Identifier()
 	if p, ok := a.peers[addr]; ok {
+		a.logger.Info("http2: reusing existing peer",
+			zap.String("peerIdentifier", addr),
+			zap.Int64("h2TransportID", p.h2ID),
+		)
 		return p
 	}
 	p := newPeer(addr, a)
 	a.peers[addr] = p
+	a.logger.Info("http2: registered new peer",
+		zap.String("peerIdentifier", addr),
+		zap.Int64("h2TransportID", p.h2ID),
+		zap.Int("totalPeers", len(a.peers)),
+	)
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 

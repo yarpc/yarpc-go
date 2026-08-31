@@ -21,6 +21,8 @@
 package http
 
 import (
+	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"time"
@@ -31,6 +33,13 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 )
+
+// h2TransportSeq is a process-wide, monotonically increasing counter used to
+// tag every per-peer *http2.Transport with a stable, human-readable ID for
+// debug logging (a pointer value alone is hard to eyeball in logs). This
+// exists purely to make it easy to verify, from logs, that duplicate peers
+// for the same address each get their own *http2.Transport/connection.
+var h2TransportSeq = atomic.NewInt64(0)
 
 type httpPeer struct {
 	*abstractpeer.Peer
@@ -48,6 +57,14 @@ type httpPeer struct {
 	// independent HTTP/2 connections instead of sharing one.
 	h2Transport *http2.Transport
 	h2Client    *http.Client
+	// h2ID identifies this peer's dedicated h2Transport in debug logs; see
+	// h2TransportSeq.
+	h2ID int64
+	// h2DialCount counts how many times this peer's h2Transport has dialed a
+	// new underlying connection. Logged on every dial so staging debugging
+	// can distinguish "reused an existing HTTP/2 connection" from "opened a
+	// new one".
+	h2DialCount *atomic.Int64
 }
 
 func newPeer(addr string, t *Transport) *httpPeer {
@@ -61,6 +78,48 @@ func newPeer(addr string, t *Transport) *httpPeer {
 	}
 
 	h2Transport := t.newH2Transport()
+	h2ID := h2TransportSeq.Inc()
+	h2DialCount := atomic.NewInt64(0)
+
+	// Wrap the dial function so every new HTTP/2 connection this peer opens
+	// gets logged with the peer's address and its h2Transport's ID. Two
+	// httpPeers pointed at the same address (e.g. via the duplicate-peer
+	// identifier support) will show up here as two distinct h2ID values each
+	// dialing independently, proving they don't share a connection.
+	innerDialTLSContext := h2Transport.DialTLSContext
+	h2Transport.DialTLSContext = func(ctx context.Context, network, dialAddr string, cfg *tls.Config) (net.Conn, error) {
+		seq := h2DialCount.Inc()
+		t.logger.Info("http2: dialing new connection for peer",
+			zap.String("peer", addr),
+			zap.Int64("h2TransportID", h2ID),
+			zap.Int64("dialSeq", seq),
+			zap.String("network", network),
+			zap.String("dialAddr", dialAddr),
+		)
+		conn, err := innerDialTLSContext(ctx, network, dialAddr, cfg)
+		if err != nil {
+			t.logger.Info("http2: dial failed for peer",
+				zap.String("peer", addr),
+				zap.Int64("h2TransportID", h2ID),
+				zap.Int64("dialSeq", seq),
+				zap.Error(err),
+			)
+			return nil, err
+		}
+		t.logger.Info("http2: dial succeeded for peer",
+			zap.String("peer", addr),
+			zap.Int64("h2TransportID", h2ID),
+			zap.Int64("dialSeq", seq),
+			zap.String("localAddr", conn.LocalAddr().String()),
+			zap.String("remoteAddr", conn.RemoteAddr().String()),
+		)
+		return conn, nil
+	}
+
+	t.logger.Info("http2: created dedicated transport for peer",
+		zap.String("peer", addr),
+		zap.Int64("h2TransportID", h2ID),
+	)
 
 	return &httpPeer{
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
@@ -72,6 +131,8 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		innocentUntilUnixNano: atomic.NewInt64(0),
 		h2Transport:           h2Transport,
 		h2Client:              &http.Client{Transport: h2Transport},
+		h2ID:                  h2ID,
+		h2DialCount:           h2DialCount,
 	}
 }
 
