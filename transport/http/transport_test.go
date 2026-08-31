@@ -25,17 +25,22 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/internal/testtime"
 	ypeer "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"golang.org/x/net/http2"
 )
 
 // NoJitter is a transport option only available in tests, to disable jitter
@@ -298,6 +303,130 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 
 	assert.NotNil(t, transport.h1Transport)
 	assert.NotNil(t, transport.h2Transport)
+}
+
+func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
+	// Count new TCP connections accepted by the server so we can prove two
+	// httpPeers actually open independent HTTP/2 connections, rather than
+	// just asserting their *http2.Transport pointers differ.
+	var newConns atomic.Int32
+	server := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	))
+	server.Config.Protocols = new(http.Protocols)
+	server.Config.Protocols.SetHTTP1(true)
+	server.Config.Protocols.SetUnencryptedHTTP2(true)
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			newConns.Add(1)
+		}
+	}
+	http2.ConfigureServer(server.Config, &http2.Server{IdleTimeout: defaultIdleConnTimeout})
+	server.Start()
+	defer server.Close()
+
+	tr := NewTransport()
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	addr := strings.TrimPrefix(server.URL, "http://")
+
+	// Build two httpPeer instances for the same address directly: newPeer
+	// itself (unlike getOrCreatePeer's map) never dedupes, so this proves
+	// each httpPeer's dedicated connection pool opens its own connection.
+	p1 := newPeer(addr, tr)
+	p2 := newPeer(addr, tr)
+	t.Cleanup(func() {
+		if pool := p1.loadH2Pool(); pool != nil {
+			pool.Stop()
+		}
+		if pool := p2.loadH2Pool(); pool != nil {
+			pool.Stop()
+		}
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+
+	for _, p := range []*httpPeer{p1, p2} {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, nil)
+		require.NoError(t, err)
+		sender, err := p.h2Sender()
+		require.NoError(t, err)
+		res, err := sender.Do(req)
+		require.NoError(t, err)
+		require.NoError(t, res.Body.Close())
+	}
+
+	require.NotSame(t, p1.loadH2Pool(), p2.loadH2Pool(),
+		"each httpPeer must own an independent HTTP/2 connection pool")
+
+	assert.EqualValues(t, 2, newConns.Load(),
+		"each peer's dedicated http2.Transport should open its own connection instead of sharing one")
+}
+
+// TestH2PoolMetricsTrackDialAndTeardown is a regression test for the
+// leak-detection gap flagged in review on PR #2539 ("we are not emitting
+// any new metric with total live connections... worth doing it so we can
+// detect possible leaks like the one in the peer teardown"): the shared
+// connpool.Metrics active-connection gauge must go up on a real dial and
+// back down to 0 once the connection is actually torn down -- even though
+// dynamic scaling (the only other path that updates these gauges) is
+// disabled -- because AddConn calls RefreshMetrics unconditionally and
+// watchH2Conn now does the same after Remove.
+func TestH2PoolMetricsTrackDialAndTeardown(t *testing.T) {
+	server := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	))
+	server.Config.Protocols = new(http.Protocols)
+	server.Config.Protocols.SetHTTP1(true)
+	server.Config.Protocols.SetUnencryptedHTTP2(true)
+	http2.ConfigureServer(server.Config, &http2.Server{IdleTimeout: defaultIdleConnTimeout})
+	server.Start()
+	defer server.Close()
+
+	root := metrics.New()
+	tr := NewTransport(Meter(root.Scope()), ServiceName("test-svc"))
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	addr := strings.TrimPrefix(server.URL, "http://")
+	p := newPeer(addr, tr)
+
+	activeConnGauge := func() int64 {
+		snap := root.Snapshot()
+		for _, g := range snap.Gauges {
+			if g.Name == "conn_pool_active_connections" {
+				return g.Value
+			}
+		}
+		return 0
+	}
+
+	assert.EqualValues(t, 0, activeConnGauge(), "no connection dialed yet")
+
+	sender, err := p.h2Sender()
+	require.NoError(t, err)
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	require.NoError(t, err)
+	res, err := sender.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+
+	assert.EqualValues(t, 1, activeConnGauge(), "dialing the peer's first connection should increment the gauge")
+
+	pool := p.loadH2Pool()
+	require.NotNil(t, pool)
+	pool.Stop()
+	pool.Wait()
+
+	assert.Eventually(t, func() bool {
+		return activeConnGauge() == 0
+	}, testtime.Second, testtime.Millisecond*10, "tearing down the connection should bring the gauge back to 0")
 }
 
 func TestDialContext(t *testing.T) {

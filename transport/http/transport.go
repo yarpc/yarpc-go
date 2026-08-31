@@ -42,6 +42,7 @@ import (
 	"go.uber.org/yarpc/internal/interceptor"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/zap"
 )
 
@@ -319,6 +320,19 @@ func (o *transportOptions) newTransport() *Transport {
 		onewayOutboundInterceptor: onewayOutbounds,
 		h1Transport:               buildH1Transport(o),
 		h2Transport:               buildH2Transport(o),
+		h2PoolConfig:              defaultH2PoolConfig,
+		h2PoolMetrics: connpool.NewMetrics(connpool.MetricsParams{
+			Meter:       o.meter,
+			Logger:      logger,
+			ServiceName: o.serviceName,
+			Transport:   "http2",
+			// MetricPrefix is left at its "conn_pool" default so this
+			// transport's connection-pool metrics share the same metric
+			// family as any other transport built on connpool.Pool (e.g. a
+			// future transport/grpc migration onto this package) --
+			// distinguished only by the "transport" tag above, not by a
+			// different metric name.
+		}),
 	}
 }
 
@@ -399,7 +413,28 @@ type Transport struct {
 	onewayOutboundInterceptor []interceptor.OnewayOutbound
 
 	h1Transport *http.Transport
+	// h2Transport is shared across all peers, but only as a *http2.ClientConn
+	// factory (via dialH2Conn) and holder of the transport's configured
+	// options (TLS/dial config, timeouts) -- its own internal connection
+	// pooling is never used. Each httpPeer instead owns its own
+	// *connpool.Pool[*http2.ClientConn] (see peer.go and h2PoolConfig below)
+	// so that duplicate peers pointed at the same address end up with
+	// independent HTTP/2 connections rather than sharing one.
 	h2Transport *http2.Transport
+	// h2PoolConfig is the connpool.Config every peer's HTTP/2 pool is built
+	// with. See defaultH2PoolConfig's doc comment.
+	h2PoolConfig connpool.Config
+	// h2PoolMetrics holds the shared, transport-wide connection-pool metric
+	// handles (active/draining/idle connection gauges, scale-event
+	// counters). It is created once here and each peer's pool gets its own
+	// connpool.Reporter feeding into it (see h2Sender in peer.go), so
+	// registration happens exactly once regardless of how many peers -
+	// including duplicate peers - are created or recreated over the
+	// Transport's lifetime. This is the same connpool.Metrics/Reporter
+	// mechanism transport/grpc uses (or will use once it migrates onto
+	// connpool), so the pool-health metrics are reusable across transports
+	// rather than reimplemented per transport.
+	h2PoolMetrics *connpool.Metrics
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -415,10 +450,51 @@ func (a *Transport) Start() error {
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
 		a.h1Transport.CloseIdleConnections()
-		a.h2Transport.CloseIdleConnections()
+		a.stopPeerH2Pools()
 		a.connectorsGroup.Wait()
 		return nil
 	})
+}
+
+// stopPeerH2Pools stops every peer's HTTP/2 connection pool and waits for
+// each to finish closing its connections and tearing down its background
+// goroutines.
+func (a *Transport) stopPeerH2Pools() {
+	a.lock.Lock()
+	peers := make([]*httpPeer, 0, len(a.peers))
+	for _, p := range a.peers {
+		peers = append(peers, p)
+	}
+	a.lock.Unlock()
+
+	pools := make([]*connpool.Pool[*http2.ClientConn], 0, len(peers))
+	for _, p := range peers {
+		if pool := p.loadH2Pool(); pool != nil {
+			pools = append(pools, pool)
+		}
+	}
+	for _, pool := range pools {
+		pool.Stop()
+	}
+	for _, pool := range pools {
+		pool.Wait()
+	}
+}
+
+// dialH2Conn dials a raw connection to addr using the transport's configured
+// dial settings and wraps it as an *http2.ClientConn. Used as the Dial
+// function for every peer's HTTP/2 connpool.Pool (see peer.go).
+func (a *Transport) dialH2Conn(ctx context.Context, addr string) (*http2.ClientConn, error) {
+	conn, err := a.h2Transport.DialTLSContext(ctx, "tcp", addr, nil)
+	if err != nil {
+		return nil, err
+	}
+	cc, err := a.h2Transport.NewClientConn(conn)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	return cc, nil
 }
 
 // IsRunning returns whether the HTTP transport is running.
