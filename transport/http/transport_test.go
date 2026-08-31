@@ -285,8 +285,7 @@ func TestDefaultTransportInitialisation(t *testing.T) {
 	transport := NewTransport()
 
 	assert.NotNil(t, transport.h1Transport)
-	assert.NotNil(t, transport.newH2Transport)
-	assert.NotNil(t, transport.newH2Transport())
+	assert.NotNil(t, transport.h2Transport)
 }
 
 func TestTransportClientOpaqueOptions(t *testing.T) {
@@ -303,11 +302,10 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 	)
 
 	assert.NotNil(t, transport.h1Transport)
-	assert.NotNil(t, transport.newH2Transport)
-	assert.NotNil(t, transport.newH2Transport())
+	assert.NotNil(t, transport.h2Transport)
 }
 
-func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
+func TestGetOrCreatePeerDoesNotDedupeSuffixedIdentifiers(t *testing.T) {
 	tr := NewTransport()
 	require.NoError(t, tr.Start())
 	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
@@ -321,10 +319,8 @@ func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
 	tr.lock.Unlock()
 
 	require.NotSame(t, p1, p2, "duplicate identifiers must not collapse into one peer")
-	assert.NotNil(t, p1.h2Transport)
-	assert.NotNil(t, p2.h2Transport)
-	assert.NotSame(t, p1.h2Transport, p2.h2Transport,
-		"each httpPeer must own an independent *http2.Transport")
+	assert.NotEqual(t, p1.debugID, p2.debugID,
+		"each suffixed identifier must get its own independently tracked httpPeer")
 }
 
 func TestPeersGetIndependentHTTP2Transports(t *testing.T) {

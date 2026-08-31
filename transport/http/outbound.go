@@ -52,6 +52,7 @@ import (
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
@@ -702,6 +703,12 @@ func (o *Outbound) doWithPeer(
 		// *http2.Transport would itself have retried transparently (see
 		// h2PeerSender's doc comment).
 		sender = &h2PeerSender{peer: p}
+		o.transport.logger.Info("http2: sending request via peer's connection pool",
+			zap.String("peer", p.addr),
+			zap.Int64("peerDebugID", p.debugID),
+			zap.String("procedure", treq.Procedure),
+			zap.String("service", treq.Service),
+		)
 	}
 
 	response, err := sender.Do(hreq.WithContext(ctx))
