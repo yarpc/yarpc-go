@@ -21,6 +21,8 @@
 package http
 
 import (
+	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"time"
@@ -61,6 +63,20 @@ func newPeer(addr string, t *Transport) *httpPeer {
 	}
 
 	h2Transport := t.newH2Transport()
+
+	// Record every dial this peer's dedicated *http2.Transport makes against
+	// the transport-wide (not per-peer) HTTP/2 connection metrics. See
+	// http2ConnectionMetrics for why these metrics are never tagged by peer.
+	innerDialTLSContext := h2Transport.DialTLSContext
+	h2Transport.DialTLSContext = func(ctx context.Context, network, dialAddr string, cfg *tls.Config) (net.Conn, error) {
+		conn, err := innerDialTLSContext(ctx, network, dialAddr, cfg)
+		if err != nil {
+			t.h2ConnMetrics.incConnectionDialFailures()
+			return nil, err
+		}
+		t.h2ConnMetrics.incConnectionsDialed()
+		return conn, nil
+	}
 
 	return &httpPeer{
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
