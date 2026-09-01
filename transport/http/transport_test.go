@@ -369,6 +369,8 @@ func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
 
 	require.NotSame(t, p1.loadH2Pool(), p2.loadH2Pool(),
 		"each httpPeer must own an independent HTTP/2 connection pool")
+	assert.NotEqual(t, p1.debugID, p2.debugID,
+		"each httpPeer must get its own debug ID so its logs can be told apart")
 
 	assert.EqualValues(t, 2, newConns.Load(),
 		"each peer's dedicated http2.Transport should open its own connection instead of sharing one")
@@ -538,6 +540,7 @@ func TestH2SenderReusesExistingConnection(t *testing.T) {
 	}
 
 	assert.EqualValues(t, 1, dials.Load(), "a second request on the same peer must reuse the dialed connection")
+	assert.EqualValues(t, 1, p.h2DialCount.Load(), "the peer's own dial counter must agree with the server's view")
 }
 
 // TestH2SenderConcurrentFirstDial hammers a single cold peer's h2Sender
@@ -583,6 +586,7 @@ func TestH2SenderConcurrentFirstDial(t *testing.T) {
 		assert.NoError(t, err)
 	}
 	assert.EqualValues(t, 1, dials.Load(), "only one goroutine should dial the peer's first connection")
+	assert.EqualValues(t, 1, p.h2DialCount.Load(), "the peer's own dial counter must agree with the server's view")
 }
 
 // TestWatchH2ConnEvictsUnhealthyConnection covers watchH2Conn's periodic

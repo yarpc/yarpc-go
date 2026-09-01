@@ -71,6 +71,9 @@ func TestIsolatedDialersDoNotSharePeer(t *testing.T) {
 	dialer2 := baseDialer.WithConnectionIsolation()
 	sub1, sub2, sub3 := idSubscriber{1}, idSubscriber{2}, idSubscriber{3}
 
+	assert.NotEqual(t, dialer1.dialerID, dialer2.dialerID, "each isolated dialer needs its own debug ID")
+	assert.NotEqual(t, baseDialer.dialerID, dialer1.dialerID, "an isolated dialer must not reuse its parent's debug ID")
+
 	p1, err := dialer1.RetainPeer(id, sub1)
 	require.NoError(t, err)
 	p1Again, err := dialer1.RetainPeer(id, sub2)
