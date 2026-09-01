@@ -41,13 +41,17 @@ type OutboundCall struct {
 
 	// If non-nil, response headers should be written here.
 	responseHeaders *map[string]string
+
+	err error
 }
 
 // NewOutboundCall constructs a new OutboundCall with the given options.
 func NewOutboundCall(options ...CallOption) *OutboundCall {
 	var call OutboundCall
 	for _, opt := range options {
-		opt.apply(&call)
+		if err := opt.apply(&call); err != nil && call.err == nil {
+			call.err = err
+		}
 	}
 	return &call
 }
@@ -56,6 +60,9 @@ func NewOutboundCall(options ...CallOption) *OutboundCall {
 // options and enforces the OutboundCall is valid for streams.
 func NewStreamOutboundCall(options ...CallOption) (*OutboundCall, error) {
 	call := NewOutboundCall(options...)
+	if call.err != nil {
+		return nil, call.err
+	}
 	if call.responseHeaders != nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("response headers are not supported for streams")
 	}
@@ -67,6 +74,9 @@ func NewStreamOutboundCall(options ...CallOption) (*OutboundCall, error) {
 //
 // The context MAY be replaced by the OutboundCall.
 func (c *OutboundCall) WriteToRequest(ctx context.Context, req *transport.Request) (context.Context, error) {
+	if c.err != nil {
+		return ctx, c.err
+	}
 	for _, h := range c.headers {
 		req.Headers = req.Headers.With(h.k, h.v)
 	}
@@ -91,6 +101,9 @@ func (c *OutboundCall) WriteToRequest(ctx context.Context, req *transport.Reques
 //
 // The context MAY be replaced by the OutboundCall.
 func (c *OutboundCall) WriteToRequestMeta(ctx context.Context, reqMeta *transport.RequestMeta) (context.Context, error) {
+	if c.err != nil {
+		return ctx, c.err
+	}
 	for _, h := range c.headers {
 		reqMeta.Headers = reqMeta.Headers.With(h.k, h.v)
 	}
