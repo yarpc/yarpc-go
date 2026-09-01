@@ -110,3 +110,30 @@ func TestUnmarshalFastPath(t *testing.T) {
 		assert.Error(t, err, "Malformed protobuf should return an error on fast path")
 	})
 }
+
+// TestUnmarshalBytesDoesNotAliasBuffer pins an ownership invariant that the
+// decode path already depends on: unmarshalBytes must copy data out of the
+// buffer it is handed, never retain a view into it.
+//
+// unmarshal calls unmarshalBytes with a pooled bufferpool buffer and returns
+// that buffer to the pool as soon as it returns, so a decoder that aliased the
+// input would hand callers a message backed by memory the pool is free to reset
+// and lease to the next request.
+func TestUnmarshalBytesDoesNotAliasBuffer(t *testing.T) {
+	payload := []byte("payload-bytes")
+
+	body, err := proto.Marshal(&types.BytesValue{Value: payload})
+	require.NoError(t, err)
+
+	got := &types.BytesValue{}
+	require.NoError(t, unmarshalBytes(Encoding, body, got, newCodec(nil)))
+	require.Equal(t, payload, got.Value)
+
+	// Scribble over the buffer the way a recycled pool buffer would be.
+	for i := range body {
+		body[i] = 0xff
+	}
+
+	assert.Equal(t, payload, got.Value,
+		"decoded message must not alias the buffer passed to unmarshalBytes")
+}
