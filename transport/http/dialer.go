@@ -21,13 +21,24 @@
 package http
 
 import (
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/zap"
 )
+
+// dialerSeq is a process-wide, monotonically increasing counter used to tag
+// every Dialer with a stable, human-readable ID for debug logging.
+var dialerSeq = atomic.NewInt64(0)
 
 // NewDialer creates a transport that is decorated to optionally isolate
 // retained peers from other dialers.
 func (t *Transport) NewDialer() *Dialer {
-	return &Dialer{trans: t}
+	d := &Dialer{trans: t, dialerID: dialerSeq.Inc()}
+	t.logger.Info("http2: dialer created",
+		zap.Int64("dialerID", d.dialerID),
+		zap.Bool("isolated", d.connectionScope != nil),
+	)
+	return d
 }
 
 // Dialer is a decorator for an HTTP transport that can isolate its peers,
@@ -35,6 +46,8 @@ func (t *Transport) NewDialer() *Dialer {
 type Dialer struct {
 	trans           *Transport
 	connectionScope *connectionScope
+	// dialerID identifies this Dialer in debug logs; see dialerSeq.
+	dialerID int64
 }
 
 var _ peer.Transport = (*Dialer)(nil)
@@ -48,15 +61,39 @@ var _ peer.Transport = (*Dialer)(nil)
 func (d *Dialer) WithConnectionIsolation() *Dialer {
 	isolated := *d
 	isolated.connectionScope = new(connectionScope)
+	isolated.dialerID = dialerSeq.Inc()
+	d.trans.logger.Info("http2: dialer created",
+		zap.Int64("dialerID", isolated.dialerID),
+		zap.Bool("isolated", true),
+	)
 	return &isolated
 }
 
 // RetainPeer retains the identified peer.
 func (d *Dialer) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
-	return d.trans.retainPeer(id, d.connectionScope, ps)
+	d.trans.logger.Info("http2: dialer retaining peer",
+		zap.Int64("dialerID", d.dialerID),
+		zap.String("peerIdentifier", id.Identifier()),
+	)
+	p, err := d.trans.retainPeer(id, d.connectionScope, ps)
+	if err != nil {
+		return p, err
+	}
+	if hp, ok := p.(*httpPeer); ok {
+		d.trans.logger.Info("http2: dialer retained peer",
+			zap.Int64("dialerID", d.dialerID),
+			zap.String("peerIdentifier", id.Identifier()),
+			zap.Int64("h2TransportID", hp.h2ID),
+		)
+	}
+	return p, nil
 }
 
 // ReleasePeer releases the identified peer.
 func (d *Dialer) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
+	d.trans.logger.Info("http2: dialer releasing peer",
+		zap.Int64("dialerID", d.dialerID),
+		zap.String("peerIdentifier", id.Identifier()),
+	)
 	return d.trans.releasePeer(id, d.connectionScope, ps)
 }

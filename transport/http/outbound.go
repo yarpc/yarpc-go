@@ -52,6 +52,7 @@ import (
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
@@ -699,6 +700,12 @@ func (o *Outbound) doWithPeer(
 		// duplicate peers for the same address get independent HTTP/2
 		// connections instead of sharing one.
 		sender = p.h2Client
+		o.transport.logger.Info("http2: sending request via peer's dedicated transport",
+			zap.String("peer", p.addr),
+			zap.Int64("h2TransportID", p.h2ID),
+			zap.String("procedure", treq.Procedure),
+			zap.String("service", treq.Service),
+		)
 	}
 
 	response, err := sender.Do(hreq.WithContext(ctx))
