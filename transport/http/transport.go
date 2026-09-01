@@ -23,6 +23,7 @@ package http
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
@@ -435,6 +436,16 @@ type peerKey struct {
 	connectionScope *connectionScope
 }
 
+// scopeLabel formats a connectionScope for debug logging: "shared" for the
+// nil scope used by ordinary (non-isolated) retain/release calls, or a
+// pointer representation that's stable and distinct per isolated Dialer.
+func scopeLabel(scope *connectionScope) string {
+	if scope == nil {
+		return "shared"
+	}
+	return fmt.Sprintf("%p", scope)
+}
+
 // Transport keeps track of HTTP peers and the associated HTTP client. It
 // allows using a single HTTP client to make requests to multiple YARPC
 // services and pooling the resources needed therein.
@@ -574,10 +585,21 @@ func (a *Transport) getOrCreatePeer(pid peer.Identifier, connectionScope *connec
 	addr := pid.Identifier()
 	key := peerKey{address: addr, connectionScope: connectionScope}
 	if p, ok := a.peers[key]; ok {
+		a.logger.Info("http2: reusing existing peer",
+			zap.String("peerIdentifier", addr),
+			zap.String("connectionScope", scopeLabel(connectionScope)),
+			zap.Int64("peerDebugID", p.debugID),
+		)
 		return p
 	}
 	p := newPeer(addr, a)
 	a.peers[key] = p
+	a.logger.Info("http2: registered new peer",
+		zap.String("peerIdentifier", addr),
+		zap.String("connectionScope", scopeLabel(connectionScope)),
+		zap.Int64("peerDebugID", p.debugID),
+		zap.Int("totalPeers", len(a.peers)),
+	)
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
@@ -609,6 +631,12 @@ func (a *Transport) releasePeer(pid peer.Identifier, connectionScope *connection
 	if p.NumSubscribers() == 0 {
 		delete(a.peers, key)
 		p.Release()
+		a.logger.Info("http2: released peer",
+			zap.String("peerIdentifier", key.address),
+			zap.String("connectionScope", scopeLabel(connectionScope)),
+			zap.Int64("peerDebugID", p.debugID),
+			zap.Int("totalPeers", len(a.peers)),
+		)
 	}
 
 	return nil

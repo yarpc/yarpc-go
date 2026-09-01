@@ -35,6 +35,13 @@ import (
 	"golang.org/x/net/http2"
 )
 
+// httpPeerDebugSeq is a process-wide, monotonically increasing counter used
+// to tag every httpPeer with a stable, human-readable ID for debug logging
+// (a pointer value alone is hard to eyeball in logs). This exists purely to
+// make it easy to verify, from logs, that duplicate peers for the same
+// address each get their own HTTP/2 connection pool/connection.
+var httpPeerDebugSeq = atomic.NewInt64(0)
+
 type httpPeer struct {
 	*abstractpeer.Peer
 
@@ -44,6 +51,14 @@ type httpPeer struct {
 	released              chan struct{}
 	timer                 *time.Timer
 	innocentUntilUnixNano *atomic.Int64
+
+	// debugID identifies this peer in debug logs; see httpPeerDebugSeq.
+	debugID int64
+	// h2DialCount counts how many times this peer's HTTP/2 pool has dialed a
+	// new underlying connection. Logged on every dial so staging debugging
+	// can distinguish "reused an existing HTTP/2 connection" from "opened a
+	// new one".
+	h2DialCount *atomic.Int64
 
 	// h2Pool manages this peer's HTTP/2 connection(s): every httpPeer gets
 	// its own pool (rather than sharing one across peers) so that duplicate
@@ -76,6 +91,12 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		<-timer.C
 	}
 
+	debugID := httpPeerDebugSeq.Inc()
+	t.logger.Info("http2: created peer",
+		zap.String("peer", addr),
+		zap.Int64("peerDebugID", debugID),
+	)
+
 	return &httpPeer{
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport:             t,
@@ -84,6 +105,8 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		released:              make(chan struct{}),
 		timer:                 timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
+		debugID:               debugID,
+		h2DialCount:           atomic.NewInt64(0),
 	}
 }
 
@@ -111,7 +134,30 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		pool = connpool.NewPool(
 			context.Background(),
 			p.transport.h2PoolConfig,
-			func(ctx context.Context) (*http2.ClientConn, error) { return p.transport.dialH2Conn(ctx, p.addr) },
+			func(ctx context.Context) (*http2.ClientConn, error) {
+				seq := p.h2DialCount.Inc()
+				p.transport.logger.Info("http2: dialing new connection for peer",
+					zap.String("peer", p.addr),
+					zap.Int64("peerDebugID", p.debugID),
+					zap.Int64("dialSeq", seq),
+				)
+				cc, err := p.transport.dialH2Conn(ctx, p.addr)
+				if err != nil {
+					p.transport.logger.Info("http2: dial failed for peer",
+						zap.String("peer", p.addr),
+						zap.Int64("peerDebugID", p.debugID),
+						zap.Int64("dialSeq", seq),
+						zap.Error(err),
+					)
+					return nil, err
+				}
+				p.transport.logger.Info("http2: dial succeeded for peer",
+					zap.String("peer", p.addr),
+					zap.Int64("peerDebugID", p.debugID),
+					zap.Int64("dialSeq", seq),
+				)
+				return cc, nil
+			},
 			p.transport.logger,
 			p.addr,
 			connpool.NewReporter(p.transport.h2PoolMetrics),
@@ -126,6 +172,10 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		_ = pool.Start(0)
 		p.h2Pool.Store(pool)
 		p.transport.h2ActivePeers.Inc()
+		p.transport.logger.Info("http2: created HTTP/2 connection pool for peer",
+			zap.String("peer", p.addr),
+			zap.Int64("peerDebugID", p.debugID),
+		)
 	}
 
 	// Re-check: another goroutine may have dialed the first connection while
