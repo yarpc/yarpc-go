@@ -164,3 +164,26 @@ func (m *testBufferPool) Put(buf *[]byte) {
 		m.putFunc(buf)
 	}
 }
+
+// TestCustomCodecUnmarshalReturnsCopy pins an ownership invariant that the
+// decode path already depends on: the []byte produced here becomes the
+// transport request/response body, which outlives the gRPC call that produced
+// it. Materialize allocates a fresh slice; switching to a pooled or aliasing
+// variant such as MaterializeToBuffer would recycle memory that transport
+// bodies and decoded messages still reference.
+func TestCustomCodecUnmarshalReturnsCopy(t *testing.T) {
+	wire := []byte("wire-bytes")
+	var got []byte
+
+	err := customCodec{}.Unmarshal(mem.BufferSlice{mem.SliceBuffer(wire)}, &got)
+	assert.NoError(t, err)
+	assert.Equal(t, "wire-bytes", string(got))
+
+	// Scribble over the wire buffer the way a recycled pool buffer would be.
+	for i := range wire {
+		wire[i] = 0xff
+	}
+
+	assert.Equal(t, "wire-bytes", string(got),
+		"Unmarshal must return a copy, not a view of the wire buffer")
+}
