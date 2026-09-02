@@ -21,6 +21,8 @@
 package pendingheap
 
 import (
+	"fmt"
+
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -79,7 +81,7 @@ func SpecWithOptions(options ...ListOption) yarpcconfig.PeerListSpec {
 			if cfg.Capacity != nil {
 				if *cfg.Capacity <= 0 {
 					return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument,
-						"Capacity must be greater than 0. Got: %d.", *cfg.Capacity)
+						fmt.Sprintf("Capacity must be greater than 0. Got: %d.", *cfg.Capacity))
 				}
 				opts = append(opts, Capacity(*cfg.Capacity))
 			}
