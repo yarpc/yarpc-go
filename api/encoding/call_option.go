@@ -20,6 +20,8 @@
 
 package encoding
 
+import "go.uber.org/yarpc/yarpcerrors"
+
 const (
 	// RoutingDelegateCrosszoneHeaderKey is one of the cross-zone header for the routing delegate
 	RoutingDelegateCrosszoneHeaderKey = "crosszone"
@@ -40,71 +42,72 @@ const (
 // Encoding authors should accept yarpc.CallOptions and convert them to
 // encoding.CallOptions to use with NewOutboundCall. This will keep the
 // API for service authors simple.
+
 type CallOption struct {
-	opt callOption
+	t               callOptionType
+	key             string
+	value           string
+	responseHeaders *map[string]string
 }
 
-type callOption interface {
-	apply(*OutboundCall)
-}
+// callOptionType identifies which option a CallOption carries.
+type callOptionType uint8
 
-type responseHeadersOptions map[string]string
+const (
+	callOptionTypeUnknown callOptionType = iota
+	callOptionTypeHeader
+	callOptionTypeShardKey
+	callOptionTypeRoutingKey
+	callOptionTypeRoutingDelegate
+	callOptionTypeResponseHeaders
+)
 
-func (r *responseHeadersOptions) apply(call *OutboundCall) {
-	call.responseHeaders = (*map[string]string)(r)
+// apply writes the option onto the given OutboundCall.
+func (o CallOption) apply(call *OutboundCall) error {
+	switch o.t {
+	case callOptionTypeHeader:
+		call.headers = append(call.headers, keyValuePair{k: o.key, v: o.value})
+	case callOptionTypeShardKey:
+		v := o.value
+		call.shardKey = &v
+	case callOptionTypeRoutingKey:
+		v := o.value
+		call.routingKey = &v
+	case callOptionTypeRoutingDelegate:
+		v := o.value
+		call.routingDelegate = &v
+	case callOptionTypeResponseHeaders:
+		call.responseHeaders = o.responseHeaders
+	default:
+		return yarpcerrors.InvalidArgumentErrorf("encoding: invalid CallOption (type %d); use the With* constructors", o.t)
+	}
+	return nil
 }
 
 // ResponseHeaders specifies that headers received in response to this request
 // should replace the given map.
 func ResponseHeaders(h *map[string]string) CallOption {
-	return CallOption{(*responseHeadersOptions)(h)}
-}
-
-type headerOption keyValuePair
-
-func (r headerOption) apply(call *OutboundCall) {
-	call.headers = append(call.headers, keyValuePair(r))
+	return CallOption{t: callOptionTypeResponseHeaders, responseHeaders: h}
 }
 
 // WithHeader adds a new header to the request.
 func WithHeader(k, v string) CallOption {
-	return CallOption{headerOption(keyValuePair{k: k, v: v})}
-}
-
-type shardKeyOption string
-
-func (r shardKeyOption) apply(call *OutboundCall) {
-	x := string(r)
-	call.shardKey = &x
+	return CallOption{t: callOptionTypeHeader, key: k, value: v}
 }
 
 // WithShardKey sets the shard key for the request.
 func WithShardKey(sk string) CallOption {
-	return CallOption{shardKeyOption(sk)}
-}
-
-type routingKeyOption string
-
-func (r routingKeyOption) apply(call *OutboundCall) {
-	x := string(r)
-	call.routingKey = &x
+	return CallOption{t: callOptionTypeShardKey, value: sk}
 }
 
 // WithRoutingKey sets the routing key for the request.
 func WithRoutingKey(rk string) CallOption {
-	return CallOption{routingKeyOption(rk)}
-}
-
-type routingDelegateOption string
-
-func (r routingDelegateOption) apply(call *OutboundCall) {
-	x := string(r)
-	call.routingDelegate = &x
+	return CallOption{t: callOptionTypeRoutingKey, value: rk}
 }
 
 // WithRoutingDelegate sets the routing delegate for the request.
 func WithRoutingDelegate(rd string) CallOption {
-	return CallOption{routingDelegateOption(rd)}
+	return CallOption{t: callOptionTypeRoutingDelegate, value: rd}
 }
 
 // WithCrossZoneRoutingGRPC sets the cross zone routing header for the gRPC request.
