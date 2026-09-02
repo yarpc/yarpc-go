@@ -45,9 +45,8 @@ import (
 // observed. Only the methods exercised below carry behaviour; the rest
 // satisfy the interface.
 type recordingServer struct {
-	called    bool
-	gotActor  string
-	gotCaller string
+	called   bool
+	gotActor string
 }
 
 func (s *recordingServer) DeleteUser(_ context.Context, req *DeleteUserRequest) (*DeleteUserResponse, error) {
