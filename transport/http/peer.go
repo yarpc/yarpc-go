@@ -126,9 +126,15 @@ func newPeer(addr string, t *Transport) *httpPeer {
 	// Record every dial this peer's dedicated *http2.Transport makes against
 	// the transport-wide (not per-peer) HTTP/2 connection metrics. See
 	// http2ConnectionMetrics for why these metrics are never tagged by peer.
-	innerDialTLSContext = h2Transport.DialTLSContext
+	//
+	// This must be a distinct variable from innerDialTLSContext above: that
+	// one is captured by reference inside the logging closure just installed,
+	// so reusing it here (with =, not :=) would repoint the logging closure's
+	// own "inner" reference at itself once we overwrite h2Transport.DialTLSContext,
+	// causing infinite self-recursion (and a stack-overflow crash) on every dial.
+	loggingDialTLSContext := h2Transport.DialTLSContext
 	h2Transport.DialTLSContext = func(ctx context.Context, network, dialAddr string, cfg *tls.Config) (net.Conn, error) {
-		conn, err := innerDialTLSContext(ctx, network, dialAddr, cfg)
+		conn, err := loggingDialTLSContext(ctx, network, dialAddr, cfg)
 		if err != nil {
 			t.h2ConnMetrics.incConnectionDialFailures()
 			return nil, err
