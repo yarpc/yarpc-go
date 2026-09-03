@@ -280,7 +280,8 @@ func TestDefaultTransportInitialisation(t *testing.T) {
 	transport := NewTransport()
 
 	assert.NotNil(t, transport.h1Transport)
-	assert.NotNil(t, transport.h2Transport)
+	assert.NotNil(t, transport.newH2Transport)
+	assert.NotNil(t, transport.newH2Transport())
 }
 
 func TestTransportClientOpaqueOptions(t *testing.T) {
@@ -297,7 +298,28 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 	)
 
 	assert.NotNil(t, transport.h1Transport)
-	assert.NotNil(t, transport.h2Transport)
+	assert.NotNil(t, transport.newH2Transport)
+	assert.NotNil(t, transport.newH2Transport())
+}
+
+func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
+	tr := NewTransport()
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	// Simulate what the duplicate-peer-identifier support (layered on top of
+	// this transport) produces: two distinct peer.Identifiers that resolve
+	// to the same real address. getOrCreatePeer requires the write lock.
+	tr.lock.Lock()
+	p1 := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#1"})
+	p2 := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#2"})
+	tr.lock.Unlock()
+
+	require.NotSame(t, p1, p2, "duplicate identifiers must not collapse into one peer")
+	assert.NotNil(t, p1.h2Transport)
+	assert.NotNil(t, p2.h2Transport)
+	assert.NotSame(t, p1.h2Transport, p2.h2Transport,
+		"each httpPeer must own an independent *http2.Transport")
 }
 
 func TestDialContext(t *testing.T) {

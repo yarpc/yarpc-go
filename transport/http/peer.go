@@ -22,12 +22,14 @@ package http
 
 import (
 	"net"
+	"net/http"
 	"time"
 
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/zap"
+	"golang.org/x/net/http2"
 )
 
 type httpPeer struct {
@@ -39,6 +41,13 @@ type httpPeer struct {
 	released              chan struct{}
 	timer                 *time.Timer
 	innocentUntilUnixNano *atomic.Int64
+
+	// h2Transport and h2Client are dedicated to this peer: every httpPeer
+	// gets its own *http2.Transport (built by transport.newH2Transport) so
+	// that duplicate peers pointed at the same address end up with
+	// independent HTTP/2 connections instead of sharing one.
+	h2Transport *http2.Transport
+	h2Client    *http.Client
 }
 
 func newPeer(addr string, t *Transport) *httpPeer {
@@ -51,6 +60,8 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		<-timer.C
 	}
 
+	h2Transport := t.newH2Transport()
+
 	return &httpPeer{
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport:             t,
@@ -59,6 +70,8 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		released:              make(chan struct{}),
 		timer:                 timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
+		h2Transport:           h2Transport,
+		h2Client:              &http.Client{Transport: h2Transport},
 	}
 }
 

@@ -318,7 +318,7 @@ func (o *transportOptions) newTransport() *Transport {
 		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
 		onewayOutboundInterceptor: onewayOutbounds,
 		h1Transport:               buildH1Transport(o),
-		h2Transport:               buildH2Transport(o),
+		newH2Transport:            func() *http2.Transport { return buildH2Transport(o) },
 	}
 }
 
@@ -399,7 +399,12 @@ type Transport struct {
 	onewayOutboundInterceptor []interceptor.OnewayOutbound
 
 	h1Transport *http.Transport
-	h2Transport *http2.Transport
+	// newH2Transport builds a fresh *http2.Transport with the transport's
+	// configured options. Each httpPeer gets its own instance (see peer.go)
+	// so that duplicate peers pointed at the same address (see the
+	// duplicate-peer identifier support layered on top of this transport)
+	// end up with independent HTTP/2 connections rather than sharing one.
+	newH2Transport func() *http2.Transport
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -415,10 +420,21 @@ func (a *Transport) Start() error {
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
 		a.h1Transport.CloseIdleConnections()
-		a.h2Transport.CloseIdleConnections()
+		a.closeIdlePeerH2Connections()
 		a.connectorsGroup.Wait()
 		return nil
 	})
+}
+
+// closeIdlePeerH2Connections closes idle HTTP/2 connections on every peer's
+// dedicated *http2.Transport.
+func (a *Transport) closeIdlePeerH2Connections() {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	for _, p := range a.peers {
+		p.h2Transport.CloseIdleConnections()
+	}
 }
 
 // IsRunning returns whether the HTTP transport is running.
