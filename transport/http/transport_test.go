@@ -257,7 +257,7 @@ func TestTransport(t *testing.T) {
 
 			assert.Len(t, transport.peers, len(tt.expectedPeers))
 			for _, expectedPeerNode := range tt.expectedPeers {
-				p, ok := transport.peers[expectedPeerNode.id]
+				p, ok := transport.peers[peerKey{address: expectedPeerNode.id}]
 				assert.True(t, ok)
 
 				if assert.NotNil(t, p) {
@@ -311,8 +311,8 @@ func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
 	// this transport) produces: two distinct peer.Identifiers that resolve
 	// to the same real address. getOrCreatePeer requires the write lock.
 	tr.lock.Lock()
-	p1 := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#1"})
-	p2 := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#2"})
+	p1 := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#1"}, nil)
+	p2 := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#2"}, nil)
 	tr.lock.Unlock()
 
 	require.NotSame(t, p1, p2, "duplicate identifiers must not collapse into one peer")

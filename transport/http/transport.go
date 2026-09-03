@@ -307,7 +307,7 @@ func (o *transportOptions) newTransport() *Transport {
 		connBackoffStrategy:       o.connBackoffStrategy,
 		innocenceWindow:           o.innocenceWindow,
 		jitter:                    o.jitter,
-		peers:                     make(map[string]*httpPeer),
+		peers:                     make(map[peerKey]*httpPeer),
 		tracer:                    tracer,
 		logger:                    logger,
 		meter:                     o.meter,
@@ -319,6 +319,11 @@ func (o *transportOptions) newTransport() *Transport {
 		onewayOutboundInterceptor: onewayOutbounds,
 		h1Transport:               buildH1Transport(o),
 		newH2Transport:            func() *http2.Transport { return buildH2Transport(o) },
+		h2ConnMetrics: newHTTP2ConnectionMetrics(http2ConnectionMetricsParams{
+			Meter:       o.meter,
+			Logger:      logger,
+			ServiceName: o.serviceName,
+		}),
 	}
 }
 
@@ -373,6 +378,22 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 	}
 }
 
+// connectionScope identifies a set of peers that must not be shared with
+// other dialers. The non-zero-sized type gives each allocation a distinct
+// address.
+type connectionScope byte
+
+// peerKey identifies a peer in the transport's peer map.
+//
+// Peers are keyed by the address they dial. Dialers that opt into connection
+// isolation (see Dialer.WithConnectionIsolation) add a stable scope to the
+// key so they do not share peers, connections, or connection pools with
+// other dialers.
+type peerKey struct {
+	address         string
+	connectionScope *connectionScope
+}
+
 // Transport keeps track of HTTP peers and the associated HTTP client. It
 // allows using a single HTTP client to make requests to multiple YARPC
 // services and pooling the resources needed therein.
@@ -380,7 +401,7 @@ type Transport struct {
 	lock sync.Mutex
 	once *lifecycle.Once
 
-	peers map[string]*httpPeer
+	peers map[peerKey]*httpPeer
 
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
@@ -405,6 +426,13 @@ type Transport struct {
 	// duplicate-peer identifier support layered on top of this transport)
 	// end up with independent HTTP/2 connections rather than sharing one.
 	newH2Transport func() *http2.Transport
+	// h2ConnMetrics tracks aggregate metrics for the per-peer dedicated
+	// *http2.Transport feature. It is created once here and shared by every
+	// peer (see getOrCreatePeer/releasePeer and peer.go) rather than being
+	// created per peer, since go.uber.org/net/metrics errors on a second
+	// registration of the same metric name and tags - see the comment on
+	// http2ConnectionMetrics for the precedent this avoids.
+	h2ConnMetrics *http2ConnectionMetrics
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -444,22 +472,28 @@ func (a *Transport) IsRunning() bool {
 
 // RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.Chooser)
 func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
+	return a.retainPeer(pid, nil, sub)
+}
+
+func (a *Transport) retainPeer(pid peer.Identifier, connectionScope *connectionScope, sub peer.Subscriber) (peer.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	p := a.getOrCreatePeer(pid)
+	p := a.getOrCreatePeer(pid, connectionScope)
 	p.Subscribe(sub)
 	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
+func (a *Transport) getOrCreatePeer(pid peer.Identifier, connectionScope *connectionScope) *httpPeer {
 	addr := pid.Identifier()
-	if p, ok := a.peers[addr]; ok {
+	key := peerKey{address: addr, connectionScope: connectionScope}
+	if p, ok := a.peers[key]; ok {
 		return p
 	}
 	p := newPeer(addr, a)
-	a.peers[addr] = p
+	a.peers[key] = p
+	a.h2ConnMetrics.incActivePeers()
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
@@ -468,10 +502,15 @@ func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
 
 // ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it
 func (a *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
+	return a.releasePeer(pid, nil, sub)
+}
+
+func (a *Transport) releasePeer(pid peer.Identifier, connectionScope *connectionScope, sub peer.Subscriber) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	p, ok := a.peers[pid.Identifier()]
+	key := peerKey{address: pid.Identifier(), connectionScope: connectionScope}
+	p, ok := a.peers[key]
 	if !ok {
 		return peer.ErrTransportHasNoReferenceToPeer{
 			TransportName:  "http.Transport",
@@ -484,8 +523,9 @@ func (a *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error 
 	}
 
 	if p.NumSubscribers() == 0 {
-		delete(a.peers, pid.Identifier())
+		delete(a.peers, key)
 		p.Release()
+		a.h2ConnMetrics.decActivePeers()
 	}
 
 	return nil
