@@ -26,10 +26,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -508,4 +513,71 @@ func BenchmarkRetainPeerParallel(b *testing.B) {
 			}
 		}
 	})
+}
+
+func TestOTelTracerProviderOption(t *testing.T) {
+	tests := []struct {
+		name                string
+		options             []TransportOption
+		wantOTelInterceptor bool
+		wantOTInterceptor   bool
+	}{
+		{
+			name:    "no tracing options installs neither interceptor",
+			options: nil,
+		},
+		{
+			name:              "TracingInterceptorEnabled installs the OT interceptor",
+			options:           []TransportOption{TracingInterceptorEnabled(true)},
+			wantOTInterceptor: true,
+		},
+		{
+			name:                "OTelTracingInterceptorEnabled installs the OTel interceptor",
+			options:             []TransportOption{OTelTracingInterceptorEnabled(true), OTelTracerProvider(sdktrace.NewTracerProvider())},
+			wantOTelInterceptor: true,
+		},
+		{
+			name: "OTel tracing takes precedence over TracingInterceptorEnabled",
+			options: []TransportOption{
+				TracingInterceptorEnabled(true),
+				OTelTracingInterceptorEnabled(true),
+			},
+			wantOTelInterceptor: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := newTransportOptions(append(tt.options, Tracer(mocktracer.New())))
+
+			require.Equal(t, tt.wantOTelInterceptor, hasOTelInterceptor(opts.unaryOutboundInterceptor))
+			require.Equal(t, tt.wantOTInterceptor, hasOTInterceptor(opts.unaryOutboundInterceptor))
+
+			// Whenever an interceptor owns tracing, the legacy tracer must be
+			// suppressed so spans are not double-reported.
+			if tt.wantOTelInterceptor || tt.wantOTInterceptor {
+				assert.Equal(t, opentracing.NoopTracer{}, opts.tracer)
+			} else {
+				assert.NotEqual(t, opentracing.NoopTracer{}, opts.tracer)
+			}
+		})
+	}
+}
+
+func hasOTelInterceptor(interceptors []interceptor.UnaryOutbound) bool {
+	for _, i := range interceptors {
+		if _, ok := i.(*tracinginterceptor.OTelInterceptor); ok {
+			return true
+		}
+	}
+	return false
+}
+
+func hasOTInterceptor(interceptors []interceptor.UnaryOutbound) bool {
+	for _, i := range interceptors {
+		if _, ok := i.(*tracinginterceptor.Interceptor); ok {
+			return true
+		}
+	}
+	return false
 }

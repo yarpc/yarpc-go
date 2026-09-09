@@ -30,13 +30,18 @@ import (
 
 	"context"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/testutils"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/interceptor"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -473,4 +478,90 @@ func newSingleOutbound(t *testing.T, serverAddr string) (transport.UnaryOutbound
 	require.NoError(t, err)
 	require.NoError(t, trans.Start())
 	return trans.NewSingleOutbound(serverAddr), trans
+}
+
+func TestOTelTracerProviderOption(t *testing.T) {
+	tests := []struct {
+		name                string
+		options             []TransportOption
+		wantOTelInterceptor bool
+		wantOTInterceptor   bool
+	}{
+		{
+			name:    "no tracing options installs neither interceptor",
+			options: nil,
+		},
+		{
+			name:              "TracingInterceptorEnabled installs the OT interceptor",
+			options:           []TransportOption{TracingInterceptorEnabled(true)},
+			wantOTInterceptor: true,
+		},
+		{
+			name:                "OTelTracingInterceptorEnabled installs the OTel interceptor",
+			options:             []TransportOption{OTelTracingInterceptorEnabled(true), OTelTracerProvider(sdktrace.NewTracerProvider())},
+			wantOTelInterceptor: true,
+		},
+		{
+			name: "OTel tracing takes precedence over TracingInterceptorEnabled",
+			options: []TransportOption{
+				TracingInterceptorEnabled(true),
+				OTelTracingInterceptorEnabled(true),
+			},
+			wantOTelInterceptor: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			trans, err := NewTransport(append(tt.options,
+				Tracer(mocktracer.New()),
+				ServiceName("test-service"),
+			)...)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.wantOTelInterceptor, hasOTelInterceptor(trans.unaryOutboundInterceptor))
+			require.Equal(t, tt.wantOTInterceptor, hasOTInterceptor(trans.unaryOutboundInterceptor))
+
+			// Whenever an interceptor owns tracing, the legacy tracer must be
+			// suppressed so spans are not double-reported.
+			if tt.wantOTelInterceptor || tt.wantOTInterceptor {
+				assert.Equal(t, opentracing.NoopTracer{}, trans.tracer)
+			} else {
+				assert.NotEqual(t, opentracing.NoopTracer{}, trans.tracer)
+			}
+		})
+	}
+}
+
+// TestOTelTracerProviderChannelTransport covers the NewChannelTransport
+// construction path, which is separate from NewTransport.
+func TestOTelTracerProviderChannelTransport(t *testing.T) {
+	trans, err := NewChannelTransport(
+		ServiceName("test-service"),
+		Tracer(mocktracer.New()),
+		OTelTracingInterceptorEnabled(true),
+		OTelTracerProvider(sdktrace.NewTracerProvider()),
+	)
+	require.NoError(t, err)
+
+	assert.True(t, hasOTelInterceptor(trans.unaryOutboundInterceptor))
+	assert.Equal(t, opentracing.NoopTracer{}, trans.tracer)
+}
+
+func hasOTelInterceptor(interceptors []interceptor.UnaryOutbound) bool {
+	for _, i := range interceptors {
+		if _, ok := i.(*tracinginterceptor.OTelInterceptor); ok {
+			return true
+		}
+	}
+	return false
+}
+
+func hasOTInterceptor(interceptors []interceptor.UnaryOutbound) bool {
+	for _, i := range interceptors {
+		if _, ok := i.(*tracinginterceptor.Interceptor); ok {
+			return true
+		}
+	}
+	return false
 }
