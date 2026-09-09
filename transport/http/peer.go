@@ -39,6 +39,7 @@ type httpPeer struct {
 	released              chan struct{}
 	timer                 *time.Timer
 	innocentUntilUnixNano *atomic.Int64
+	pool                  *http2Pool
 }
 
 func newPeer(addr string, t *Transport) *httpPeer {
@@ -51,7 +52,7 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		<-timer.C
 	}
 
-	return &httpPeer{
+	p := &httpPeer{
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport:             t,
 		addr:                  addr,
@@ -60,6 +61,10 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		timer:                 timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
 	}
+	if t.http2PoolEnabled {
+		p.pool = newHTTP2Pool(addr, t.newH2Transport, t.http2PoolCfg, t.logger)
+	}
+	return p
 }
 
 // The HTTP transport polls for whether a peer is available by attempting to
@@ -141,6 +146,9 @@ func (p *httpPeer) onDisconnected() {
 
 func (p *httpPeer) Release() {
 	close(p.released)
+	if p.pool != nil {
+		p.pool.Close()
+	}
 }
 
 func (p *httpPeer) MaintainConn() {
