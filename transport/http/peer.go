@@ -44,6 +44,7 @@ type httpPeer struct {
 	released              chan struct{}
 	timer                 *time.Timer
 	innocentUntilUnixNano *atomic.Int64
+	pool                  *http2Pool
 
 	// h2Pool manages this peer's HTTP/2 connection(s): every httpPeer gets
 	// its own pool (rather than sharing one across peers) so that duplicate
@@ -76,7 +77,7 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		<-timer.C
 	}
 
-	return &httpPeer{
+	p := &httpPeer{
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport:             t,
 		addr:                  addr,
@@ -85,6 +86,10 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		timer:                 timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
 	}
+	if t.http2PoolEnabled {
+		p.pool = newHTTP2Pool(addr, t.newH2Transport, t.http2PoolCfg, t.logger)
+	}
+	return p
 }
 
 // loadH2Pool returns this peer's HTTP/2 connection pool, or nil if h2Sender
@@ -273,6 +278,9 @@ func (p *httpPeer) Release() {
 	// stopPeerH2Pools is what actually waits for pool teardown to complete.
 	if pool := p.loadH2Pool(); pool != nil {
 		pool.Stop()
+	}
+	if p.pool != nil {
+		p.pool.Close()
 	}
 }
 
