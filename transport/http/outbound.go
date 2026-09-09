@@ -703,7 +703,7 @@ func (o *Outbound) doWithPeer(
 ) (*http.Response, error) {
 	hreq.URL.Host = p.HostPort()
 
-	response, err := sender.Do(hreq.WithContext(ctx))
+	response, err := o.send(ctx, hreq, p, sender)
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
 		// https://github.com/golang/go/issues/17711 is resolved.
@@ -739,6 +739,26 @@ func (o *Outbound) doWithPeer(
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}
 
+	return response, nil
+}
+
+// send issues hreq to p, routing through the peer's per-connection HTTP/2
+// pool when the outbound is using HTTP/2 and pooling is enabled on the
+// transport; otherwise it falls through to today's shared-client behavior.
+func (o *Outbound) send(ctx context.Context, hreq *http.Request, p *httpPeer, sender sender) (*http.Response, error) {
+	if !o.useHTTP2 || p.pool == nil {
+		return sender.Do(hreq.WithContext(ctx))
+	}
+
+	conn, err := p.pool.pickConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	response, err := conn.cc.RoundTrip(hreq.WithContext(ctx))
+	if err != nil {
+		p.pool.removeConn(conn)
+		return nil, err
+	}
 	return response, nil
 }
 
