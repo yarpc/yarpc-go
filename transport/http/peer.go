@@ -129,6 +129,7 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		// with count 0.
 		_ = pool.Start(0, false)
 		p.h2Pool.Store(pool)
+		p.transport.h2ActivePeers.Inc()
 	}
 
 	// Re-check: another goroutine may have dialed the first connection while
@@ -267,6 +268,7 @@ func (p *httpPeer) Release() {
 	// stopPeerH2Pools is what actually waits for pool teardown to complete.
 	if pool := p.loadH2Pool(); pool != nil {
 		pool.Stop()
+		p.transport.h2ActivePeers.Dec()
 	}
 }
 
