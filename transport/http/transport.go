@@ -48,25 +48,26 @@ import (
 )
 
 type transportOptions struct {
-	keepAlive                 time.Duration
-	maxIdleConns              int
-	maxIdleConnsPerHost       int
-	idleConnTimeout           time.Duration
-	disableKeepAlives         bool
-	disableCompression        bool
-	responseHeaderTimeout     time.Duration
-	connTimeout               time.Duration
-	connBackoffStrategy       backoffapi.Strategy
-	innocenceWindow           time.Duration
-	dialContext               func(ctx context.Context, network, addr string) (net.Conn, error)
-	jitter                    func(int64) int64
-	tracer                    opentracing.Tracer
-	tracingInterceptorEnabled bool
-	buildClient               func(*transportOptions) *http.Client
-	logger                    *zap.Logger
-	meter                     *metrics.Scope
-	serviceName               string
-	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+	keepAlive                  time.Duration
+	maxIdleConns               int
+	maxIdleConnsPerHost        int
+	idleConnTimeout            time.Duration
+	disableKeepAlives          bool
+	disableCompression         bool
+	responseHeaderTimeout      time.Duration
+	connTimeout                time.Duration
+	connBackoffStrategy        backoffapi.Strategy
+	innocenceWindow            time.Duration
+	dialContext                func(ctx context.Context, network, addr string) (net.Conn, error)
+	jitter                     func(int64) int64
+	tracer                     opentracing.Tracer
+	tracingInterceptorEnabled  bool
+	buildClient                func(*transportOptions) *http.Client
+	logger                     *zap.Logger
+	meter                      *metrics.Scope
+	serviceName                string
+	outboundTLSConfigProvider  yarpctls.OutboundTLSConfigProvider
+	isolateOutboundConnections bool
 }
 
 var defaultTransportOptions = transportOptions{
@@ -262,6 +263,26 @@ func OutboundTLSConfigProvider(provider yarpctls.OutboundTLSConfigProvider) Tran
 	}
 }
 
+// IsolateConnectionsPerOutbound makes every outbound this transport builds
+// from a URL (NewSingleOutbound) or from configuration (TransportSpec) retain
+// its own peers, and therefore its own connections or connection pools, instead
+// of sharing them with other outbounds that resolve to the same address. It is
+// the transport-wide form of retaining peers through an isolated Dialer (see
+// Dialer.WithConnectionIsolation), for callers that build their outbounds
+// through the transport or through configuration and so cannot supply a Dialer
+// themselves.
+//
+// It does not affect outbounds built with NewOutbound from a peer chooser the
+// caller created: that chooser already holds the transport or Dialer it
+// retains peers through.
+//
+// Defaults to false: outbounds to the same address share a peer.
+func IsolateConnectionsPerOutbound(enabled bool) TransportOption {
+	return func(options *transportOptions) {
+		options.isolateOutboundConnections = enabled
+	}
+}
+
 // Hidden option to override the buildHTTPClient function. This is used only
 // for testing.
 func buildClient(f func(*transportOptions) *http.Client) TransportOption {
@@ -304,24 +325,25 @@ func (o *transportOptions) newTransport() *Transport {
 		tracer = opentracing.NoopTracer{}
 	}
 	return &Transport{
-		once:                      lifecycle.NewOnce(),
-		connTimeout:               o.connTimeout,
-		connBackoffStrategy:       o.connBackoffStrategy,
-		innocenceWindow:           o.innocenceWindow,
-		jitter:                    o.jitter,
-		peers:                     make(map[string]*httpPeer),
-		tracer:                    tracer,
-		logger:                    logger,
-		meter:                     o.meter,
-		serviceName:               o.serviceName,
-		ouboundTLSConfigProvider:  o.outboundTLSConfigProvider,
-		unaryInboundInterceptor:   inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor:  unaryOutbounds,
-		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
-		onewayOutboundInterceptor: onewayOutbounds,
-		h1Transport:               buildH1Transport(o),
-		h2Transport:               buildH2Transport(o),
-		h2PoolConfig:              defaultH2PoolConfig,
+		once:                       lifecycle.NewOnce(),
+		connTimeout:                o.connTimeout,
+		connBackoffStrategy:        o.connBackoffStrategy,
+		innocenceWindow:            o.innocenceWindow,
+		jitter:                     o.jitter,
+		peers:                      make(map[peerKey]*httpPeer),
+		tracer:                     tracer,
+		logger:                     logger,
+		meter:                      o.meter,
+		serviceName:                o.serviceName,
+		ouboundTLSConfigProvider:   o.outboundTLSConfigProvider,
+		unaryInboundInterceptor:    inboundmiddleware.UnaryChain(unaryInbounds...),
+		unaryOutboundInterceptor:   unaryOutbounds,
+		onewayInboundInterceptor:   inboundmiddleware.OnewayChain(onewayInbounds...),
+		onewayOutboundInterceptor:  onewayOutbounds,
+		isolateOutboundConnections: o.isolateOutboundConnections,
+		h1Transport:                buildH1Transport(o),
+		h2Transport:                buildH2Transport(o),
+		h2PoolConfig:               defaultH2PoolConfig,
 		h2PoolMetrics: connpool.NewMetrics(connpool.MetricsParams{
 			Meter:       o.meter,
 			Logger:      logger,
@@ -334,7 +356,39 @@ func (o *transportOptions) newTransport() *Transport {
 			// distinguished only by the "transport" tag above, not by a
 			// different metric name.
 		}),
+		h2ActivePeers: newH2ActivePeersGauge(o.meter, logger, o.serviceName),
 	}
+}
+
+// newH2ActivePeersGauge creates the gauge tracking how many peers currently
+// hold a dedicated HTTP/2 connection pool, aggregated across all peers. It
+// is created once here and shared by every peer (see
+// getOrCreatePeer/releasePeer) rather than per peer, since
+// go.uber.org/net/metrics errors on a second registration of the same
+// metric name and tags.
+//
+// This is not tagged by peer (host:port) or connection scope, for the same
+// cardinality reason connpool's metrics aren't: duplicate-peer identifiers
+// or isolated Dialers (see Dialer.WithConnectionIsolation) can create many
+// peers for what is logically one destination, and go.uber.org/net/metrics
+// rejects re-registering the same series (transport/grpc's connection pool
+// metrics hit exactly this failure mode when briefly tagged by peer
+// address, and were redesigned to aggregate at the transport level
+// instead).
+func newH2ActivePeersGauge(meter *metrics.Scope, logger *zap.Logger, serviceName string) *metrics.Gauge {
+	g, err := meter.Gauge(metrics.Spec{
+		Name: "http2_peer_dedicated_transports",
+		Help: "Number of peers with a dedicated HTTP/2 transport, aggregated across all peers.",
+		ConstTags: metrics.Tags{
+			"component": "yarpc",
+			"service":   serviceName,
+			"transport": "http",
+		},
+	})
+	if err != nil {
+		logger.Warn("failed to create http2 active peers gauge", zap.Error(err))
+	}
+	return g
 }
 
 func buildH1Transport(options *transportOptions) *http.Transport {
@@ -388,6 +442,23 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 	}
 }
 
+// connectionScope identifies a set of peers that must not be shared with
+// other dialers. The non-zero-sized type gives each allocation a distinct
+// address.
+type connectionScope byte
+
+// peerKey identifies a peer in the transport's peer map.
+//
+// Peers are keyed by their full peer identifier, which may carry a
+// duplicate-peer suffix and so is not always the address the peer dials (see
+// peeraddr.Address). Dialers that opt into connection isolation (see
+// Dialer.WithConnectionIsolation) add a stable scope to the key so they do
+// not share peers, connections, or connection pools with other dialers.
+type peerKey struct {
+	identifier      string
+	connectionScope *connectionScope
+}
+
 // Transport keeps track of HTTP peers and the associated HTTP client. It
 // allows using a single HTTP client to make requests to multiple YARPC
 // services and pooling the resources needed therein.
@@ -395,7 +466,7 @@ type Transport struct {
 	lock sync.Mutex
 	once *lifecycle.Once
 
-	peers map[string]*httpPeer
+	peers map[peerKey]*httpPeer
 
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
@@ -413,6 +484,11 @@ type Transport struct {
 	onewayInboundInterceptor  interceptor.OnewayInbound
 	onewayOutboundInterceptor []interceptor.OnewayOutbound
 
+	// isolateOutboundConnections makes outbounds built by the transport retain
+	// peers through their own isolated Dialer. See
+	// IsolateConnectionsPerOutbound.
+	isolateOutboundConnections bool
+
 	h1Transport *http.Transport
 	// h2Transport is shared across all peers, but only as a *http2.ClientConn
 	// factory (via dialH2Conn) and holder of the transport's configured
@@ -426,16 +502,21 @@ type Transport struct {
 	// with. See defaultH2PoolConfig's doc comment.
 	h2PoolConfig connpool.Config
 	// h2PoolMetrics holds the shared, transport-wide connection-pool metric
-	// handles (active/draining/idle connection gauges, scale-event
-	// counters). It is created once here and each peer's pool gets its own
-	// connpool.Reporter feeding into it (see h2Sender in peer.go), so
-	// registration happens exactly once regardless of how many peers -
-	// including duplicate peers - are created or recreated over the
+	// handles (active/draining/idle connection gauges, scale-event and
+	// dial-outcome counters). It is created once here and each peer's pool
+	// gets its own connpool.Reporter feeding into it (see h2Sender in
+	// peer.go), so registration happens exactly once regardless of how many
+	// peers - including duplicate peers - are created or recreated over the
 	// Transport's lifetime. This is the same connpool.Metrics/Reporter
 	// mechanism transport/grpc uses (or will use once it migrates onto
-	// connpool), so the pool-health metrics are reusable across transports
-	// rather than reimplemented per transport.
+	// connpool), so the pool-health and dial metrics are reusable across
+	// transports rather than reimplemented per transport.
 	h2PoolMetrics *connpool.Metrics
+	// h2ActivePeers tracks the one HTTP/2 metric connpool has no notion of:
+	// how many peers currently hold a dedicated connection pool. See
+	// newH2ActivePeersGauge for why it's created once here and shared by
+	// every peer rather than per peer.
+	h2ActivePeers *metrics.Gauge
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -505,23 +586,27 @@ func (a *Transport) IsRunning() bool {
 
 // RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.Chooser)
 func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
+	return a.retainPeer(pid, nil, sub)
+}
+
+func (a *Transport) retainPeer(pid peer.Identifier, connectionScope *connectionScope, sub peer.Subscriber) (peer.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	p := a.getOrCreatePeer(pid)
+	p := a.getOrCreatePeer(pid, connectionScope)
 	p.Subscribe(sub)
 	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
-	mapKey := pid.Identifier()
-	if p, ok := a.peers[mapKey]; ok {
+func (a *Transport) getOrCreatePeer(pid peer.Identifier, connectionScope *connectionScope) *httpPeer {
+	key := peerKey{identifier: pid.Identifier(), connectionScope: connectionScope}
+	if p, ok := a.peers[key]; ok {
 		return p
 	}
 	realAddr := peeraddr.Address(pid.Identifier())
 	p := newPeer(realAddr, a)
-	a.peers[mapKey] = p
+	a.peers[key] = p
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
@@ -530,10 +615,15 @@ func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
 
 // ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it
 func (a *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
+	return a.releasePeer(pid, nil, sub)
+}
+
+func (a *Transport) releasePeer(pid peer.Identifier, connectionScope *connectionScope, sub peer.Subscriber) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	p, ok := a.peers[pid.Identifier()]
+	key := peerKey{identifier: pid.Identifier(), connectionScope: connectionScope}
+	p, ok := a.peers[key]
 	if !ok {
 		return peer.ErrTransportHasNoReferenceToPeer{
 			TransportName:  "http.Transport",
@@ -546,7 +636,7 @@ func (a *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error 
 	}
 
 	if p.NumSubscribers() == 0 {
-		delete(a.peers, pid.Identifier())
+		delete(a.peers, key)
 		p.Release()
 	}
 
