@@ -214,8 +214,10 @@ func (p *Pool[T]) LoadConns() []*Wrapper[T] {
 func (p *Pool[T]) AddConn() (*Wrapper[T], error) {
 	conn, err := p.Dial(p.ctx)
 	if err != nil {
+		p.metrics.IncDialFailure()
 		return nil, err
 	}
+	p.metrics.IncDial()
 	w := newWrapper(p.ctx, conn)
 
 	// Enter the critical window: increment addingCount so the teardown
