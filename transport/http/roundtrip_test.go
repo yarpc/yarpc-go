@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/net/http2"
 )
 
 func TestRoundTripSuccess(t *testing.T) {
@@ -167,4 +168,51 @@ func TestRoundTripNotRunning(t *testing.T) {
 		assert.Contains(t, err.Error(), "waiting for HTTP outbound to start")
 	}
 	assert.Nil(t, res)
+}
+
+// TestRoundTripHTTP2DoesNotAutoRedirect guards against a regression where
+// routing HTTP/2 requests through the peer's dedicated *http.Client (instead
+// of through a transportSender wrapping it) would make RoundTrip() follow
+// redirects automatically via http.Client.Do, unlike the HTTP/1 path which
+// calls Transport.RoundTrip directly and returns 3xx responses as-is.
+func TestRoundTripHTTP2DoesNotAutoRedirect(t *testing.T) {
+	redirectedTo := "/final"
+	h2s := &http2.Server{IdleTimeout: defaultIdleConnTimeout}
+	server := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == redirectedTo {
+				w.Write([]byte("should not get here"))
+				return
+			}
+			w.Header().Set("Location", redirectedTo)
+			w.WriteHeader(http.StatusFound)
+		},
+	))
+	server.Config.Protocols = new(http.Protocols)
+	server.Config.Protocols.SetHTTP1(true)
+	server.Config.Protocols.SetUnencryptedHTTP2(true)
+	http2.ConfigureServer(server.Config, h2s)
+	server.Start()
+	defer server.Close()
+
+	tran := NewTransport()
+	defer tran.Stop()
+	out := tran.NewSingleOutbound(server.URL, UseHTTP2())
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	req, err := http.NewRequest("GET", server.URL, nil /* body */)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	req = req.WithContext(ctx)
+
+	res, err := out.RoundTrip(req)
+	require.NoError(t, err)
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusFound, res.StatusCode,
+		"RoundTrip must return the 3xx response as-is, not follow the redirect")
+	assert.Equal(t, redirectedTo, res.Header.Get("Location"))
 }

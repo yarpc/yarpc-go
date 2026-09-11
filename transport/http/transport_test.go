@@ -25,17 +25,23 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/internal/testtime"
 	ypeer "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"golang.org/x/net/http2"
 )
 
 // NoJitter is a transport option only available in tests, to disable jitter
@@ -298,6 +304,372 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 
 	assert.NotNil(t, transport.h1Transport)
 	assert.NotNil(t, transport.h2Transport)
+}
+
+func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
+	// Count new TCP connections accepted by the server so we can prove two
+	// httpPeers actually open independent HTTP/2 connections, rather than
+	// just asserting their *http2.Transport pointers differ.
+	var newConns atomic.Int32
+	server := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	))
+	server.Config.Protocols = new(http.Protocols)
+	server.Config.Protocols.SetHTTP1(true)
+	server.Config.Protocols.SetUnencryptedHTTP2(true)
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			newConns.Add(1)
+		}
+	}
+	http2.ConfigureServer(server.Config, &http2.Server{IdleTimeout: defaultIdleConnTimeout})
+	server.Start()
+	defer server.Close()
+
+	tr := NewTransport()
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	addr := strings.TrimPrefix(server.URL, "http://")
+
+	// Build two httpPeer instances for the same address directly: newPeer
+	// itself (unlike getOrCreatePeer's map) never dedupes, so this proves
+	// each httpPeer's dedicated connection pool opens its own connection.
+	p1 := newPeer(addr, tr)
+	p2 := newPeer(addr, tr)
+	t.Cleanup(func() {
+		if pool := p1.loadH2Pool(); pool != nil {
+			pool.Stop()
+		}
+		if pool := p2.loadH2Pool(); pool != nil {
+			pool.Stop()
+		}
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+
+	for _, p := range []*httpPeer{p1, p2} {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, nil)
+		require.NoError(t, err)
+		sender, err := p.h2Sender()
+		require.NoError(t, err)
+		res, err := sender.Do(req)
+		require.NoError(t, err)
+		require.NoError(t, res.Body.Close())
+	}
+
+	require.NotSame(t, p1.loadH2Pool(), p2.loadH2Pool(),
+		"each httpPeer must own an independent HTTP/2 connection pool")
+
+	assert.EqualValues(t, 2, newConns.Load(),
+		"each peer's dedicated http2.Transport should open its own connection instead of sharing one")
+}
+
+// TestH2PoolMetricsTrackDialAndTeardown is a regression test for the
+// leak-detection gap flagged in review on PR #2539 ("we are not emitting
+// any new metric with total live connections... worth doing it so we can
+// detect possible leaks like the one in the peer teardown"): the shared
+// connpool.Metrics active-connection gauge must go up on a real dial and
+// back down to 0 once the connection is actually torn down -- even though
+// dynamic scaling (the only other path that updates these gauges) is
+// disabled -- because AddConn calls RefreshMetrics unconditionally and
+// watchH2Conn now does the same after Remove.
+func TestH2PoolMetricsTrackDialAndTeardown(t *testing.T) {
+	server := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	))
+	server.Config.Protocols = new(http.Protocols)
+	server.Config.Protocols.SetHTTP1(true)
+	server.Config.Protocols.SetUnencryptedHTTP2(true)
+	http2.ConfigureServer(server.Config, &http2.Server{IdleTimeout: defaultIdleConnTimeout})
+	server.Start()
+	defer server.Close()
+
+	root := metrics.New()
+	tr := NewTransport(Meter(root.Scope()), ServiceName("test-svc"))
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	addr := strings.TrimPrefix(server.URL, "http://")
+	p := newPeer(addr, tr)
+
+	activeConnGauge := func() int64 {
+		snap := root.Snapshot()
+		for _, g := range snap.Gauges {
+			if g.Name == "conn_pool_active_connections" {
+				return g.Value
+			}
+		}
+		return 0
+	}
+
+	assert.EqualValues(t, 0, activeConnGauge(), "no connection dialed yet")
+
+	sender, err := p.h2Sender()
+	require.NoError(t, err)
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	require.NoError(t, err)
+	res, err := sender.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+
+	assert.EqualValues(t, 1, activeConnGauge(), "dialing the peer's first connection should increment the gauge")
+
+	pool := p.loadH2Pool()
+	require.NotNil(t, pool)
+	pool.Stop()
+	pool.Wait()
+
+	assert.Eventually(t, func() bool {
+		return activeConnGauge() == 0
+	}, testtime.Second, testtime.Millisecond*10, "tearing down the connection should bring the gauge back to 0")
+}
+
+// TestTransportStopStopsPeerH2Pools is a regression test for
+// stopPeerH2Pools: it must be exercised through Transport.Stop's real
+// lifecycle -- iterating a.peers, stopping every peer's pool, and waiting
+// for each to tear down -- not just through a peer created and stopped
+// directly (as most other tests in this file do, bypassing the Transport's
+// peer map entirely).
+func TestTransportStopStopsPeerH2Pools(t *testing.T) {
+	server := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	))
+	server.Config.Protocols = new(http.Protocols)
+	server.Config.Protocols.SetHTTP1(true)
+	server.Config.Protocols.SetUnencryptedHTTP2(true)
+	http2.ConfigureServer(server.Config, &http2.Server{IdleTimeout: defaultIdleConnTimeout})
+	server.Start()
+	defer server.Close()
+
+	tr := NewTransport()
+	require.NoError(t, tr.Start())
+
+	addr := strings.TrimPrefix(server.URL, "http://")
+	p := newPeer(addr, tr)
+	_, err := p.h2Sender()
+	require.NoError(t, err)
+
+	// Register the peer directly in the Transport's map, the way
+	// getOrCreatePeer would, but without spawning MaintainConn: that
+	// goroutine only exits via Release or an Unavailable peer's backoff
+	// loop noticing Transport.once.Stopping, neither of which this test
+	// needs in order to exercise stopPeerH2Pools itself.
+	tr.lock.Lock()
+	tr.peers[addr] = p
+	tr.lock.Unlock()
+
+	require.NoError(t, tr.Stop())
+
+	pool := p.loadH2Pool()
+	require.NotNil(t, pool)
+	assert.Nil(t, pool.PickConn(), "Transport.Stop should have torn down the peer's HTTP/2 pool")
+}
+
+// TestDialH2ConnDialFailure covers dialH2Conn's first error branch: the raw
+// TCP dial failing.
+func TestDialH2ConnDialFailure(t *testing.T) {
+	tr := NewTransport()
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	// Bind and immediately release a port so nothing is listening on it.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := ln.Addr().String()
+	require.NoError(t, ln.Close())
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+
+	_, err = tr.dialH2Conn(ctx, addr)
+	require.Error(t, err)
+}
+
+// TestDialH2ConnNewClientConnFailure covers dialH2Conn's second error
+// branch: DialTLSContext succeeds, but wrapping the connection with
+// NewClientConn fails. http2.Transport.NewClientConn writes the client
+// preface and initial SETTINGS frame synchronously, so handing it an
+// already-closed net.Conn (via a custom DialContext) makes that write fail
+// deterministically, without needing a real misbehaving server.
+func TestDialH2ConnNewClientConnFailure(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	require.NoError(t, serverConn.Close())
+	require.NoError(t, clientConn.Close())
+
+	tr := NewTransport(DialContext(func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return clientConn, nil
+	}))
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	_, err := tr.dialH2Conn(context.Background(), "unused:0")
+	require.Error(t, err)
+}
+
+// TestH2SenderReusesExistingConnection drives two requests through the same
+// peer and asserts a single dial: the second h2Sender call must return via
+// pool.PickConn's fast path (checked both before and after acquiring
+// h2DialMu) instead of dialing again.
+func TestH2SenderReusesExistingConnection(t *testing.T) {
+	var dials atomic.Int32
+	server := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	))
+	server.Config.Protocols = new(http.Protocols)
+	server.Config.Protocols.SetHTTP1(true)
+	server.Config.Protocols.SetUnencryptedHTTP2(true)
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			dials.Add(1)
+		}
+	}
+	http2.ConfigureServer(server.Config, &http2.Server{IdleTimeout: defaultIdleConnTimeout})
+	server.Start()
+	defer server.Close()
+
+	tr := NewTransport()
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	addr := strings.TrimPrefix(server.URL, "http://")
+	p := newPeer(addr, tr)
+	t.Cleanup(func() {
+		if pool := p.loadH2Pool(); pool != nil {
+			pool.Stop()
+		}
+	})
+
+	for range 2 {
+		sender, err := p.h2Sender()
+		require.NoError(t, err)
+		req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+		require.NoError(t, err)
+		res, err := sender.Do(req)
+		require.NoError(t, err)
+		require.NoError(t, res.Body.Close())
+	}
+
+	assert.EqualValues(t, 1, dials.Load(), "a second request on the same peer must reuse the dialed connection")
+}
+
+// TestH2SenderConcurrentFirstDial hammers a single cold peer's h2Sender
+// concurrently. Only one goroutine should win the race to create the pool
+// and dial the first connection; every other goroutine must take one of
+// h2Sender's two PickConn fast paths (the unlocked check before acquiring
+// h2DialMu, and the re-check immediately after acquiring it) rather than
+// attempting its own dial or pool creation.
+func TestH2SenderConcurrentFirstDial(t *testing.T) {
+	var dials atomic.Int32
+	server := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	))
+	server.Config.Protocols = new(http.Protocols)
+	server.Config.Protocols.SetHTTP1(true)
+	server.Config.Protocols.SetUnencryptedHTTP2(true)
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			dials.Add(1)
+		}
+	}
+	http2.ConfigureServer(server.Config, &http2.Server{IdleTimeout: defaultIdleConnTimeout})
+	server.Start()
+	defer server.Close()
+
+	tr := NewTransport()
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	addr := strings.TrimPrefix(server.URL, "http://")
+	p := newPeer(addr, tr)
+	t.Cleanup(func() {
+		if pool := p.loadH2Pool(); pool != nil {
+			pool.Stop()
+		}
+	})
+
+	const goroutines = 20
+	var wg sync.WaitGroup
+	errs := make([]error, goroutines)
+	for i := range goroutines {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_, errs[i] = p.h2Sender()
+		}(i)
+	}
+	wg.Wait()
+
+	for _, err := range errs {
+		assert.NoError(t, err)
+	}
+	assert.EqualValues(t, 1, dials.Load(), "only one goroutine should dial the peer's first connection")
+}
+
+// TestWatchH2ConnEvictsUnhealthyConnection covers watchH2Conn's periodic
+// health-poll branch: unlike TestH2PoolMetricsTrackDialAndTeardown (which
+// tears the connection down via an explicit pool.Stop, hitting the
+// Context().Done() branch), this test lets the connection go unhealthy on
+// its own -- by closing the server out from under it -- so the ticker
+// branch is what notices and evicts it.
+func TestWatchH2ConnEvictsUnhealthyConnection(t *testing.T) {
+	origInterval := defaultH2ConnHealthPollInterval
+	defaultH2ConnHealthPollInterval = testtime.Millisecond * 10
+	t.Cleanup(func() { defaultH2ConnHealthPollInterval = origInterval })
+
+	server := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	))
+	server.Config.Protocols = new(http.Protocols)
+	server.Config.Protocols.SetHTTP1(true)
+	server.Config.Protocols.SetUnencryptedHTTP2(true)
+	http2.ConfigureServer(server.Config, &http2.Server{IdleTimeout: defaultIdleConnTimeout})
+	server.Start()
+
+	tr := NewTransport()
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	addr := strings.TrimPrefix(server.URL, "http://")
+	p := newPeer(addr, tr)
+	t.Cleanup(func() {
+		if pool := p.loadH2Pool(); pool != nil {
+			pool.Stop()
+		}
+	})
+
+	sender, err := p.h2Sender()
+	require.NoError(t, err)
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	require.NoError(t, err)
+	res, err := sender.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+
+	pool := p.loadH2Pool()
+	require.NotNil(t, pool)
+
+	// Close the server out from under the live connection: the health
+	// poller (not an external pool.Stop) is what must notice it can no
+	// longer take new requests and evict it.
+	server.Close()
+
+	assert.Eventually(t, func() bool {
+		return pool.PickConn() == nil
+	}, testtime.Second, testtime.Millisecond*5, "health poll should evict the connection once the server goes away")
 }
 
 func TestDialContext(t *testing.T) {
