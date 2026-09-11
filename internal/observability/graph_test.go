@@ -193,6 +193,81 @@ func TestEdgeNopFallbacks(t *testing.T) {
 	e.serverErrLatencies.Observe(0)
 }
 
+func TestEdgeKey(t *testing.T) {
+	req := &transport.Request{
+		Caller:          "caller",
+		Service:         "service",
+		Transport:       "grpc",
+		Encoding:        "proto",
+		Procedure:       "procedure",
+		RoutingKey:      "rk",
+		RoutingDelegate: "rd",
+	}
+
+	tests := []struct {
+		desc   string
+		ignore []string
+		want   edgeKey
+	}{
+		{
+			desc: "no tags ignored",
+			want: edgeKey{
+				caller:          "caller",
+				service:         "service",
+				transport:       "grpc",
+				encoding:        "proto",
+				procedure:       "procedure",
+				routingKey:      "rk",
+				routingDelegate: "rd",
+				direction:       _directionInbound,
+				rpcType:         transport.Unary,
+			},
+		},
+		{
+			desc:   "source ignored",
+			ignore: []string{_source},
+			want: edgeKey{
+				service:         "service",
+				transport:       "grpc",
+				encoding:        "proto",
+				procedure:       "procedure",
+				routingKey:      "rk",
+				routingDelegate: "rd",
+				direction:       _directionInbound,
+				rpcType:         transport.Unary,
+			},
+		},
+		{
+			desc:   "all tags ignored",
+			ignore: []string{_source, _dest, _transport, _procedure, _encoding, _routingKey, _routingDelegate, _direction, _rpcType},
+			want:   edgeKey{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			got := newMetricsTagIgnore(tt.ignore).edgeKey(req, _directionInbound, transport.Unary)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestEdgeKeyIgnoredFieldsShareKey(t *testing.T) {
+	ignore := newMetricsTagIgnore([]string{_routingDelegate})
+	a := &transport.Request{
+		Caller:          "caller",
+		Service:         "service",
+		Transport:       "grpc",
+		Encoding:        "proto",
+		Procedure:       "procedure",
+		RoutingDelegate: "rd1",
+	}
+	b := *a
+	b.RoutingDelegate = "rd2"
+
+	assert.Equal(t, ignore.edgeKey(a, _directionInbound, transport.Unary), ignore.edgeKey(&b, _directionInbound, transport.Unary))
+}
+
 func TestUnknownIfEmpty(t *testing.T) {
 	tests := []struct {
 		transport string

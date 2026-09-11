@@ -28,7 +28,6 @@ import (
 	"go.uber.org/net/metrics"
 	"go.uber.org/net/metrics/bucket"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/digester"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -74,7 +73,7 @@ type graph struct {
 	ignoreMetricsTag *metricsTagIgnore
 
 	edgesMu sync.RWMutex
-	edges   map[string]*edge
+	edges   map[edgeKey]*edge
 
 	inboundLevels, outboundLevels levels
 }
@@ -164,9 +163,56 @@ func (m *metricsTagIgnore) tags(req *transport.Request, direction string, rpcTyp
 	return tags
 }
 
+// edgeKey is the comparable cache key for metric edges. Ignored metric tags
+// are left as the zero value so requests that differ only in a blocked tag
+// share an edge.
+type edgeKey struct {
+	caller          string
+	service         string
+	transport       string
+	encoding        transport.Encoding
+	procedure       string
+	routingKey      string
+	routingDelegate string
+	direction       directionName
+	rpcType         transport.Type
+}
+
+func (m *metricsTagIgnore) edgeKey(req *transport.Request, direction directionName, rpcType transport.Type) edgeKey {
+	var key edgeKey
+	if !m.source {
+		key.caller = req.Caller
+	}
+	if !m.dest {
+		key.service = req.Service
+	}
+	if !m.transport {
+		key.transport = req.Transport
+	}
+	if !m.encoding {
+		key.encoding = req.Encoding
+	}
+	if !m.procedure {
+		key.procedure = req.Procedure
+	}
+	if !m.routingKey {
+		key.routingKey = req.RoutingKey
+	}
+	if !m.routingDelegate {
+		key.routingDelegate = req.RoutingDelegate
+	}
+	if !m.direction {
+		key.direction = direction
+	}
+	if !m.rpcType {
+		key.rpcType = rpcType
+	}
+	return key
+}
+
 func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string) graph {
 	return graph{
-		edges:            make(map[string]*edge, _defaultGraphSize),
+		edges:            make(map[edgeKey]*edge, _defaultGraphSize),
 		meter:            meter,
 		logger:           logger,
 		extract:          extract,
@@ -192,36 +238,7 @@ func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor
 func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction directionName, req *transport.Request) call {
 	now := _timeNow()
 
-	d := digester.New()
-	if !g.ignoreMetricsTag.source {
-		d.Add(req.Caller)
-	}
-	if !g.ignoreMetricsTag.dest {
-		d.Add(req.Service)
-	}
-	if !g.ignoreMetricsTag.transport {
-		d.Add(req.Transport)
-	}
-	if !g.ignoreMetricsTag.encoding {
-		d.Add(string(req.Encoding))
-	}
-	if !g.ignoreMetricsTag.procedure {
-		d.Add(req.Procedure)
-	}
-	if !g.ignoreMetricsTag.routingKey {
-		d.Add(req.RoutingKey)
-	}
-	if !g.ignoreMetricsTag.routingDelegate {
-		d.Add(req.RoutingDelegate)
-	}
-	if !g.ignoreMetricsTag.direction {
-		d.Add(string(direction))
-	}
-	if !g.ignoreMetricsTag.rpcType {
-		d.Add(rpcType.String())
-	}
-	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)
-	d.Free()
+	e := g.getOrCreateEdge(g.ignoreMetricsTag.edgeKey(req, direction, rpcType), req, string(direction), rpcType)
 
 	levels := &g.inboundLevels
 	if direction != _directionInbound {
@@ -240,32 +257,32 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	}
 }
 
-func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func (g *graph) getOrCreateEdge(key edgeKey, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	if e := g.getEdge(key); e != nil {
 		return e
 	}
 	return g.createEdge(key, req, direction, rpcType)
 }
 
-func (g *graph) getEdge(key []byte) *edge {
+func (g *graph) getEdge(key edgeKey) *edge {
 	g.edgesMu.RLock()
-	e := g.edges[string(key)]
+	e := g.edges[key]
 	g.edgesMu.RUnlock()
 	return e
 }
 
-func (g *graph) createEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func (g *graph) createEdge(key edgeKey, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	g.edgesMu.Lock()
 	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
 	defer g.edgesMu.Unlock()
 
-	if e, ok := g.edges[string(key)]; ok {
+	if e, ok := g.edges[key]; ok {
 		// Someone beat us to the punch.
 		return e
 	}
 
 	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, req, direction, rpcType)
-	g.edges[string(key)] = e
+	g.edges[key] = e
 	return e
 }
 

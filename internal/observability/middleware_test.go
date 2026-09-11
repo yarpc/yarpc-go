@@ -36,7 +36,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/internal/digester"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -1814,9 +1813,8 @@ func TestMiddlewareMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		validate := func(mw *Middleware, direction string, rpcType transport.Type) {
-			key, free := getKey(req, direction, rpcType)
+			key := mw.graph.ignoreMetricsTag.edgeKey(req, directionName(direction), rpcType)
 			edge := mw.graph.getEdge(key)
-			free()
 			assert.EqualValues(t, tt.wantCalls, edge.calls.Load(), "expected calls mismatch")
 			assert.EqualValues(t, tt.wantSuccesses, edge.successes.Load(), "expected successes mismatch")
 			assert.EqualValues(t, 0, edge.panics.Load(), "expected panics mismatch")
@@ -1857,23 +1855,6 @@ func TestMiddlewareMetrics(t *testing.T) {
 			validate(mw, string(_directionOutbound), transport.Unary)
 		})
 	}
-}
-
-// getKey gets the "key" that we will use to get an edge in the graph.  We use
-// a separate function to recreate the logic because extracting it out in the
-// main code could have performance implications.
-func getKey(req *transport.Request, direction string, rpcType transport.Type) (key []byte, free func()) {
-	d := digester.New()
-	d.Add(req.Caller)
-	d.Add(req.Service)
-	d.Add(req.Transport)
-	d.Add(string(req.Encoding))
-	d.Add(req.Procedure)
-	d.Add(req.RoutingKey)
-	d.Add(req.RoutingDelegate)
-	d.Add(direction)
-	d.Add(rpcType.String())
-	return d.Digest(), d.Free
 }
 
 func TestUnaryInboundApplicationErrors(t *testing.T) {
