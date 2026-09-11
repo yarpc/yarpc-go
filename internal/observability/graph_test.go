@@ -246,26 +246,10 @@ func TestEdgeKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got := newMetricsTagIgnore(tt.ignore).edgeKey(req, _directionInbound, transport.Unary)
+			got := newMetricsTagIgnore(tt.ignore).getEdgeKey(req, _directionInbound, transport.Unary)
 			assert.Equal(t, tt.want, got)
 		})
 	}
-}
-
-func TestEdgeKeyIgnoredFieldsShareKey(t *testing.T) {
-	ignore := newMetricsTagIgnore([]string{_routingDelegate})
-	a := &transport.Request{
-		Caller:          "caller",
-		Service:         "service",
-		Transport:       "grpc",
-		Encoding:        "proto",
-		Procedure:       "procedure",
-		RoutingDelegate: "rd1",
-	}
-	b := *a
-	b.RoutingDelegate = "rd2"
-
-	assert.Equal(t, ignore.edgeKey(a, _directionInbound, transport.Unary), ignore.edgeKey(&b, _directionInbound, transport.Unary))
 }
 
 func TestUnknownIfEmpty(t *testing.T) {

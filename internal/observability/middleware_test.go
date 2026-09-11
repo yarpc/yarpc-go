@@ -1813,7 +1813,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		validate := func(mw *Middleware, direction string, rpcType transport.Type) {
-			key := mw.graph.ignoreMetricsTag.edgeKey(req, directionName(direction), rpcType)
+			key := mw.graph.ignoreMetricsTag.getEdgeKey(req, directionName(direction), rpcType)
 			edge := mw.graph.getEdge(key)
 			assert.EqualValues(t, tt.wantCalls, edge.calls.Load(), "expected calls mismatch")
 			assert.EqualValues(t, tt.wantSuccesses, edge.successes.Load(), "expected successes mismatch")

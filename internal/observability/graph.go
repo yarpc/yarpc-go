@@ -178,7 +178,7 @@ type edgeKey struct {
 	rpcType         transport.Type
 }
 
-func (m *metricsTagIgnore) edgeKey(req *transport.Request, direction directionName, rpcType transport.Type) edgeKey {
+func (m *metricsTagIgnore) getEdgeKey(req *transport.Request, direction directionName, rpcType transport.Type) edgeKey {
 	var key edgeKey
 	if !m.source {
 		key.caller = req.Caller
@@ -238,7 +238,7 @@ func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor
 func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction directionName, req *transport.Request) call {
 	now := _timeNow()
 
-	e := g.getOrCreateEdge(g.ignoreMetricsTag.edgeKey(req, direction, rpcType), req, string(direction), rpcType)
+	e := g.getOrCreateEdge(g.ignoreMetricsTag.getEdgeKey(req, direction, rpcType), req, string(direction), rpcType)
 
 	levels := &g.inboundLevels
 	if direction != _directionInbound {
