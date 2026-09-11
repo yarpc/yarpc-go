@@ -167,6 +167,25 @@ func TestScaler_MaybeScaleDownDrainsWhenLoadFits(t *testing.T) {
 	assert.Equal(t, 1, drainedCount)
 }
 
+// With scaling on, the most-loaded connection is the one drained, even when it
+// is not the first in the pool, so the survivors keep burst capacity.
+func TestScaler_MaybeScaleDownDrainsMostLoadedWhenScalingOn(t *testing.T) {
+	cfg := baseConfig()
+	cfg.MaxConcurrentStreams = 100
+	cfg.MinConnections = 1
+	p, _ := newTestPool(t, cfg)
+	require.NoError(t, p.Start(2, false))
+	defer func() { p.Stop(); p.Wait() }()
+
+	conns := p.LoadConns()
+	conns[1].IncStreamCount()
+
+	p.MaybeScaleDown()
+
+	assert.Equal(t, StateActive, conns[0].GetState())
+	assert.Equal(t, StateDraining, conns[1].GetState())
+}
+
 func TestScaler_MaybeScaleDownNeverBelowMinConnections(t *testing.T) {
 	cfg := baseConfig()
 	cfg.MinConnections = 2

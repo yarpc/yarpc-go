@@ -409,7 +409,7 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 		return x.NewSingleOutbound(oc.URL, opts...), nil
 	}
 
-	chooser, err := oc.BuildPeerChooser(x, hostport.Identify, k)
+	chooser, err := oc.BuildPeerChooser(x.outboundPeerTransport(), hostport.Identify, k)
 	if err != nil {
 		return nil, fmt.Errorf("cannot configure peer chooser for HTTP outbound: %v", err)
 	}
