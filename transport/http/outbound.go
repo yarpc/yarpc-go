@@ -229,7 +229,7 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 		panic(err.Error())
 	}
 
-	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
+	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t.outboundPeerTransport())
 	opts = append(opts, URLTemplate(uri))
 	o := t.NewOutbound(chooser, opts...)
 	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
