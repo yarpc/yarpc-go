@@ -76,6 +76,12 @@ type Metrics struct {
 	// idleReactivationTotal counts the number of times an idle connection
 	// was reactivated rather than opening a new one.
 	idleReactivationTotal *metrics.Counter
+	// dialsTotal counts every dial attempt that succeeded, aggregated
+	// across all pools.
+	dialsTotal *metrics.Counter
+	// dialFailuresTotal counts every dial attempt that failed, aggregated
+	// across all pools.
+	dialFailuresTotal *metrics.Counter
 }
 
 // NewMetrics creates the transport-wide connection pool metric handles.
@@ -151,6 +157,24 @@ func NewMetrics(p MetricsParams) *Metrics {
 		p.Logger.Warn("connpool: failed to create idle reactivation counter", zap.Error(err))
 	}
 
+	m.dialsTotal, err = p.Meter.Counter(metrics.Spec{
+		Name:      prefix + "_dials_total",
+		Help:      "Total number of connection dial attempts that succeeded, aggregated across all pools.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		p.Logger.Warn("connpool: failed to create dials counter", zap.Error(err))
+	}
+
+	m.dialFailuresTotal, err = p.Meter.Counter(metrics.Spec{
+		Name:      prefix + "_dial_failures_total",
+		Help:      "Total number of connection dial attempts that failed, aggregated across all pools.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		p.Logger.Warn("connpool: failed to create dial failures counter", zap.Error(err))
+	}
+
 	return m
 }
 
@@ -194,6 +218,20 @@ func (m *Metrics) incIdleReactivation() {
 		return
 	}
 	m.idleReactivationTotal.Inc()
+}
+
+func (m *Metrics) incDial() {
+	if m == nil || m.dialsTotal == nil {
+		return
+	}
+	m.dialsTotal.Inc()
+}
+
+func (m *Metrics) incDialFailure() {
+	if m == nil || m.dialFailuresTotal == nil {
+		return
+	}
+	m.dialFailuresTotal.Inc()
 }
 
 // Reporter applies a single pool's connection-state counts to the shared,
@@ -260,4 +298,20 @@ func (r *Reporter) IncIdleReactivation() {
 		return
 	}
 	r.shared.incIdleReactivation()
+}
+
+// IncDial records that a pool's dial attempt succeeded.
+func (r *Reporter) IncDial() {
+	if r == nil {
+		return
+	}
+	r.shared.incDial()
+}
+
+// IncDialFailure records that a pool's dial attempt failed.
+func (r *Reporter) IncDialFailure() {
+	if r == nil {
+		return
+	}
+	r.shared.incDialFailure()
 }
