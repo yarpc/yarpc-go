@@ -145,8 +145,7 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		default:
 			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
 		}
-		header = transport.CanonicalizeHeaderKey(header)
-		// skip routing header
+		// gRPC metadata keys are already lowercase.
 		if routingHeaders[header] {
 			continue
 		}
@@ -203,7 +202,7 @@ func metadataToApplicationErrorMeta(responseMD metadata.MD) *transport.Applicati
 // addApplicationHeaders adds the headers to md.
 func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 	for header, value := range headers.Items() {
-		header = transport.CanonicalizeHeaderKey(header)
+		// Items() keys are already canonical (lowercased on insertion via With).
 		if isReserved(header) {
 			return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
 		}
@@ -221,7 +220,7 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 	}
 	headers := transport.NewHeadersWithCapacity(md.Len())
 	for header, values := range md {
-		header = transport.CanonicalizeHeaderKey(header)
+		// gRPC metadata keys are already lowercase.
 		if isReserved(header) {
 			continue
 		}
