@@ -20,8 +20,6 @@
 
 package encoding
 
-import "go.uber.org/yarpc/yarpcerrors"
-
 const (
 	// RoutingDelegateCrosszoneHeaderKey is one of the cross-zone header for the routing delegate
 	RoutingDelegateCrosszoneHeaderKey = "crosszone"
@@ -42,7 +40,6 @@ const (
 // Encoding authors should accept yarpc.CallOptions and convert them to
 // encoding.CallOptions to use with NewOutboundCall. This will keep the
 // API for service authors simple.
-
 type CallOption struct {
 	t               callOptionType
 	key             string
@@ -60,10 +57,14 @@ const (
 	callOptionTypeRoutingKey
 	callOptionTypeRoutingDelegate
 	callOptionTypeResponseHeaders
+
+	// callOptionTypeLastValueGuard is not a valid type and must stay last.
+	// Tests use it to check that apply handles every type before it.
+	callOptionTypeLastValueGuard
 )
 
 // apply writes the option onto the given OutboundCall.
-func (o CallOption) apply(call *OutboundCall) error {
+func (o CallOption) apply(call *OutboundCall) {
 	switch o.t {
 	case callOptionTypeHeader:
 		call.headers = append(call.headers, keyValuePair{k: o.key, v: o.value})
@@ -78,10 +79,7 @@ func (o CallOption) apply(call *OutboundCall) error {
 		call.routingDelegate = &v
 	case callOptionTypeResponseHeaders:
 		call.responseHeaders = o.responseHeaders
-	default:
-		return yarpcerrors.InvalidArgumentErrorf("encoding: invalid CallOption (type %d); use the With* constructors", o.t)
 	}
-	return nil
 }
 
 // ResponseHeaders specifies that headers received in response to this request

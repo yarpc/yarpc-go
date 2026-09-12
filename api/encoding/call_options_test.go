@@ -21,13 +21,10 @@
 package encoding
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // Ensuring these are equal via `reflect.DeepEqual` ensures that gomock by default can assert equality on CallOptions
@@ -49,20 +46,16 @@ func TestManyCallOptionsReflectEquals(t *testing.T) {
 	require.False(t, reflect.DeepEqual(opts2, opts3))
 }
 
-// A zero-value CallOption is not produced by any With* constructor. It must be
-// reported as an invalid argument rather than silently ignored.
-func TestNewOutboundCallInvalidOption(t *testing.T) {
-	call := NewOutboundCall(CallOption{})
+func TestZeroCallOptionIsNoop(t *testing.T) {
+	require.Equal(t, callOptionTypeUnknown, CallOption{}.t)
+	require.Equal(t, OutboundCall{}, *NewOutboundCall(CallOption{}))
+}
 
-	_, err := call.WriteToRequest(context.Background(), &transport.Request{})
-	require.Error(t, err)
-	require.True(t, yarpcerrors.IsInvalidArgument(err))
-
-	_, err = call.WriteToRequestMeta(context.Background(), &transport.RequestMeta{})
-	require.Error(t, err)
-	require.True(t, yarpcerrors.IsInvalidArgument(err))
-
-	_, err = NewStreamOutboundCall(CallOption{})
-	require.Error(t, err)
-	require.True(t, yarpcerrors.IsInvalidArgument(err))
+// A callOptionType without a case in apply would silently drop the option.
+func TestCallOptionApplyHandlesEveryType(t *testing.T) {
+	var resHeaders map[string]string
+	for typ := callOptionTypeUnknown + 1; typ < callOptionTypeLastValueGuard; typ++ {
+		opt := CallOption{t: typ, key: "k", value: "v", responseHeaders: &resHeaders}
+		require.NotEqual(t, OutboundCall{}, *NewOutboundCall(opt), "apply ignores callOptionType %d", typ)
+	}
 }
