@@ -55,3 +55,39 @@ func BenchmarkNewOutboundCallMixed(b *testing.B) {
 		)
 	}
 }
+
+func BenchmarkNewOutboundCallWithHeader(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		NewOutboundCall(WithHeader(benchHeaderKey, benchHeaderVal))
+	}
+}
+
+func BenchmarkNewOutboundCallWithShardKey(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		NewOutboundCall(WithShardKey(benchShardKey))
+	}
+}
+
+func BenchmarkNewOutboundCallWithRoutingKey(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		NewOutboundCall(WithRoutingKey(benchRouteKey))
+	}
+}
+
+func BenchmarkNewOutboundCallWithRoutingDelegate(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		NewOutboundCall(WithRoutingDelegate(benchRouteDel))
+	}
+}
+
+func BenchmarkNewOutboundCallResponseHeaders(b *testing.B) {
+	b.ReportAllocs()
+	var resHeaders map[string]string
+	for b.Loop() {
+		NewOutboundCall(ResponseHeaders(&resHeaders))
+	}
+}
