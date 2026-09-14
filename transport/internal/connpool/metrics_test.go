@@ -183,6 +183,41 @@ func TestReporter_AggregatesAcrossPools(t *testing.T) {
 	}
 }
 
+// TestReporter_ConcurrentIncrementsExactTotals ports transport/grpc's
+// TestConnPoolMetrics_ConcurrentAccess: unlike TestReporter_ConcurrentSetCounts
+// below (which only checks for data races), this asserts the exact counter
+// totals after concurrent increments, verifying no increments are lost.
+func TestReporter_ConcurrentIncrementsExactTotals(t *testing.T) {
+	root := metrics.New()
+	shared := NewMetrics(MetricsParams{Meter: root.Scope(), Transport: "http2"})
+	r := NewReporter(shared)
+
+	const goroutines = 10
+	const iterations = 100
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				r.IncScaleUp()
+				r.IncScaleDown()
+				r.IncIdleReactivation()
+			}
+		}()
+	}
+	wg.Wait()
+
+	countersByName := make(map[string]int64)
+	for _, c := range root.Snapshot().Counters {
+		countersByName[c.Name] = c.Value
+	}
+	assert.EqualValues(t, goroutines*iterations, countersByName["conn_pool_scale_up_total"])
+	assert.EqualValues(t, goroutines*iterations, countersByName["conn_pool_scale_down_total"])
+	assert.EqualValues(t, goroutines*iterations, countersByName["conn_pool_idle_reactivation_total"])
+}
+
 func TestReporter_ConcurrentSetCounts(t *testing.T) {
 	root := metrics.New()
 	shared := NewMetrics(MetricsParams{Meter: root.Scope(), Transport: "http2"})

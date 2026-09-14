@@ -23,6 +23,7 @@ package connpool
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -69,6 +70,33 @@ func TestWrapper_TransitionState(t *testing.T) {
 	// Wrong `from` fails and leaves state unchanged.
 	assert.False(t, w.TransitionState(StateActive, StateIdle))
 	assert.Equal(t, StateDraining, w.GetState())
+}
+
+// TestWrapper_ConcurrentTransitionOnlyOneWins ports transport/grpc's
+// concurrent-CAS subtest of TestTransitionState: when two goroutines race to
+// transition the same wrapper out of the same starting state to two
+// different destination states, exactly one of them must win.
+func TestWrapper_ConcurrentTransitionOnlyOneWins(t *testing.T) {
+	w := newWrapper(context.Background(), &fakeConn{})
+	w.setState(StateIdle)
+
+	var wins int32
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		if w.TransitionState(StateIdle, StateActive) {
+			atomic.AddInt32(&wins, 1)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if w.TransitionState(StateIdle, StateClosing) {
+			atomic.AddInt32(&wins, 1)
+		}
+	}()
+	wg.Wait()
+	assert.Equal(t, int32(1), atomic.LoadInt32(&wins), "exactly one transition must win")
 }
 
 func TestWrapper_SetIdleNowAndIdleSince(t *testing.T) {
