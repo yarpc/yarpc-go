@@ -143,7 +143,11 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		case 1:
 			value = values[0]
 		default:
-			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			if header == "grpc-accept-encoding" {
+				value = values[0]
+			} else {
+				return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			}
 		}
 		// gRPC metadata keys are already lowercase.
 		if routingHeaders[header] {
@@ -231,7 +235,11 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 		case 1:
 			value = values[0]
 		default:
-			return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			if header == "grpc-accept-encoding" {
+				value = values[0]
+			} else {
+				return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			}
 		}
 		headers = headers.With(header, value)
 	}
