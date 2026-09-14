@@ -51,8 +51,15 @@ var _ peer.Transport = (*Dialer)(nil)
 //
 // Callers should create one isolated Dialer per logical outbound. Requests
 // within that outbound continue to share peers normally.
+//
+// Isolating a Dialer also allows any ClientConnectionPool DialOption passed
+// to it to override the transport's shared dynamic connection pool
+// configuration for peers retained through it; see ClientConnectionPool.
 func (d *Dialer) WithConnectionIsolation() *Dialer {
 	isolated := *d
+	optionsCopy := *d.options
+	optionsCopy.connectionPerOutbound = true
+	isolated.options = &optionsCopy
 	isolated.connectionScope = new(connectionScope)
 	return &isolated
 }
