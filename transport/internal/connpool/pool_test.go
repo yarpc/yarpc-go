@@ -23,6 +23,7 @@ package connpool
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -250,6 +251,70 @@ func TestPool_StartTeardownZeroesRealMetricsReporter(t *testing.T) {
 	for _, g := range snap.Gauges {
 		if g.Name == "conn_pool_active_connections" {
 			assert.EqualValues(t, 0, g.Value)
+		}
+	}
+}
+
+// TestPool_DynamicScalingTeardownRace ports transport/grpc's
+// TestConnPoolMetrics_DynamicScalingTeardownRace: it hammers scale-up and
+// scale-down paths (via concurrent PickConn/TryScaleUp/EvaluateScaling)
+// while stopping a dynamically-scaled pool, and checks that the shared
+// connection-state gauges always return to exactly zero once teardown
+// completes -- i.e. no in-flight scale event can leave a residual
+// contribution on the shared gauges after Stop/Wait.
+// Run with -race to stress the teardown race.
+func TestPool_DynamicScalingTeardownRace(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping teardown race stress test in short mode")
+	}
+
+	const iterations = 50
+
+	for i := 0; i < iterations; i++ {
+		root := metrics.New()
+		shared := NewMetrics(MetricsParams{Meter: root.Scope(), Transport: "grpc"})
+		reporter := NewReporter(shared)
+
+		cfg := baseConfig()
+		cfg.MinConnections = 2
+		cfg.MaxConnections = 4
+
+		var nextID atomic.Int32
+		dial := func(_ context.Context) (*fakeConn, error) {
+			return &fakeConn{id: int(nextID.Add(1))}, nil
+		}
+		p := NewPool(context.Background(), cfg, dial, zap.NewNop(), "test-pool", reporter)
+		attachFakeWatcher(p)
+		require.NoError(t, p.Start(2))
+
+		var wg sync.WaitGroup
+		for g := 0; g < 4; g++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for j := 0; j < 100; j++ {
+					conn := p.PickConn()
+					if conn == nil {
+						continue
+					}
+					p.TryScaleUp(conn)
+					p.EvaluateScaling()
+					atomic.StoreInt32(&conn.streamCount, 85)
+				}
+			}()
+		}
+
+		time.Sleep(5 * time.Millisecond)
+		p.Stop()
+		wg.Wait()
+		p.Wait()
+
+		snap := root.Snapshot()
+		for _, g := range snap.Gauges {
+			switch g.Name {
+			case "conn_pool_active_connections", "conn_pool_draining_connections", "conn_pool_idle_connections":
+				assert.EqualValues(t, 0, g.Value, g.Name)
+			}
 		}
 	}
 }

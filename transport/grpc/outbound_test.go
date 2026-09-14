@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"net"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 )
@@ -368,12 +370,30 @@ func TestOutboundIntrospection(t *testing.T) {
 // emptyGRPCPeer returns a *grpcPeer with no connections in the pool, so that
 // pickConn() returns nil.  Only p.Peer is set; p.t is intentionally left nil
 // because the nil-conn path returns before any transport access.
+// emptyGRPCPeer returns a grpcPeer with a connection pool that has no
+// connections and never dials any (Start(0), dial always fails), so
+// pickConn always returns nil.
 func emptyGRPCPeer(t *testing.T) *grpcPeer {
 	t.Helper()
 	tr := NewTransport()
-	return &grpcPeer{
-		Peer: abstractpeer.NewPeer(abstractpeer.PeerIdentifier("127.0.0.1:1"), tr),
+	ctx, cancel := context.WithCancel(context.Background())
+	p := &grpcPeer{
+		Peer:   abstractpeer.NewPeer(abstractpeer.PeerIdentifier("127.0.0.1:1"), tr),
+		t:      tr,
+		ctx:    ctx,
+		cancel: cancel,
 	}
+	dial := func(context.Context) (*grpc.ClientConn, error) {
+		return nil, errors.New("dialing disabled for this test peer")
+	}
+	p.pool = connpool.NewPool(ctx, connpool.Config{}, dial, tr.options.logger, "127.0.0.1:1", connpool.NewReporter(tr.metrics))
+	p.pool.OnConnAdded = p.monitorConnWrapper
+	require.NoError(t, p.pool.Start(0))
+	t.Cleanup(func() {
+		p.cancel()
+		p.pool.Wait()
+	})
+	return p
 }
 
 // TestInvokeWithNoActiveConnections verifies that DirectCall returns an

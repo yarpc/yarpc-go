@@ -57,6 +57,7 @@ import (
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/peer/roundrobin"
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -1613,13 +1614,15 @@ func TestConnectionPoolScaleDown(t *testing.T) {
 		p := apiPeer.(*grpcPeer)
 
 		// Grow the pool to 3 connections (minConnections=1 so scale-down is allowed).
-		require.NoError(t, p.addConn())
-		require.NoError(t, p.addConn())
+		_, err = p.pool.AddConn()
+		require.NoError(t, err)
+		_, err = p.pool.AddConn()
+		require.NoError(t, err)
 
 		// With 3 active connections, 0 total streams, and
 		// capacityAfterDrain = threshold*(3-1) = 80*2 = 160 > 0,
 		// maybeScaleDown must drain the most-loaded connection.
-		p.evaluateScaling()
+		p.pool.EvaluateScaling()
 
 		gauges, counters := poolMetricSnapshot(root)
 		assert.Equal(t, int64(1), counters["conn_pool_scale_down_total"],
@@ -1654,14 +1657,22 @@ func TestConnectionPoolIdleReactivation(t *testing.T) {
 		p := apiPeer.(*grpcPeer)
 
 		// Mark the initial connection as idle (live context, so reactivation is allowed).
-		p.loadConns()[0].setState(connStateIdle)
+		idleConn := p.pool.LoadConns()[0]
+		require.True(t, idleConn.TransitionState(connpool.StateActive, connpool.StateIdle))
 
 		// tryScaleUp should reactivate the idle conn instead of dialling.
-		overBudget := makeConn(connStateActive, 85)
+		// overBudget is a second, real pool connection whose stream count we
+		// pump up synthetically purely to trigger tryScaleUp's threshold
+		// check -- tryScaleUp only reads its stream count.
+		overBudget, err := p.pool.AddConn()
+		require.NoError(t, err)
+		for i := 0; i < 85; i++ {
+			overBudget.IncStreamCount()
+		}
 		p.tryScaleUp(overBudget)
 
 		require.Eventually(t, func() bool {
-			return atomic.LoadInt32(&p.isScaling) == 0
+			return idleConn.GetState() == connpool.StateActive
 		}, 2*time.Second, 10*time.Millisecond)
 
 		_, counters := poolMetricSnapshot(root)
@@ -1670,7 +1681,7 @@ func TestConnectionPoolIdleReactivation(t *testing.T) {
 		assert.Equal(t, int64(0), counters["conn_pool_scale_up_total"],
 			"no new dial should happen when an idle conn is available")
 
-		assert.Equal(t, connStateActive, p.loadConns()[0].getState(),
+		assert.Equal(t, connpool.StateActive, idleConn.GetState(),
 			"formerly idle conn should be active after reactivation")
 	})
 }
@@ -1708,8 +1719,8 @@ func TestConnectionPoolNoActiveConnectionsReturnsUnavailable(t *testing.T) {
 		// monitorConnWrapper goroutines remain blocked in WaitForStateChange,
 		// so the YARPC peer status stays Available — Choose will still return
 		// this peer, but pickConn() will find no active connections.
-		for _, c := range p.loadConns() {
-			c.setState(connStateDraining)
+		for _, c := range p.pool.LoadConns() {
+			c.TransitionState(connpool.StateActive, connpool.StateDraining)
 		}
 
 		err = e.SetValueYARPC(ctx, "foo", "bar")
