@@ -21,6 +21,9 @@
 package connpool
 
 import (
+	"reflect"
+	"sort"
+	"strings"
 	"sync"
 
 	"go.uber.org/net/metrics"
@@ -78,17 +81,186 @@ type Metrics struct {
 	idleReactivationTotal *metrics.Counter
 }
 
-// NewMetrics creates the transport-wide connection pool metric handles.
+// metricsKey identifies one set of registered metrics. go.uber.org/net/metrics
+// rejects a second registration of the same name and tags in a registry, so a
+// set is registered once per key and shared by every caller that asks for it.
+// Two scopes are the same registration target when they share a registry and
+// constant tags, even if they are different *Scope values (Tagged returns a new
+// one every call), so the key holds that identity rather than the pointer.
+type metricsKey struct {
+	scope       scopeIdentity
+	prefix      string
+	serviceName string
+	transport   string
+}
+
+// scopeIdentity says which registry and constant tags a *Scope registers into.
+type scopeIdentity struct {
+	core uintptr // the registry, zero when identityOf could not read it
+	tags string  // sorted constant tags, as k=v pairs
+	// ptr is set only when identityOf could not read the scope's internals, in
+	// which case identity falls back to the *Scope pointer.
+	ptr *metrics.Scope
+}
+
+// identityOf reads the registry and constant tags of s. go.uber.org/net/metrics
+// does not export them, so they are read with reflection; if its Scope no
+// longer has the expected shape this falls back to the pointer, which still
+// dedupes callers that share one *Scope. TestScopeIdentity fails if that
+// happens, so a dependency upgrade cannot silently lose the fix.
+func identityOf(s *metrics.Scope) scopeIdentity {
+	if id, ok := readScopeIdentity(s); ok {
+		return id
+	}
+	return scopeIdentity{ptr: s}
+}
+
+func readScopeIdentity(s *metrics.Scope) (scopeIdentity, bool) {
+	v := reflect.ValueOf(s)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		return scopeIdentity{}, false
+	}
+	e := v.Elem()
+	if e.Kind() != reflect.Struct {
+		return scopeIdentity{}, false
+	}
+	core, tags := e.FieldByName("core"), e.FieldByName("constTags")
+	if !core.IsValid() || core.Kind() != reflect.Ptr || core.IsNil() ||
+		!tags.IsValid() || tags.Kind() != reflect.Map ||
+		tags.Type().Key().Kind() != reflect.String || tags.Type().Elem().Kind() != reflect.String {
+		return scopeIdentity{}, false
+	}
+	pairs := make([]string, 0, tags.Len())
+	for it := tags.MapRange(); it.Next(); {
+		pairs = append(pairs, it.Key().String()+"\x00"+it.Value().String())
+	}
+	sort.Strings(pairs)
+	return scopeIdentity{core: core.Pointer(), tags: strings.Join(pairs, "\x01")}, true
+}
+
+// registryKey identifies a metric family within one registry, whatever
+// constant tags the scope adds. go.uber.org/net/metrics rejects a metric name
+// registered again with a different set of tag names, so a family can only be
+// registered once per registry however its callers' scopes are tagged.
+type registryKey struct {
+	core        uintptr
+	ptr         *metrics.Scope
+	prefix      string
+	serviceName string
+	transport   string
+}
+
+// sharedMetric is one registered set. scope is kept so the registry whose
+// address is in the key stays alive; a freed registry's address could
+// otherwise be reused by another one and match this entry by mistake.
+type sharedMetric struct {
+	metrics *Metrics
+	scope   *metrics.Scope
+}
+
+// sharedMetrics holds the Metrics registered so far. Entries live for the life
+// of the process, like the Scope each one is registered on.
+var sharedMetrics = struct {
+	sync.Mutex
+	byKey      map[metricsKey]sharedMetric  // exactly this registry, tags and family
+	byRegistry map[registryKey]sharedMetric // first set registered in this registry
+}{
+	byKey:      make(map[metricsKey]sharedMetric),
+	byRegistry: make(map[registryKey]sharedMetric),
+}
+
+func metricPrefix(p MetricsParams) string {
+	if p.MetricPrefix == "" {
+		return "conn_pool"
+	}
+	return p.MetricPrefix
+}
+
+// NewMetrics returns the connection pool metric handles for the given
+// registry, metric prefix, service name and transport, registering them the
+// first time they are asked for.
+//
+// A process may build several transports on the same meter and service name
+// (for example one per dispatcher). Each used to register the same metrics, so
+// every transport after the first failed registration, logged a warning per
+// metric, and was left with nil handles that reported nothing. Later callers
+// now share the handles the first one registered:
+//
+//   - a scope with the same registry and constant tags gets them directly,
+//     even when it is a different *Scope value (Tagged returns a new one on
+//     every call);
+//   - a scope whose tags make it a different series (same tag names, other
+//     values) registers its own set, as before;
+//   - a scope that cannot register because the registry already holds the
+//     family under different tag names gets the first set registered there,
+//     since that family can only exist once per registry. Its tags do not apply.
+//
+// Pools report through a Reporter that applies deltas, so sharing the handles
+// makes the gauges the aggregate across all of those transports' pools, which
+// is what they are documented to be.
 func NewMetrics(p MetricsParams) *Metrics {
-	m := &Metrics{}
 	if p.Meter == nil {
-		return m
+		return &Metrics{}
+	}
+	id := identityOf(p.Meter)
+	key := metricsKey{scope: id, prefix: metricPrefix(p), serviceName: p.ServiceName, transport: p.Transport}
+	reg := registryKey{core: id.core, ptr: id.ptr, prefix: key.prefix, serviceName: p.ServiceName, transport: p.Transport}
+
+	sharedMetrics.Lock()
+	defer sharedMetrics.Unlock()
+	if e, ok := sharedMetrics.byKey[key]; ok {
+		return e.metrics
 	}
 
-	prefix := p.MetricPrefix
-	if prefix == "" {
-		prefix = "conn_pool"
+	// Register quietly: if nothing can be registered because the registry
+	// already has this family, share it instead of warning.
+	type failure struct {
+		msg string
+		err error
 	}
+	var failures []failure
+	m := registerMetrics(p, func(msg string, err error) { failures = append(failures, failure{msg, err}) })
+	if len(failures) == metricsCount {
+		if e, ok := sharedMetrics.byRegistry[reg]; ok {
+			sharedMetrics.byKey[key] = e
+			return e.metrics
+		}
+	}
+	for _, f := range failures {
+		if p.Logger != nil {
+			p.Logger.Warn(f.msg, zap.Error(f.err))
+		}
+	}
+
+	e := sharedMetric{metrics: m, scope: p.Meter}
+	sharedMetrics.byKey[key] = e
+	if len(failures) < metricsCount {
+		if _, ok := sharedMetrics.byRegistry[reg]; !ok {
+			sharedMetrics.byRegistry[reg] = e
+		}
+	}
+	return m
+}
+
+// newMetrics registers a new set of metric handles on p.Meter. A registration
+// that fails is logged and leaves that handle nil, which every Metrics method
+// tolerates.
+func newMetrics(p MetricsParams) *Metrics {
+	return registerMetrics(p, func(msg string, err error) {
+		if p.Logger != nil {
+			p.Logger.Warn(msg, zap.Error(err))
+		}
+	})
+}
+
+// metricsCount is how many handles registerMetrics registers.
+const metricsCount = 6
+
+// registerMetrics registers the metric handles on p.Meter, calling warn for
+// each one that fails to register and leaving that handle nil.
+func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics {
+	m := &Metrics{}
+	prefix := metricPrefix(p)
 
 	tags := metrics.Tags{
 		componentTag: componentYarpc,
@@ -103,7 +275,7 @@ func NewMetrics(p MetricsParams) *Metrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Warn("failed to create active connections gauge", zap.Error(err))
+		warn("failed to create active connections gauge", err)
 	}
 
 	m.drainingConnectionCount, err = p.Meter.Gauge(metrics.Spec{
@@ -112,7 +284,7 @@ func NewMetrics(p MetricsParams) *Metrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Warn("failed to create draining connections gauge", zap.Error(err))
+		warn("failed to create draining connections gauge", err)
 	}
 
 	m.idleConnectionCount, err = p.Meter.Gauge(metrics.Spec{
@@ -121,7 +293,7 @@ func NewMetrics(p MetricsParams) *Metrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Warn("failed to create idle connections gauge", zap.Error(err))
+		warn("failed to create idle connections gauge", err)
 	}
 
 	m.scaleUpTotal, err = p.Meter.Counter(metrics.Spec{
@@ -130,7 +302,7 @@ func NewMetrics(p MetricsParams) *Metrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Warn("failed to create scale up counter", zap.Error(err))
+		warn("failed to create scale up counter", err)
 	}
 
 	m.scaleDownTotal, err = p.Meter.Counter(metrics.Spec{
@@ -139,7 +311,7 @@ func NewMetrics(p MetricsParams) *Metrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Warn("failed to create scale down counter", zap.Error(err))
+		warn("failed to create scale down counter", err)
 	}
 
 	m.idleReactivationTotal, err = p.Meter.Counter(metrics.Spec{
@@ -148,7 +320,7 @@ func NewMetrics(p MetricsParams) *Metrics {
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Warn("failed to create idle reactivation counter", zap.Error(err))
+		warn("failed to create idle reactivation counter", err)
 	}
 
 	return m

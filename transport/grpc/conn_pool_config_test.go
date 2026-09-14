@@ -23,18 +23,21 @@ package grpc
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 func staticPoolProvider(cfg ClientConnectionPoolConfig) LiveConnectionPoolProvider {
 	return func() ClientConnectionPoolConfig { return cfg }
 }
 
-func liveTestPeer(t *testing.T, base connPoolConfig, provider LiveConnectionPoolProvider) *grpcPeer {
+func liveTestPeer(t *testing.T, base connpool.Config, provider LiveConnectionPoolProvider) *grpcPeer {
 	t.Helper()
 	transport := NewTransport(WithGlobalLiveConnectionPoolProvider(provider))
 	p := &grpcPeer{
@@ -63,8 +66,8 @@ func TestLivePoolCfg_TransportHookOverlays(t *testing.T) {
 
 	got := p.livePoolCfg()
 
-	assert.Equal(t, 9, got.maxConnections)
-	assert.Equal(t, base.maxConcurrentStreams, got.maxConcurrentStreams, "unset live fields inherit startup")
+	assert.Equal(t, 9, got.MaxConnections)
+	assert.Equal(t, base.MaxConcurrentStreams, got.MaxConcurrentStreams, "unset live fields inherit startup")
 }
 
 func TestLivePoolCfg_DialerHookOverridesTransport(t *testing.T) {
@@ -72,7 +75,7 @@ func TestLivePoolCfg_DialerHookOverridesTransport(t *testing.T) {
 	p := liveTestPeer(t, base, staticPoolProvider(ClientConnectionPoolConfig{MaxConnections: 9}))
 	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{MaxConnections: 20})
 
-	assert.Equal(t, 20, p.livePoolCfg().maxConnections)
+	assert.Equal(t, 20, p.livePoolCfg().MaxConnections)
 }
 
 func TestLivePoolCfg_InvalidKeepsLastGood(t *testing.T) {
@@ -85,7 +88,7 @@ func TestLivePoolCfg_InvalidKeepsLastGood(t *testing.T) {
 		return overlay
 	})
 
-	assert.Equal(t, 12, p.livePoolCfg().maxConnections)
+	assert.Equal(t, 12, p.livePoolCfg().MaxConnections)
 
 	mu.Lock()
 	// scaleUp - gap <= 0 is rejected by validateResolvedConnPool.
@@ -93,8 +96,8 @@ func TestLivePoolCfg_InvalidKeepsLastGood(t *testing.T) {
 	mu.Unlock()
 
 	got := p.livePoolCfg()
-	assert.Equal(t, 12, got.maxConnections, "invalid live overlay must keep the last valid snapshot")
-	assert.Equal(t, base.scaleUpThreshold, got.scaleUpThreshold)
+	assert.Equal(t, 12, got.MaxConnections, "invalid live overlay must keep the last valid snapshot")
+	assert.Equal(t, base.ScaleUpThreshold, got.ScaleUpThreshold)
 }
 
 func TestLivePoolCfg_InvalidFallsBackToStartup(t *testing.T) {
@@ -115,12 +118,12 @@ func TestValidateResolvedConnPool(t *testing.T) {
 
 	tests := []struct {
 		name string
-		mut  func(*connPoolConfig)
+		mut  func(*connpool.Config)
 	}{
-		{"min greater than max", func(c *connPoolConfig) { c.minConnections = 8; c.maxConnections = 2 }},
-		{"zero streams", func(c *connPoolConfig) { c.maxConcurrentStreams = 0 }},
-		{"zero scale-up threshold", func(c *connPoolConfig) { c.scaleUpThreshold = 0 }},
-		{"hysteresis collapse", func(c *connPoolConfig) { c.scaleUpThreshold = 0.5; c.scaleDownGap = 0.5 }},
+		{"min greater than max", func(c *connpool.Config) { c.MinConnections = 8; c.MaxConnections = 2 }},
+		{"zero streams", func(c *connpool.Config) { c.MaxConcurrentStreams = 0 }},
+		{"zero scale-up threshold", func(c *connpool.Config) { c.ScaleUpThreshold = 0 }},
+		{"hysteresis collapse", func(c *connpool.Config) { c.ScaleUpThreshold = 0.5; c.ScaleDownGap = 0.5 }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -133,31 +136,33 @@ func TestValidateResolvedConnPool(t *testing.T) {
 
 func TestMaybeScaleDown_LiveDisabled(t *testing.T) {
 	disabled := false
-	conns := []*grpcClientConnWrapper{
-		makeConn(connStateActive, 30),
-		makeConn(connStateActive, 5),
-		makeConn(connStateActive, 20),
-	}
 	transport := NewTransport(WithGlobalLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
 		DynamicScalingEnabled: &disabled,
 	})))
-	cfg := defaultScaleDownCfg
-	cfg.dynamicScalingEnabled = true
-	cfg.maxConnections = 5
-	cfg.scaleDownGap = 0.1
-	p := &grpcPeer{
-		Peer:        abstractpeer.NewPeer(abstractpeer.PeerIdentifier("10.0.0.1:9000"), transport),
-		t:           transport,
-		startupPool: cfg,
+	cfg := connpool.Config{
+		DynamicScalingEnabled: true,
+		MinConnections:        1,
+		MaxConnections:        5,
+		MaxConcurrentStreams:  100,
+		ScaleUpThreshold:      0.8,
+		ScaleDownGap:          0.1,
 	}
-	p.lastValidLivePool.Store(p.startupPool)
-	p.storeConns(conns)
+	p := peerForPoolOnTransport(t, transport, cfg, nil)
+	var conns []*connpool.Wrapper[*grpc.ClientConn]
+	for _, streams := range []int{30, 5, 20} {
+		w, err := p.pool.AddConn()
+		require.NoError(t, err)
+		for range streams {
+			w.IncStreamCount()
+		}
+		conns = append(conns, w)
+	}
 
-	p.maybeScaleDown()
+	p.pool.MaybeScaleDown()
 
-	assert.Equal(t, connStateActive, conns[0].getState(), "busiest conn should stay active")
-	assert.Equal(t, connStateDraining, conns[1].getState(), "least-loaded extra should drain when scaling is off")
-	assert.Equal(t, connStateActive, conns[2].getState())
+	assert.Equal(t, connpool.StateActive, conns[0].GetState(), "busiest conn should stay active")
+	assert.Equal(t, connpool.StateDraining, conns[1].GetState(), "least-loaded extra should drain when scaling is off")
+	assert.Equal(t, connpool.StateActive, conns[2].GetState())
 }
 
 func TestTryScaleUp_LiveDisabled(t *testing.T) {
@@ -168,14 +173,24 @@ func TestTryScaleUp_LiveDisabled(t *testing.T) {
 			DynamicScalingEnabled: &disabled,
 		})),
 	)
-	p := peerForPool(t)
-	p.t = transport
-	p.startupPool.dynamicScalingEnabled = true
-	p.lastValidLivePool.Store(p.startupPool)
+	cfg := connpool.Config{
+		DynamicScalingEnabled: true,
+		MinConnections:        1,
+		MaxConnections:        5,
+		MaxConcurrentStreams:  100,
+		ScaleUpThreshold:      0.8,
+	}
+	p := peerForPoolOnTransport(t, transport, cfg, nil)
+	w, err := p.pool.AddConn()
+	require.NoError(t, err)
+	for range 85 {
+		w.IncStreamCount()
+	}
 
-	p.tryScaleUp(makeConn(connStateActive, 85))
+	p.tryScaleUp(w)
 
-	assert.Equal(t, int32(0), p.isScaling)
+	// Live config turned scaling off, so no scale-up may happen.
+	assert.Never(t, func() bool { return len(p.pool.LoadConns()) > 1 }, 200*time.Millisecond, 5*time.Millisecond)
 }
 
 func TestWithGlobalLiveConnectionPoolProvider(t *testing.T) {
@@ -224,7 +239,7 @@ func TestOutboundLiveProvider_AppliesOnDialer(t *testing.T) {
 	require.NoError(t, err)
 	sharedPeer := sp.(*grpcPeer)
 	require.NotNil(t, sharedPeer.outboundLiveProvider)
-	assert.Equal(t, 20, sharedPeer.livePoolCfg().maxConnections, "dialer live provider replaces the transport hook")
+	assert.Equal(t, 20, sharedPeer.livePoolCfg().MaxConnections, "dialer live provider replaces the transport hook")
 
 	isolated := transport.NewDialer(outboundLiveProvider(staticPoolProvider(ClientConnectionPoolConfig{
 		MaxConnections: 20,
@@ -233,7 +248,7 @@ func TestOutboundLiveProvider_AppliesOnDialer(t *testing.T) {
 	require.NoError(t, err)
 	isolatedPeer := ip.(*grpcPeer)
 	require.NotNil(t, isolatedPeer.outboundLiveProvider)
-	assert.Equal(t, 20, isolatedPeer.livePoolCfg().maxConnections)
+	assert.Equal(t, 20, isolatedPeer.livePoolCfg().MaxConnections)
 	assert.NotSame(t, sharedPeer, isolatedPeer)
 
 	require.NoError(t, shared.ReleasePeer(id, idSubscriber{1}))
