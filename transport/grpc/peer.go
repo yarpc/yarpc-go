@@ -120,9 +120,19 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	startMonitor := p.startupPool.DynamicScalingEnabled || p.liveProvider() != nil
 
 	if err := p.pool.Start(initialConnCount, startMonitor); err != nil {
+		t.options.logger.Warn("grpc: failed to create peer; initial connection fill failed",
+			zap.String("peer", address),
+			zap.Int("initialConnCount", initialConnCount),
+			zap.Error(err),
+		)
 		p.cancel()
 		return nil, err
 	}
+
+	t.options.logger.Info("grpc: peer created",
+		zap.String("peer", address),
+		zap.Int("initialConnCount", initialConnCount),
+	)
 
 	return p, nil
 }
@@ -148,7 +158,10 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *connpool.Wrapper[*grpc.ClientConn
 // evicted by the pool), and per the OnConnAdded contract must call Remove and
 // then ConnDone exactly once.
 func (p *grpcPeer) monitorConnWrapper(w *connpool.Wrapper[*grpc.ClientConn]) {
+	addr := p.Peer.Identifier()
+	p.t.options.logger.Debug("grpc: connection watcher started", zap.String("peer", addr))
 	defer func() {
+		p.t.options.logger.Debug("grpc: connection watcher cleanup starting", zap.String("peer", addr))
 		_ = w.Conn.Close()
 		p.pool.Remove(w)
 		// Skip status notification during peer shutdown: NotifyStatusChanged
@@ -162,6 +175,7 @@ func (p *grpcPeer) monitorConnWrapper(w *connpool.Wrapper[*grpc.ClientConn]) {
 		// waiting on StoppedC (e.g. tests) observes a consistent metric state.
 		close(w.StoppedC)
 		p.pool.ConnDone()
+		p.t.options.logger.Debug("grpc: connection watcher cleanup complete", zap.String("peer", addr))
 	}()
 
 	var grpcStatus connectivity.State
@@ -176,6 +190,7 @@ func (p *grpcPeer) monitorConnWrapper(w *connpool.Wrapper[*grpc.ClientConn]) {
 		// - Reconnect manually so the connection is ready before the next call.
 		// We choose the second option.
 		if grpcStatus == connectivity.Idle {
+			p.t.options.logger.Debug("grpc: connection idle; triggering reconnect", zap.String("peer", addr))
 			w.Conn.Connect()
 		}
 
@@ -187,13 +202,21 @@ func (p *grpcPeer) monitorConnWrapper(w *connpool.Wrapper[*grpc.ClientConn]) {
 		// but the caller (abstractlist.stop) may already hold it while
 		// waiting on p.wait().
 		if p.ctx.Err() != nil {
+			p.t.options.logger.Debug("grpc: connection watcher stopping; peer shutting down",
+				zap.String("peer", addr), zap.String("grpcState", grpcStatus.String()))
 			break
 		}
 		p.recomputeConnectionStatus()
 
 		if !w.Conn.WaitForStateChange(w.Context(), grpcStatus) {
+			p.t.options.logger.Debug("grpc: connection watcher stopping; connection context done",
+				zap.String("peer", addr), zap.String("grpcState", grpcStatus.String()))
 			break
 		}
+		p.t.options.logger.Debug("grpc: connection state changed",
+			zap.String("peer", addr),
+			zap.String("previousState", grpcStatus.String()),
+			zap.String("newState", w.Conn.GetState().String()))
 	}
 }
 

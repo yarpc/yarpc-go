@@ -40,6 +40,7 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/mem"
 	"google.golang.org/grpc/metadata"
@@ -217,8 +218,14 @@ func (o *Outbound) invoke(
 	// Pick the pool connection with the fewest active streams.
 	conn := grpcPeer.pickConn()
 	if conn == nil {
+		o.t.options.logger.Debug("grpc: no available connections for peer",
+			zap.String("peer", grpcPeer.HostPort()))
 		return yarpcerrors.UnavailableErrorf("no available connections for peer %s", grpcPeer.HostPort())
 	}
+	o.t.options.logger.Debug("grpc: picked connection for unary call",
+		zap.String("peer", grpcPeer.HostPort()),
+		zap.Int32("streamCountBeforeInc", conn.StreamCount()),
+		zap.Int("poolSize", len(grpcPeer.pool.LoadConns())))
 	conn.IncStreamCount()
 	defer conn.DecStreamCount()
 	grpcPeer.tryScaleUp(conn)
@@ -363,9 +370,15 @@ func (o *Outbound) stream(
 	// Pick the pool connection with the fewest active streams.
 	conn := grpcPeer.pickConn()
 	if conn == nil {
+		o.t.options.logger.Debug("grpc: no available connections for peer stream",
+			zap.String("peer", grpcPeer.HostPort()))
 		onFinish(yarpcerrors.UnavailableErrorf("no available connections for peer %s", grpcPeer.HostPort()))
 		return nil, yarpcerrors.UnavailableErrorf("no available connections for peer %s", grpcPeer.HostPort())
 	}
+	o.t.options.logger.Debug("grpc: picked connection for stream call",
+		zap.String("peer", grpcPeer.HostPort()),
+		zap.Int32("streamCountBeforeInc", conn.StreamCount()),
+		zap.Int("poolSize", len(grpcPeer.pool.LoadConns())))
 	conn.IncStreamCount()
 	// Wrap the release callback so stream count is decremented when
 	// the stream actually closes, not when stream() returns.
