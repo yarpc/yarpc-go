@@ -148,6 +148,18 @@ func NewPool[T Conn](parentCtx context.Context, cfg Config, dial func(ctx contex
 	// slice mismatch before the first AddConn call.
 	var empty []*Wrapper[T]
 	p.connsPtr.Store(&empty)
+	if p.Logger != nil {
+		p.Logger.Debug("connpool: pool created",
+			zap.String("pool", p.ID),
+			zap.Bool("dynamicScalingEnabled", cfg.DynamicScalingEnabled),
+			zap.Int("minConnections", cfg.MinConnections),
+			zap.Int("maxConnections", cfg.MaxConnections),
+			zap.Int32("maxConcurrentStreams", cfg.MaxConcurrentStreams),
+			zap.Float64("scaleUpThreshold", cfg.ScaleUpThreshold),
+			zap.Float64("scaleDownGap", cfg.ScaleDownGap),
+			zap.Duration("idleTimeout", cfg.IdleTimeout),
+			zap.Duration("scalingMonitorInterval", cfg.ScalingMonitorInterval))
+	}
 	return p
 }
 
@@ -157,13 +169,35 @@ func NewPool[T Conn](parentCtx context.Context, cfg Config, dial func(ctx contex
 // dial fails, Start cancels the pool's context and returns the error without
 // starting anything else.
 func (p *Pool[T]) Start(initialConnCount int) error {
-	for range initialConnCount {
+	if p.Logger != nil {
+		p.Logger.Info("connpool: starting initial connection fill",
+			zap.String("pool", p.ID),
+			zap.Int("initialConnCount", initialConnCount))
+	}
+	for i := range initialConnCount {
 		if _, err := p.AddConn(); err != nil {
+			if p.Logger != nil {
+				p.Logger.Warn("connpool: initial connection fill failed; aborting pool startup",
+					zap.String("pool", p.ID),
+					zap.Int("connectionsDialedBeforeFailure", i),
+					zap.Int("initialConnCount", initialConnCount),
+					zap.Error(err))
+			}
 			p.cancel()
 			return err
 		}
 	}
+	if p.Logger != nil {
+		p.Logger.Info("connpool: initial connection fill complete",
+			zap.String("pool", p.ID),
+			zap.Int("connectionCount", int(p.connCount.Load())))
+	}
 	if p.Config.DynamicScalingEnabled {
+		if p.Logger != nil {
+			p.Logger.Debug("connpool: starting scaling monitor",
+				zap.String("pool", p.ID),
+				zap.Duration("scalingMonitorInterval", p.Config.ScalingMonitorInterval))
+		}
 		p.connWg.Add(1)
 		go p.RunScalingMonitor()
 	}
@@ -173,6 +207,11 @@ func (p *Pool[T]) Start(initialConnCount int) error {
 	// AddConn already past its ctx check before calling Wait.
 	go func() {
 		<-p.ctx.Done()
+		if p.Logger != nil {
+			p.Logger.Debug("connpool: pool shutdown initiated",
+				zap.String("pool", p.ID),
+				zap.Int("connectionCount", int(p.connCount.Load())))
+		}
 		p.shutdownStarted.Store(true)
 		for p.addingCount.Load() > 0 {
 			runtime.Gosched()
@@ -184,6 +223,9 @@ func (p *Pool[T]) Start(initialConnCount int) error {
 		if p.metrics != nil {
 			p.metrics.SetCounts(0, 0, 0)
 		}
+		if p.Logger != nil {
+			p.Logger.Debug("connpool: pool shutdown complete", zap.String("pool", p.ID))
+		}
 		close(p.stoppedC)
 	}()
 
@@ -192,7 +234,12 @@ func (p *Pool[T]) Start(initialConnCount int) error {
 
 // Stop begins asynchronous teardown of the pool. It does not block; use Wait
 // to block until teardown completes.
-func (p *Pool[T]) Stop() { p.cancel() }
+func (p *Pool[T]) Stop() {
+	if p.Logger != nil {
+		p.Logger.Debug("connpool: pool stop requested", zap.String("pool", p.ID))
+	}
+	p.cancel()
+}
 
 // Wait blocks until the pool has fully torn down (all connections closed,
 // background goroutines exited) after Stop.
@@ -215,9 +262,17 @@ func (p *Pool[T]) AddConn() (*Wrapper[T], error) {
 	conn, err := p.Dial(p.ctx)
 	if err != nil {
 		p.metrics.IncDialFailure()
+		if p.Logger != nil {
+			p.Logger.Warn("connpool: dial failed",
+				zap.String("pool", p.ID),
+				zap.Error(err))
+		}
 		return nil, err
 	}
 	p.metrics.IncDial()
+	if p.Logger != nil {
+		p.Logger.Debug("connpool: dial succeeded", zap.String("pool", p.ID))
+	}
 	w := newWrapper(p.ctx, conn)
 
 	// Enter the critical window: increment addingCount so the teardown
@@ -226,6 +281,10 @@ func (p *Pool[T]) AddConn() (*Wrapper[T], error) {
 	if p.ctx.Err() != nil || p.shutdownStarted.Load() {
 		p.addingCount.Add(-1)
 		_ = conn.Close()
+		if p.Logger != nil {
+			p.Logger.Debug("connpool: dropping freshly dialed connection; pool is shutting down",
+				zap.String("pool", p.ID))
+		}
 		return nil, p.ctx.Err()
 	}
 	p.connWg.Add(1)
@@ -247,6 +306,11 @@ func (p *Pool[T]) AddConn() (*Wrapper[T], error) {
 		}
 	}
 
+	if p.Logger != nil {
+		p.Logger.Debug("connpool: connection added to pool",
+			zap.String("pool", p.ID),
+			zap.Int32("connectionCount", p.connCount.Load()))
+	}
 	if p.OnConnAdded != nil {
 		p.OnConnAdded(w)
 	}
@@ -281,6 +345,11 @@ func (p *Pool[T]) Remove(w *Wrapper[T]) {
 		copy(next[idx:], oldSlice[idx+1:])
 		if p.connsPtr.CompareAndSwap(old, &next) {
 			p.connCount.Store(int32(len(next)))
+			if p.Logger != nil {
+				p.Logger.Debug("connpool: connection removed from pool",
+					zap.String("pool", p.ID),
+					zap.Int("connectionCount", len(next)))
+			}
 			return
 		}
 	}
