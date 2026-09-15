@@ -40,6 +40,20 @@ var (
 	defaultDialerTimeout        = 30 * time.Second
 	defaultHTTP2PingTimeout     = 10 * time.Second
 	defaultHTTP2ReadIdleTimeout = 15 * time.Second
+
+	defaultHTTP2PoolMinConns               = 1
+	defaultHTTP2PoolMaxConns               = 5
+	defaultHTTP2PoolScaleUpThreshold       = 0.8
+	defaultHTTP2PoolScaleDownGap           = 0.1
+	defaultHTTP2PoolConnIdleTimeout        = 15 * time.Minute
+	defaultHTTP2PoolScalingMonitorInterval = 30 * time.Second
+
+	// defaultHTTP2PoolMaxConcurrentStreams is the assumed
+	// SETTINGS_MAX_CONCURRENT_STREAMS ceiling per pooled connection. Each
+	// pooled *http2.Transport doesn't expose the peer's real negotiated
+	// value the way a *http2.ClientConn does, so the pool assumes this
+	// fixed ceiling per connection instead of reading it off the wire.
+	defaultHTTP2PoolMaxConcurrentStreams int32 = 100
 )
 
 // HTTP headers used in requests and responses to send YARPC metadata.
