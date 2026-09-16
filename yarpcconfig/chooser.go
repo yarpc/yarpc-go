@@ -329,8 +329,17 @@ func buildPeerListUpdater(c config.AttributeMap, identify func(string) peer.Iden
 
 func identifyAll(identify func(string) peer.Identifier, peers []string) []peer.Identifier {
 	pids := make([]peer.Identifier, len(peers))
+	peerCount := make(map[string]int)
+
 	for i, p := range peers {
-		pids[i] = identify(p)
+		// Count occurrences of each peer
+		peerCount[p]++
+		count := peerCount[p]
+
+		// If this is a duplicate, append an index to make it unique
+		// E.g. "127.0.0.1:8080" -> "127.0.0.1:8080#2"
+		indexedPeer := fmt.Sprintf("%s#%d", p, count)
+		pids[i] = identify(indexedPeer)
 	}
 	return pids
 }

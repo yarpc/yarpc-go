@@ -45,6 +45,20 @@ import (
 	"go.uber.org/zap"
 )
 
+// extractAddress extracts the network address from a peer identifier,
+// removing any index suffix added for duplicate peer support.
+// For example: "127.0.0.1:8080#2" becomes "127.0.0.1:8080"
+func extractAddress(pid peer.Identifier) string {
+	identifier := pid.Identifier()
+	// Find the last '#' character
+	for i := len(identifier) - 1; i >= 0; i-- {
+		if identifier[i] == '#' {
+			return identifier[:i]
+		}
+	}
+	return identifier
+}
+
 type transportOptions struct {
 	keepAlive                 time.Duration
 	maxIdleConns              int
@@ -438,12 +452,13 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 
 // **NOTE** should only be called while the lock write mutex is acquired
 func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
-	addr := pid.Identifier()
-	if p, ok := a.peers[addr]; ok {
+	mapKey := pid.Identifier()
+	if p, ok := a.peers[mapKey]; ok {
 		return p
 	}
-	p := newPeer(addr, a)
-	a.peers[addr] = p
+	realAddr := extractAddress(pid)
+	p := newPeer(realAddr, a)
+	a.peers[mapKey] = p
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 

@@ -45,6 +45,20 @@ import (
 	"go.uber.org/zap"
 )
 
+// extractAddress extracts the network address from a peer identifier,
+// removing any index suffix added for duplicate peer support.
+// For example: "127.0.0.1:8080#2" becomes "127.0.0.1:8080"
+func extractAddress(pid peer.Identifier) string {
+	identifier := pid.Identifier()
+	// Find the last '#' character
+	for i := len(identifier) - 1; i >= 0; i-- {
+		if identifier[i] == '#' {
+			return identifier[:i]
+		}
+	}
+	return identifier
+}
+
 type headerCase int
 
 const (
@@ -190,13 +204,15 @@ func (t *Transport) retainPeer(pid peer.Identifier, sub peer.Subscriber, ch *tch
 
 // **NOTE** should only be called while the lock write mutex is acquired
 func (t *Transport) getOrCreatePeer(pid peer.Identifier, ch *tchannel.Channel) *tchannelPeer {
-	addr := pid.Identifier()
-	if p, ok := t.peers[addr]; ok {
+	mapKey := pid.Identifier()
+	if p, ok := t.peers[mapKey]; ok {
 		return p
 	}
 
-	p := newPeer(addr, t, ch)
-	t.peers[addr] = p
+	realAddr := extractAddress(pid)
+	p := newPeer(realAddr, t, ch)
+	t.peers[mapKey] = p
+
 	// Start a peer connection loop
 	t.connectorsGroup.Add(1)
 	go p.maintainConnection()
@@ -356,16 +372,18 @@ func (t *Transport) IsRunning() bool {
 }
 
 // onPeerStatusChanged receives notifications from TChannel Channel when any
-// peer's status changes.
+// peer's status changes. For duplicate peer support, this notifies all YARPC
+// peers that share the same real network address.
 func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	p, ok := t.peers[tp.HostPort()]
-	if !ok {
-		return
+	// get map key values
+	for _, peer := range t.peers {
+		if peer.addr == tp.HostPort() {
+			peer.notifyConnectionStatusChanged()
+		}
 	}
-	p.notifyConnectionStatusChanged()
 }
 
 // CreateTLSOutboundChannel creates a outbound channel for managing tls

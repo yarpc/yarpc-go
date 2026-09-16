@@ -63,10 +63,24 @@ type Peer struct {
 	connectionStatus atomic.Int32
 }
 
+// extractAddress extracts the network address from a peer identifier,
+// removing any index suffix added for duplicate peer support.
+// For example: "127.0.0.1:8080#2" becomes "127.0.0.1:8080"
+func extractAddress(pid peer.Identifier) string {
+	identifier := pid.Identifier()
+	// Find the last '#' character
+	for i := len(identifier) - 1; i >= 0; i-- {
+		if identifier[i] == '#' {
+			return identifier[:i]
+		}
+	}
+	return identifier
+}
+
 // HostPort surfaces the HostPort in this function, if you want to access the hostport directly (for a downstream call)
 // You need to cast the Peer to a *hostport.Peer and run this function
 func (p *Peer) HostPort() string {
-	return string(p.PeerIdentifier)
+	return extractAddress(p.PeerIdentifier)
 }
 
 // Transport returns the peer.Transport that is in charge of this hostport.Peer (and should be the one to handle requests)

@@ -28,6 +28,20 @@ import (
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
+// extractAddress extracts the network address from a peer identifier,
+// removing any index suffix added for duplicate peer support.
+// For example: "127.0.0.1:8080#2" becomes "127.0.0.1:8080"
+func extractAddress(pid peer.Identifier) string {
+	identifier := pid.Identifier()
+	// Find the last '#' character
+	for i := len(identifier) - 1; i >= 0; i-- {
+		if identifier[i] == '#' {
+			return identifier[:i]
+		}
+	}
+	return identifier
+}
+
 var emptyDialOpts = &dialOptions{}
 
 // Transport is a grpc transport.Transport.
@@ -145,12 +159,13 @@ func (t *Transport) retainPeer(
 ) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	address := pid.Identifier()
-	key := peerKey{address: address, connectionScope: connectionScope}
+	mapKey := pid.Identifier()
+	key := peerKey{address: mapKey, connectionScope: connectionScope}
 	p, ok := t.peers[key]
 	if !ok {
 		var err error
-		p, err = t.newPeer(address, options)
+		realAddr := extractAddress(pid)
+		p, err = t.newPeer(realAddr, options)
 		if err != nil {
 			return nil, err
 		}
