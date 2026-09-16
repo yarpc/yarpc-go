@@ -1,0 +1,27 @@
+2026-09-15T13:25:22.092Z	INFO	client/echo_rpc.go:116	entering RPS phase	{"client": "go-prober-client", "rps": 100, "duration": "15s"}
+2026-09-15T13:25:37.093Z	INFO	client/echo_rpc.go:116	entering RPS phase	{"client": "go-prober-client", "rps": 1000, "duration": "15s"}
+2026-09-15T13:25:52.093Z	INFO	client/echo_rpc.go:116	entering RPS phase	{"client": "go-prober-client", "rps": 20000, "duration": "35s"}
+2026-09-15T13:25:52.099Z	INFO	connpool/scaler.go:285	connpool: scaling up pool; opened new connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 16, "scale_up_threshold": 8, "total_connections": 2}
+2026-09-15T13:25:52.100Z	INFO	connpool/scaler.go:285	connpool: scaling up pool; opened new connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 15, "scale_up_threshold": 8, "total_connections": 3}
+2026-09-15T13:25:52.101Z	INFO	connpool/scaler.go:285	connpool: scaling up pool; opened new connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 12, "scale_up_threshold": 8, "total_connections": 4}
+2026-09-15T13:25:52.108Z	INFO	connpool/scaler.go:285	connpool: scaling up pool; opened new connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 8, "scale_up_threshold": 8, "total_connections": 5}
+2026-09-15T13:25:52.117Z	INFO	connpool/scaler.go:285	connpool: scaling up pool; opened new connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 10, "scale_up_threshold": 8, "total_connections": 6}
+2026-09-15T13:25:52.118Z	INFO	connpool/scaler.go:285	connpool: scaling up pool; opened new connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 8, "scale_up_threshold": 8, "total_connections": 7}
+2026-09-15T13:25:52.118Z	INFO	connpool/scaler.go:285	connpool: scaling up pool; opened new connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 8, "scale_up_threshold": 8, "total_connections": 8}
+2026-09-15T13:25:52.119Z	INFO	connpool/scaler.go:285	connpool: scaling up pool; opened new connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 10, "scale_up_threshold": 8, "total_connections": 9}
+2026-09-15T13:25:52.119Z	INFO	connpool/scaler.go:285	connpool: scaling up pool; opened new connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 9, "scale_up_threshold": 8, "total_connections": 10}
+2026-09-15T13:25:52.120Z	INFO	connpool/scaler.go:269	connpool: cannot scale up pool; at max connections	{"pool": "127.0.0.1:5435", "total_connections": 10, "max_connections": 10}
+2026-09-15T13:26:22.091Z	INFO	connpool/scaler.go:133	connpool: scaling down pool; marked connection for draining	{"pool": "127.0.0.1:5435", "active_connections_before": 10, "active_connections_after": 9, "total_load": 17, "drained_conn_load": 4, "scale_down_threshold": 7}
+2026-09-15T13:26:22.146Z	INFO	connpool/scaler.go:255	connpool: scaling up pool; reactivated idle connection	{"pool": "127.0.0.1:5435", "least_loaded_conn_load": 8, "scale_up_threshold": 8, "total_connections": 10}
+2026-09-15T13:26:27.093Z	INFO	client/echo_rpc.go:116	entering RPS phase	{"client": "go-prober-client", "rps": 200, "duration": "35s"}
+2026-09-15T13:26:52.091Z	INFO	connpool/scaler.go:133	connpool: scaling down pool; marked connection for draining	{"pool": "127.0.0.1:5435", "active_connections_before": 10, "active_connections_after": 9, "total_load": 0, "drained_conn_load": 0, "scale_down_threshold": 7}
+2026-09-15T13:27:02.097Z	INFO	client/echo_rpc.go:116	entering RPS phase	{"client": "go-prober-client", "rps": 0, "duration": "1m15s"}
+2026-09-15T13:27:22.090Z	INFO	connpool/scaler.go:133	connpool: scaling down pool; marked connection for draining	{"pool": "127.0.0.1:5435", "active_connections_before": 9, "active_connections_after": 8, "total_load": 0, "drained_conn_load": 0, "scale_down_threshold": 7}
+2026-09-15T13:27:52.090Z	INFO	connpool/scaler.go:195	connpool: scaling down pool; closing idle connection after timeout	{"pool": "127.0.0.1:5435", "idle_duration": "30.000044544s", "total_connections": 10}
+2026-09-15T13:27:52.090Z	INFO	connpool/scaler.go:133	connpool: scaling down pool; marked connection for draining	{"pool": "127.0.0.1:5435", "active_connections_before": 8, "active_connections_after": 7, "total_load": 0, "drained_conn_load": 0, "scale_down_threshold": 7}
+2026-09-15T13:28:17.098Z	INFO	client/echo_rpc.go:116	entering RPS phase	{"client": "go-prober-client", "rps": 5000, "duration": "20s"}
+2026-09-15T13:28:22.090Z	INFO	connpool/scaler.go:133	connpool: scaling down pool; marked connection for draining	{"pool": "127.0.0.1:5435", "active_connections_before": 7, "active_connections_after": 6, "total_load": 3, "drained_conn_load": 1, "scale_down_threshold": 7}
+2026-09-15T13:28:37.098Z	INFO	client/echo_rpc.go:116	entering RPS phase	{"client": "go-prober-client", "rps": 50, "duration": "15s"}
+2026-09-15T13:28:52.090Z	INFO	connpool/scaler.go:195	connpool: scaling down pool; closing idle connection after timeout	{"pool": "127.0.0.1:5435", "idle_duration": "59.999950649s", "total_connections": 9}
+2026-09-15T13:28:52.090Z	INFO	connpool/scaler.go:195	connpool: scaling down pool; closing idle connection after timeout	{"pool": "127.0.0.1:5435", "idle_duration": "30.000378925s", "total_connections": 9}
+2026-09-15T13:28:52.090Z	INFO	connpool/scaler.go:133	connpool: scaling down pool; marked connection for draining	{"pool": "127.0.0.1:5435", "active_connections_before": 6, "active_connections_after": 5, "total_load": 0, "drained_conn_load": 0, "scale_down_threshold": 7}

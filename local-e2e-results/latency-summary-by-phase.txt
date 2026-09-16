@@ -1,0 +1,7 @@
+rps=0      n=1        avg_ms=0.959    max_ms=0.959    ok=1/1
+rps=50     n=753      avg_ms=1.317    max_ms=3.731    ok=753/753
+rps=100    n=1499     avg_ms=1.142    max_ms=4.297    ok=1499/1499
+rps=200    n=7044     avg_ms=1.022    max_ms=10.836   ok=7044/7044
+rps=1000   n=14579    avg_ms=0.991    max_ms=9.698    ok=14579/14579
+rps=5000   n=94792    avg_ms=1.212    max_ms=12.749   ok=94792/94792
+rps=20000  n=350622   avg_ms=2.992    max_ms=35.716   ok=350622/350622
