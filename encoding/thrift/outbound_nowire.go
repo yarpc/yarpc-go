@@ -32,6 +32,7 @@ import (
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/pkg/encoding"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
@@ -138,7 +139,8 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 
 	out := c.cc.GetUnaryOutbound()
 
-	treq, proto, err := c.buildTransportRequest(reqBody)
+	treq, proto, cleanup, err := c.buildTransportRequest(reqBody)
+	defer cleanup()
 	if err != nil {
 		return err
 	}
@@ -196,7 +198,8 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 func (c noWireThriftClient) CallOneway(ctx context.Context, reqBody stream.Enveloper, opts ...yarpc.CallOption) (transport.Ack, error) {
 	out := c.cc.GetOnewayOutbound()
 
-	treq, _, err := c.buildTransportRequest(reqBody)
+	treq, _, cleanup, err := c.buildTransportRequest(reqBody)
+	defer cleanup()
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +217,11 @@ func (c noWireThriftClient) Enabled() bool {
 	return c.NoWire
 }
 
-func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*transport.Request, stream.Protocol, error) {
+// buildTransportRequest encodes reqBody into a pooled buffer and returns the
+// resulting transport.Request along with a cleanup function that returns the
+// buffer to the pool. The cleanup function is never nil and must be called
+// once the caller is done with the request.
+func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*transport.Request, stream.Protocol, func(), error) {
 	proto := c.p
 	if !c.Enveloping {
 		proto = disableEnvelopingNoWireProtocol{
@@ -232,13 +239,15 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 
 	envType := reqBody.EnvelopeType()
 	if envType != wire.Call && envType != wire.OneWay {
-		return nil, nil, errors.RequestBodyEncodeError(
+		return nil, nil, noopCleanup, errors.RequestBodyEncodeError(
 			&treq, errUnexpectedEnvelopeType(envType),
 		)
 	}
 
-	var buffer bytes.Buffer
-	sw := proto.Writer(&buffer)
+	buffer := bufferpool.Get()
+	cleanup := func() { bufferpool.Put(buffer) }
+
+	sw := proto.Writer(buffer)
 	defer sw.Close()
 
 	if err := sw.WriteEnvelopeBegin(stream.EnvelopeHeader{
@@ -246,18 +255,28 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		Type:  envType,
 		SeqID: 1, // don't care
 	}); err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		cleanup()
+		return nil, nil, noopCleanup, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := reqBody.Encode(sw); err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		cleanup()
+		return nil, nil, noopCleanup, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := sw.WriteEnvelopeEnd(); err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		cleanup()
+		return nil, nil, noopCleanup, errors.RequestBodyEncodeError(&treq, err)
 	}
 
-	treq.Body = &buffer
+	// bytes.Reader keeps the request body a type that net/http recognizes, so
+	// Content-Length is still set for HTTP outbounds. The bytes stay valid
+	// until cleanup returns the buffer to the pool.
+	treq.Body = bytes.NewReader(buffer.Bytes())
 	treq.BodySize = buffer.Len()
-	return &treq, proto, nil
+	return &treq, proto, cleanup, nil
 }
+
+// noopCleanup is returned alongside errors so callers can unconditionally
+// defer the cleanup function.
+func noopCleanup() {}
