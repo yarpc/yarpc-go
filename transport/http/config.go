@@ -41,7 +41,7 @@ import (
 // interpreted. This allows configuration parameters to override Option
 // provided to TransportSpec.
 func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
-	var ts transportSpec
+	ts := transportSpec{name: TransportName}
 	for _, o := range opts {
 		switch opt := o.(type) {
 		case TransportOption:
@@ -50,6 +50,8 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 			ts.InboundOptions = append(ts.InboundOptions, opt)
 		case OutboundOption:
 			ts.OutboundOptions = append(ts.OutboundOptions, opt)
+		case specNameOption:
+			ts.name = string(opt)
 		default:
 			panic(fmt.Sprintf("unknown option of type %T: %v", o, o))
 		}
@@ -57,11 +59,35 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 	return ts.Spec()
 }
 
+// specNameOption is an Option that overrides the yarpcconfig.TransportSpec
+// name this TransportSpec registers under.
+type specNameOption string
+
+func (specNameOption) httpOption() {}
+
+// SpecName registers this TransportSpec's config key (the outbound YAML
+// sub-key, e.g. "outbounds.foo.<name>:") as name instead of the default
+// "http". This lets a service register multiple, independently
+// http.TransportSpec()-configured transports -- each with its own *Transport
+// and therefore its own HTTP/2 connection pool settings (see
+// EnableHTTP2ConnPool) -- under different YAML sub-keys.
+//
+// The wire-level transport name reported in metrics and transport.Request is
+// unaffected by this option: it remains "http", or "http2" when UseHTTP2()
+// is also set.
+//
+// Defaults to TransportName ("http").
+func SpecName(name string) Option {
+	return specNameOption(name)
+}
+
 // transportSpec holds the configurable parts of the HTTP TransportSpec.
 //
 // These are usually runtime dependencies that cannot be parsed from
 // configuration.
 type transportSpec struct {
+	name string
+
 	TransportOptions []TransportOption
 	InboundOptions   []InboundOption
 	OutboundOptions  []OutboundOption
@@ -69,7 +95,7 @@ type transportSpec struct {
 
 func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
 	return yarpcconfig.TransportSpec{
-		Name:                TransportName,
+		Name:                ts.name,
 		BuildTransport:      ts.buildTransport,
 		BuildInbound:        ts.buildInbound,
 		BuildUnaryOutbound:  ts.buildUnaryOutbound,
