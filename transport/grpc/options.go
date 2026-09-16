@@ -55,12 +55,14 @@ const (
 	defaultServerMaxRecvMsgSize = 1024 * 1024 * 64
 	defaultClientMaxRecvMsgSize = 1024 * 1024 * 64
 	// Client connection pool defaults.
-	// defaultClientConnPoolMaxConcurrentStreams matches Go's net/http2 server default (SETTINGS_MAX_CONCURRENT_STREAMS = 250).
-	defaultClientConnPoolMaxConcurrentStreams   int32         = 250
+	// defaultClientConnPoolMaxConcurrentStreams is set below Go's net/http2 server default
+	// (SETTINGS_MAX_CONCURRENT_STREAMS = 250) so the pool scales up connections well before
+	// hitting the real HTTP/2 stream limit.
+	defaultClientConnPoolMaxConcurrentStreams   int32         = 100
 	defaultClientConnPoolScaleUpThreshold       float64       = 0.8
 	defaultClientConnPoolScaleDownGap           float64       = 0.1
 	defaultClientConnPoolMinConnections         int           = 1
-	defaultClientConnPoolMaxConnections         int           = 5
+	defaultClientConnPoolMaxConnections         int           = 40
 	defaultClientConnPoolIdleTimeout            time.Duration = 15 * time.Minute
 	defaultClientConnPoolScalingMonitorInterval time.Duration = 30 * time.Second
 )
@@ -266,7 +268,7 @@ func MinConnections(n int) TransportOption {
 // MaxConnections sets the maximum number of connections YARPC may open to a
 // single peer.
 //
-// The default is 5.
+// The default is 40.
 func MaxConnections(n int) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolMaxConnections = n

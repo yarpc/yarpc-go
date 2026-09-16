@@ -72,7 +72,7 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 //	    serverMaxHeaderListSize: 2048
 //	    clientConnectionPool:
 //	      dynamicScalingEnabled: true
-//	      maxConcurrentStreams: 250
+//	      maxConcurrentStreams: 100
 //	      scaleUpThreshold: 0.8
 //	      minConnections: 1
 //	      maxConnections: 10
@@ -107,7 +107,7 @@ type TransportConfig struct {
 //	  grpc:
 //	    clientConnectionPool:
 //	      dynamicScalingEnabled: false  # explicit opt-out (overrides central OC control)
-//	      maxConcurrentStreams: 250     # assumed server HTTP/2 stream limit
+//	      maxConcurrentStreams: 100     # assumed server HTTP/2 stream limit
 //	      scaleUpThreshold: 0.8         # open a new conn at 80% utilization
 //	      scaleDownGap: 0.1             # hysteresis gap below scaleUpThreshold for drain decisions
 //	      minConnections: 1             # minimum connections per peer

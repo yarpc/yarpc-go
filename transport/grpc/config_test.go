@@ -598,7 +598,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "minConnections exceeds default maxConnections",
 			transportCfg: attrs{
 				"clientConnectionPool": attrs{
-					"minConnections": "10",
+					"minConnections": "50",
 				},
 			},
 			outboundCfg: attrs{
@@ -606,7 +606,7 @@ func TestTransportSpec(t *testing.T) {
 					TransportName: attrs{"address": "localhost:54583"},
 				},
 			},
-			wantErrors: []string{"clientConnectionPool.maxConnections (5) must be >= minConnections (10)"},
+			wantErrors: []string{"clientConnectionPool.maxConnections (40) must be >= minConnections (50)"},
 		},
 		{
 			desc: "scaleUpThreshold out of range",
@@ -629,7 +629,7 @@ func TestTransportSpec(t *testing.T) {
 					"minConnections":         "2",
 					"maxConnections":         "8",
 					"scaleUpThreshold":       "0.7",
-					"maxConcurrentStreams":   "200",
+					"maxConcurrentStreams":   "100",
 					"idleTimeout":            "10m",
 					"scaleDownGap":           "0.1",
 					"scalingMonitorInterval": "60s",
