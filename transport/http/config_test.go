@@ -816,6 +816,52 @@ func TestTransportSpec(t *testing.T) {
 	}
 }
 
+func TestSpecName(t *testing.T) {
+	t.Run("defaults to TransportName", func(t *testing.T) {
+		ts := TransportSpec()
+		assert.Equal(t, TransportName, ts.Name)
+	})
+
+	t.Run("overridden by SpecName", func(t *testing.T) {
+		ts := TransportSpec(SpecName("thrift-stream50"))
+		assert.Equal(t, "thrift-stream50", ts.Name)
+	})
+
+	t.Run("two specs with different SpecName coexist in one Configurator", func(t *testing.T) {
+		configurator := yarpcconfig.New()
+
+		require.NoError(t, configurator.RegisterTransport(TransportSpec(SpecName("stream50"), UseHTTP2())))
+		require.NoError(t, configurator.RegisterTransport(TransportSpec(SpecName("stream100"), UseHTTP2())))
+
+		cfg, err := configurator.LoadConfig("foo", map[string]interface{}{
+			"outbounds": map[string]interface{}{
+				"svc50": map[string]interface{}{
+					"stream50": map[string]interface{}{
+						"url": "http://localhost:8050/yarpc",
+					},
+				},
+				"svc100": map[string]interface{}{
+					"stream100": map[string]interface{}{
+						"url": "http://localhost:8100/yarpc",
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		ob50, ok := cfg.Outbounds["svc50"].Unary.(*Outbound)
+		require.True(t, ok, "expected *Outbound for svc50, got %T", cfg.Outbounds["svc50"].Unary)
+		assert.Equal(t, "http://localhost:8050/yarpc", ob50.urlTemplate.String())
+
+		ob100, ok := cfg.Outbounds["svc100"].Unary.(*Outbound)
+		require.True(t, ok, "expected *Outbound for svc100, got %T", cfg.Outbounds["svc100"].Unary)
+		assert.Equal(t, "http://localhost:8100/yarpc", ob100.urlTemplate.String())
+
+		assert.NotSame(t, ob50.transport, ob100.transport,
+			"outbounds registered under different SpecNames must use independent *Transport instances")
+	})
+}
+
 func mapResolver(m map[string]string) func(string) (string, bool) {
 	return func(k string) (v string, ok bool) {
 		if m != nil {
