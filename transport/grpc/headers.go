@@ -91,6 +91,12 @@ const (
 
 	baseContentType   = "application/grpc"
 	contentTypeHeader = "content-type"
+
+	// _acceptEncodingHeader is the gRPC compression negotiation header. Unlike
+	// every other header, it is tolerated with more than one value: clients and
+	// proxies in the wild send it repeated rather than comma-joined, and it is
+	// a hop-by-hop hint that YARPC does not act on.
+	_acceptEncodingHeader = "grpc-accept-encoding"
 )
 
 var (
@@ -143,7 +149,11 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		case 1:
 			value = values[0]
 		default:
-			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			if header == _acceptEncodingHeader {
+				value = values[0]
+			} else {
+				return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			}
 		}
 		// gRPC metadata keys are already lowercase.
 		if routingHeaders[header] {
@@ -231,7 +241,11 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 		case 1:
 			value = values[0]
 		default:
-			return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			if header == _acceptEncodingHeader {
+				value = values[0]
+			} else {
+				return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			}
 		}
 		headers = headers.With(header, value)
 	}
