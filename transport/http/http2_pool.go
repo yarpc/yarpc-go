@@ -475,6 +475,30 @@ func (p *http2Pool) addConnBelowMax(c *http2Conn) bool {
 	}
 }
 
+// removeConn removes c from the pool via copy-on-write. It is a no-op if c
+// is not present (e.g. concurrently removed already).
+func (p *http2Pool) removeConn(c *http2Conn) {
+	for {
+		old := p.connsPtr.Load()
+		idx := -1
+		for i, cur := range *old {
+			if cur == c {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			return
+		}
+		next := make([]*http2Conn, 0, len(*old)-1)
+		next = append(next, (*old)[:idx]...)
+		next = append(next, (*old)[idx+1:]...)
+		if p.connsPtr.CompareAndSwap(old, &next) {
+			return
+		}
+	}
+}
+
 // Close permanently shuts the pool down. It marks the pool closed (so
 // pickConn, growPool and maybeScaleUp stop handing out or opening
 // connections), stops the monitor loop and waits for it to exit, then shuts
