@@ -750,11 +750,13 @@ func (o *Outbound) send(ctx context.Context, hreq *http.Request, p *httpPeer, se
 		return sender.Do(hreq.WithContext(ctx))
 	}
 
-	conn, err := p.pool.pickConn(ctx)
+	conn, err := p.pool.pickConn()
 	if err != nil {
 		return nil, err
 	}
-	response, err := conn.cc.RoundTrip(hreq.WithContext(ctx))
+	defer conn.decInflight()
+
+	response, err := conn.transport.RoundTrip(hreq.WithContext(ctx))
 	if err != nil {
 		p.pool.removeConn(conn)
 		return nil, err
