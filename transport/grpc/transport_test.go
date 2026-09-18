@@ -509,3 +509,43 @@ func BenchmarkRetainPeerParallel(b *testing.B) {
 		}
 	})
 }
+
+func TestRetainDuplicatePeers(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(listener)
+	defer grpcServer.Stop()
+
+	trans := NewTransport()
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+
+	address := listener.Addr().String()
+	sub := testPeerSubscriber{}
+
+	// The same address listed twice must yield two peers, each with its own
+	// connection, but both dialing the real address.
+	first, err := trans.RetainPeer(testIdentifier{address + "#1"}, sub)
+	require.NoError(t, err)
+	second, err := trans.RetainPeer(testIdentifier{address + "#2"}, sub)
+	require.NoError(t, err)
+
+	assert.NotSame(t, first, second, "duplicate peers must not be shared")
+	assert.Len(t, trans.peers, 2)
+	assert.Equal(t, address, first.Identifier(), "peer must dial the bare address")
+	assert.Equal(t, address, second.Identifier(), "peer must dial the bare address")
+
+	// Retaining the same identifier again reuses the existing peer.
+	firstAgain, err := trans.RetainPeer(testIdentifier{address + "#1"}, sub)
+	require.NoError(t, err)
+	assert.Same(t, first, firstAgain)
+	assert.Len(t, trans.peers, 2)
+
+	// Releasing one occurrence leaves the other connected.
+	require.NoError(t, trans.ReleasePeer(testIdentifier{address + "#1"}, sub))
+	assert.Len(t, trans.peers, 1)
+	require.NoError(t, trans.ReleasePeer(testIdentifier{address + "#2"}, sub))
+	assert.Empty(t, trans.peers)
+}

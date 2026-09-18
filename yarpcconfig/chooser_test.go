@@ -321,7 +321,7 @@ func TestChooserConfigurator(t *testing.T) {
 				require.NoError(t, err, "error choosing peer")
 				defer onFinish(nil)
 
-				expectedPeers := []string{"127.0.0.1:8080", "127.0.0.1:8081"}
+				expectedPeers := []string{"127.0.0.1:8080#1", "127.0.0.1:8081#1"}
 				assert.Contains(t, expectedPeers, peer.Identifier(), "chooses one of the provided peers")
 			},
 		},

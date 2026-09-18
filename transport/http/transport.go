@@ -40,6 +40,7 @@ import (
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/peeraddr"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
@@ -438,12 +439,13 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 
 // **NOTE** should only be called while the lock write mutex is acquired
 func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
-	addr := pid.Identifier()
-	if p, ok := a.peers[addr]; ok {
+	mapKey := pid.Identifier()
+	if p, ok := a.peers[mapKey]; ok {
 		return p
 	}
-	p := newPeer(addr, a)
-	a.peers[addr] = p
+	realAddr := peeraddr.Address(pid.Identifier())
+	p := newPeer(realAddr, a)
+	a.peers[mapKey] = p
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
