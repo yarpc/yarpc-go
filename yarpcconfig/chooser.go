@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/internal/config"
+	"go.uber.org/yarpc/internal/peeraddr"
 	peerbind "go.uber.org/yarpc/peer"
 )
 
@@ -336,10 +337,9 @@ func identifyAll(identify func(string) peer.Identifier, peers []string) []peer.I
 		peerCount[p]++
 		count := peerCount[p]
 
-		// If this is a duplicate, append an index to make it unique
-		// E.g. "127.0.0.1:8080" -> "127.0.0.1:8080#2"
-		indexedPeer := fmt.Sprintf("%s#%d", p, count)
-		pids[i] = identify(indexedPeer)
+		// Index every occurrence so repeated addresses stay distinct peers.
+		// E.g. the second "127.0.0.1:8080" becomes "127.0.0.1:8080#2".
+		pids[i] = identify(peeraddr.Indexed(p, count))
 	}
 	return pids
 }

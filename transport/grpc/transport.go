@@ -25,22 +25,9 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/internal/peeraddr"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
-
-// extractAddress extracts the network address from a peer identifier,
-// removing any index suffix added for duplicate peer support.
-// For example: "127.0.0.1:8080#2" becomes "127.0.0.1:8080"
-func extractAddress(pid peer.Identifier) string {
-	identifier := pid.Identifier()
-	// Find the last '#' character
-	for i := len(identifier) - 1; i >= 0; i-- {
-		if identifier[i] == '#' {
-			return identifier[:i]
-		}
-	}
-	return identifier
-}
 
 var emptyDialOpts = &dialOptions{}
 
@@ -164,7 +151,7 @@ func (t *Transport) retainPeer(
 	p, ok := t.peers[key]
 	if !ok {
 		var err error
-		realAddr := extractAddress(pid)
+		realAddr := peeraddr.Address(pid.Identifier())
 		p, err = t.newPeer(realAddr, options)
 		if err != nil {
 			return nil, err

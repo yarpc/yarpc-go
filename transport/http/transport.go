@@ -40,24 +40,11 @@ import (
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/peeraddr"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
-
-// extractAddress extracts the network address from a peer identifier,
-// removing any index suffix added for duplicate peer support.
-// For example: "127.0.0.1:8080#2" becomes "127.0.0.1:8080"
-func extractAddress(pid peer.Identifier) string {
-	identifier := pid.Identifier()
-	// Find the last '#' character
-	for i := len(identifier) - 1; i >= 0; i-- {
-		if identifier[i] == '#' {
-			return identifier[:i]
-		}
-	}
-	return identifier
-}
 
 type transportOptions struct {
 	keepAlive                 time.Duration
@@ -456,7 +443,7 @@ func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
 	if p, ok := a.peers[mapKey]; ok {
 		return p
 	}
-	realAddr := extractAddress(pid)
+	realAddr := peeraddr.Address(pid.Identifier())
 	p := newPeer(realAddr, a)
 	a.peers[mapKey] = p
 	a.connectorsGroup.Add(1)
