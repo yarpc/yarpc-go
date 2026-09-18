@@ -21,10 +21,12 @@
 package thrift
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
 	"io"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -331,6 +333,82 @@ func TestNoNewWireBadProtocolConfig(t *testing.T) {
 		})
 }
 
+func TestBuildTransportRequestBody(t *testing.T) {
+	nwc := noWireThriftClient{
+		cc:         clientconfig.MultiOutbound("caller", "service", transport.Outbounds{}),
+		p:          tbinary.Default,
+		Enveloping: true,
+	}
+
+	treq, _, cleanup, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
+	require.NoError(t, err)
+	require.NotNil(t, cleanup)
+	defer cleanup()
+
+	// net/http only infers Content-Length for *bytes.Buffer, *bytes.Reader and
+	// *strings.Reader bodies, so the pooled buffer must be handed over as one
+	// of those types.
+	body, ok := treq.Body.(*bytes.Reader)
+	require.True(t, ok, "expected *bytes.Reader body, got %T", treq.Body)
+
+	assert.Equal(t, body.Len(), treq.BodySize, "BodySize must match the encoded body")
+	assert.NotZero(t, treq.BodySize)
+
+	got, err := io.ReadAll(treq.Body)
+	require.NoError(t, err)
+	assert.Len(t, got, treq.BodySize)
+}
+
+func TestBuildTransportRequestContentLength(t *testing.T) {
+	nwc := noWireThriftClient{
+		cc:         clientconfig.MultiOutbound("caller", "service", transport.Outbounds{}),
+		p:          tbinary.Default,
+		Enveloping: true,
+	}
+
+	treq, _, cleanup, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
+	require.NoError(t, err)
+	defer cleanup()
+
+	// The invariant that matters for the HTTP outbound: net/http must be able
+	// to derive Content-Length from the body it is handed. A body type it does
+	// not recognize sends the request chunked, which zeroes the inbound
+	// request_payload_size_bytes histogram.
+	hreq, err := http.NewRequest("POST", "http://host:1234/", treq.Body)
+	require.NoError(t, err)
+	assert.EqualValues(t, treq.BodySize, hreq.ContentLength,
+		"net/http must infer Content-Length from the request body")
+}
+
+func TestBuildTransportRequestBufferReuse(t *testing.T) {
+	nwc := noWireThriftClient{
+		cc:         clientconfig.MultiOutbound("caller", "service", transport.Outbounds{}),
+		p:          tbinary.Default,
+		Enveloping: true,
+	}
+
+	// Buffers are recycled across calls: every request must encode the same
+	// payload, with no residue from the previous one and no aliasing of bytes
+	// that were already returned to the pool.
+	var want []byte
+	for i := 0; i < 3; i++ {
+		treq, _, cleanup, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
+		require.NoError(t, err)
+
+		got, err := io.ReadAll(treq.Body)
+		require.NoError(t, err)
+		require.Len(t, got, treq.BodySize)
+
+		if i == 0 {
+			want = got
+		} else {
+			assert.Equal(t, want, got, "call %d encoded a different payload", i)
+		}
+
+		cleanup()
+	}
+}
+
 func TestBuildTransportRequestWriteError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -355,18 +433,23 @@ func TestBuildTransportRequestWriteError(t *testing.T) {
 		sw.EXPECT().Close().Return(nil)
 		sw.EXPECT().WriteEnvelopeBegin(wantEnvHeader).Return(errors.New("writeenvelopebegin error"))
 
-		_, _, _, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
+		_, _, cleanup, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `failed to encode "thrift" request body for procedure "::someMethod" of service "service": writeenvelopebegin error`)
+		// Callers defer the cleanup before checking err, so it must never be nil.
+		require.NotNil(t, cleanup)
+		assert.NotPanics(t, cleanup)
 	})
 
 	t.Run("encode", func(t *testing.T) {
 		sw.EXPECT().Close().Return(nil)
 		sw.EXPECT().WriteEnvelopeBegin(wantEnvHeader).Return(nil)
 
-		_, _, _, err := nwc.buildTransportRequest(errorEnveloper{envelopeType: wire.Call, err: errors.New("encode error")})
+		_, _, cleanup, err := nwc.buildTransportRequest(errorEnveloper{envelopeType: wire.Call, err: errors.New("encode error")})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `failed to encode "thrift" request body for procedure "::someMethod" of service "service": encode error`)
+		require.NotNil(t, cleanup)
+		assert.NotPanics(t, cleanup)
 	})
 
 	t.Run("encode", func(t *testing.T) {
@@ -375,9 +458,11 @@ func TestBuildTransportRequestWriteError(t *testing.T) {
 		sw.EXPECT().WriteString(_irrelevant).Return(nil)
 		sw.EXPECT().WriteEnvelopeEnd().Return(errors.New("writeenvelopeend error"))
 
-		_, _, _, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
+		_, _, cleanup, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `failed to encode "thrift" request body for procedure "::someMethod" of service "service": writeenvelopeend error`)
+		require.NotNil(t, cleanup)
+		assert.NotPanics(t, cleanup)
 	})
 }
 
