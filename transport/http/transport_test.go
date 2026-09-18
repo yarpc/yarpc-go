@@ -333,3 +333,49 @@ type testIdentifier struct {
 func (i testIdentifier) Identifier() string {
 	return i.id
 }
+
+func TestRetainDuplicatePeers(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	trans := NewTransport()
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+
+	const address = "127.0.0.1:8080"
+	// Each peer's connection loop notifies its subscribers of status changes
+	// from its own goroutine. An unexpected gomock call would Fatalf there and
+	// exit that goroutine before it signals the transport's WaitGroup, hanging
+	// Stop, so accept any number of notifications.
+	sub := NewMockSubscriber(mockCtrl)
+	sub.EXPECT().NotifyStatusChanged(gomock.Any()).AnyTimes()
+
+	// The same address listed twice must yield two peers, each maintaining its
+	// own connection, but both dialing the real address.
+	first, err := trans.RetainPeer(hostport.PeerIdentifier(address+"#1"), sub)
+	require.NoError(t, err)
+	second, err := trans.RetainPeer(hostport.PeerIdentifier(address+"#2"), sub)
+	require.NoError(t, err)
+
+	assert.NotSame(t, first, second, "duplicate peers must not be shared")
+	assert.Len(t, trans.peers, 2)
+
+	firstHTTP, ok := first.(*httpPeer)
+	require.True(t, ok)
+	secondHTTP, ok := second.(*httpPeer)
+	require.True(t, ok)
+	assert.Equal(t, address, firstHTTP.addr, "peer must dial the bare address")
+	assert.Equal(t, address, secondHTTP.addr, "peer must dial the bare address")
+
+	// Retaining the same identifier again reuses the existing peer.
+	firstAgain, err := trans.RetainPeer(hostport.PeerIdentifier(address+"#1"), sub)
+	require.NoError(t, err)
+	assert.Same(t, first, firstAgain)
+	assert.Len(t, trans.peers, 2)
+
+	// Releasing one occurrence leaves the other alone.
+	require.NoError(t, trans.ReleasePeer(hostport.PeerIdentifier(address+"#1"), sub))
+	assert.Len(t, trans.peers, 1)
+	require.NoError(t, trans.ReleasePeer(hostport.PeerIdentifier(address+"#2"), sub))
+	assert.Empty(t, trans.peers)
+}

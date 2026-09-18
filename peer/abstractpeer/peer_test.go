@@ -309,3 +309,49 @@ func TestPeer(t *testing.T) {
 		})
 	}
 }
+
+func TestHostPortStripsDuplicateIndex(t *testing.T) {
+	// Duplicate peer support gives each occurrence of an address a distinct
+	// identifier by appending "#<n>". HostPort() must still report a dialable
+	// address, while Identifier() keeps the unique form.
+	tests := []struct {
+		msg          string
+		pid          string
+		wantHostPort string
+	}{
+		{
+			msg:          "no index",
+			pid:          "127.0.0.1:8080",
+			wantHostPort: "127.0.0.1:8080",
+		},
+		{
+			msg:          "first occurrence",
+			pid:          "127.0.0.1:8080#1",
+			wantHostPort: "127.0.0.1:8080",
+		},
+		{
+			msg:          "later occurrence",
+			pid:          "127.0.0.1:8080#12",
+			wantHostPort: "127.0.0.1:8080",
+		},
+		{
+			msg:          "strips at the last separator",
+			pid:          "127.0.0.1:8080#1#2",
+			wantHostPort: "127.0.0.1:8080#1",
+		},
+		{
+			msg:          "hostname",
+			pid:          "service.example.com:443#3",
+			wantHostPort: "service.example.com:443",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			p := NewPeer(PeerIdentifier(tt.pid), NewMockTransport(gomock.NewController(t)))
+
+			assert.Equal(t, tt.wantHostPort, p.HostPort(), "unexpected HostPort")
+			assert.Equal(t, tt.pid, p.Identifier(), "Identifier must stay unique")
+		})
+	}
+}
