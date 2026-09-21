@@ -32,6 +32,7 @@ import (
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/pkg/encoding"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
@@ -55,6 +56,21 @@ type NoWireClient interface {
 	// ClientOption. This ClientOption is toggled through the 'NoWire(bool)'
 	// option.
 	Enabled() bool
+}
+
+// readCloser wraps a bytes.Reader with a cleanup function that executes on Close.
+// This ensures the buffer is not returned to the pool until the transport finishes reading.
+type readCloser struct {
+	*bytes.Reader
+	cleanup func()
+}
+
+func (rc *readCloser) Close() error {
+	if rc.cleanup != nil {
+		rc.cleanup()
+		rc.cleanup = nil
+	}
+	return nil
 }
 
 // NewNoWire creates a new Thrift client that leverages ThriftRW's "streaming"
@@ -237,8 +253,10 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		)
 	}
 
-	var buffer bytes.Buffer
-	sw := proto.Writer(&buffer)
+	// The buffer will be returned to the pool when treq.Body is closed by the transport.
+	buffer := bufferpool.Get()
+
+	sw := proto.Writer(buffer)
 	defer sw.Close()
 
 	if err := sw.WriteEnvelopeBegin(stream.EnvelopeHeader{
@@ -246,18 +264,24 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		Type:  envType,
 		SeqID: 1, // don't care
 	}); err != nil {
+		bufferpool.Put(buffer)
 		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := reqBody.Encode(sw); err != nil {
+		bufferpool.Put(buffer)
 		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := sw.WriteEnvelopeEnd(); err != nil {
+		bufferpool.Put(buffer)
 		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
-	treq.Body = &buffer
+	treq.Body = &readCloser{
+		Reader:  bytes.NewReader(buffer.Bytes()),
+		cleanup: func() { bufferpool.Put(buffer) },
+	}
 	treq.BodySize = buffer.Len()
 	return &treq, proto, nil
 }
