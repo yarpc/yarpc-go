@@ -28,6 +28,7 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/net/metrics"
 	"go.uber.org/net/metrics/tallypush"
+	"go.uber.org/yarpc/api/metrics/metricstagdecorator"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/zap"
@@ -157,6 +158,8 @@ type MetricsConfig struct {
 	// TagsBlocklist enlists tags' keys that should be suppressed from all the metrics
 	// emitted from w/in YARPC middleware.
 	TagsBlocklist []string
+	// MetricsTagsDecorators populates yarpc metrics scope with custom tags.
+	MetricsTagsDecorators []metricstagdecorator.MetricsTagDecorator
 }
 
 func (c MetricsConfig) scope(name string, logger *zap.Logger) (*metrics.Scope, context.CancelFunc) {
