@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/internal/peeraddr"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
@@ -145,12 +146,13 @@ func (t *Transport) retainPeer(
 ) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	address := pid.Identifier()
-	key := peerKey{address: address, connectionScope: connectionScope}
+	mapKey := pid.Identifier()
+	key := peerKey{address: mapKey, connectionScope: connectionScope}
 	p, ok := t.peers[key]
 	if !ok {
 		var err error
-		p, err = t.newPeer(address, options)
+		realAddr := peeraddr.Address(pid.Identifier())
+		p, err = t.newPeer(realAddr, options)
 		if err != nil {
 			return nil, err
 		}
