@@ -2836,6 +2836,8 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 }
 
 func TestUnaryInboundApplicationPanics(t *testing.T) {
+	defer stubTime()()
+
 	var err error
 	root := metrics.New()
 	scope := root.Scope()
@@ -2938,6 +2940,8 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 }
 
 func TestUnaryOutboundApplicationPanics(t *testing.T) {
+	defer stubTime()()
+
 	var err error
 	root := metrics.New()
 	scope := root.Scope()
@@ -3038,6 +3042,8 @@ func TestUnaryOutboundApplicationPanics(t *testing.T) {
 	})
 }
 func TestOnewayInboundApplicationPanics(t *testing.T) {
+	defer stubTime()()
+
 	var err error
 	root := metrics.New()
 	scope := root.Scope()
@@ -3139,6 +3145,8 @@ func TestOnewayInboundApplicationPanics(t *testing.T) {
 }
 
 func TestOnewayOutboundApplicationPanics(t *testing.T) {
+	defer stubTime()()
+
 	var err error
 	root := metrics.New()
 	scope := root.Scope()
@@ -3240,6 +3248,8 @@ func TestOnewayOutboundApplicationPanics(t *testing.T) {
 }
 
 func TestStreamingInboundApplicationPanics(t *testing.T) {
+	defer stubTime()()
+
 	root := metrics.New()
 	scope := root.Scope()
 	mw := NewMiddleware(Config{
@@ -3328,6 +3338,8 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 }
 
 func TestStreamingOutboundApplicationPanics(t *testing.T) {
+	defer stubTime()()
+
 	root := metrics.New()
 	scope := root.Scope()
 	mw := NewMiddleware(Config{
