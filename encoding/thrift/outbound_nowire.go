@@ -21,7 +21,6 @@
 package thrift
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -56,21 +55,6 @@ type NoWireClient interface {
 	// ClientOption. This ClientOption is toggled through the 'NoWire(bool)'
 	// option.
 	Enabled() bool
-}
-
-// readCloser wraps a bytes.Reader with a cleanup function that executes on Close.
-// This ensures the buffer is not returned to the pool until the transport finishes reading.
-type readCloser struct {
-	*bytes.Reader
-	cleanup func()
-}
-
-func (rc *readCloser) Close() error {
-	if rc.cleanup != nil {
-		rc.cleanup()
-		rc.cleanup = nil
-	}
-	return nil
 }
 
 // NewNoWire creates a new Thrift client that leverages ThriftRW's "streaming"
@@ -154,10 +138,11 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 
 	out := c.cc.GetUnaryOutbound()
 
-	treq, proto, err := c.buildTransportRequest(reqBody)
+	treq, proto, release, err := c.buildTransportRequest(reqBody)
 	if err != nil {
 		return err
 	}
+	defer release()
 
 	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	ctx, err = call.WriteToRequest(ctx, treq)
@@ -212,10 +197,11 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 func (c noWireThriftClient) CallOneway(ctx context.Context, reqBody stream.Enveloper, opts ...yarpc.CallOption) (transport.Ack, error) {
 	out := c.cc.GetOnewayOutbound()
 
-	treq, _, err := c.buildTransportRequest(reqBody)
+	treq, _, release, err := c.buildTransportRequest(reqBody)
 	if err != nil {
 		return nil, err
 	}
+	defer release()
 
 	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	ctx, err = call.WriteToRequest(ctx, treq)
@@ -230,7 +216,7 @@ func (c noWireThriftClient) Enabled() bool {
 	return c.NoWire
 }
 
-func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*transport.Request, stream.Protocol, error) {
+func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (_ *transport.Request, _ stream.Protocol, _ func(), err error) {
 	proto := c.p
 	if !c.Enveloping {
 		proto = disableEnvelopingNoWireProtocol{
@@ -248,13 +234,18 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 
 	envType := reqBody.EnvelopeType()
 	if envType != wire.Call && envType != wire.OneWay {
-		return nil, nil, errors.RequestBodyEncodeError(
+		return nil, nil, nil, errors.RequestBodyEncodeError(
 			&treq, errUnexpectedEnvelopeType(envType),
 		)
 	}
 
-	// The buffer will be returned to the pool when treq.Body is closed by the transport.
 	buffer := bufferpool.Get()
+
+	defer func() {
+		if err != nil {
+			bufferpool.Put(buffer)
+		}
+	}()
 
 	sw := proto.Writer(buffer)
 	defer sw.Close()
@@ -264,24 +255,20 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		Type:  envType,
 		SeqID: 1, // don't care
 	}); err != nil {
-		bufferpool.Put(buffer)
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := reqBody.Encode(sw); err != nil {
-		bufferpool.Put(buffer)
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := sw.WriteEnvelopeEnd(); err != nil {
-		bufferpool.Put(buffer)
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
-	treq.Body = &readCloser{
-		Reader:  bytes.NewReader(buffer.Bytes()),
-		cleanup: func() { bufferpool.Put(buffer) },
-	}
-	treq.BodySize = buffer.Len()
-	return &treq, proto, nil
+	bodySize := buffer.Len()
+	body, release := newPooledBody(buffer)
+	treq.Body = body
+	treq.BodySize = bodySize
+	return &treq, proto, release, nil
 }
