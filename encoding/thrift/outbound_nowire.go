@@ -32,6 +32,7 @@ import (
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/pkg/encoding"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
@@ -237,8 +238,16 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		)
 	}
 
-	var buffer bytes.Buffer
-	sw := proto.Writer(&buffer)
+	// buffer is only scratch space for the streaming encode below; it is
+	// always returned to the pool before this function returns, and its
+	// backing array must never be reachable from treq.Body. The transport
+	// (and, for retries, retryfx) may read treq.Body an arbitrary number of
+	// times, arbitrarily far in the future and concurrently with other
+	// requests reusing this same pooled buffer — so treq.Body gets its own,
+	// unshared copy of the encoded bytes instead.
+	buffer := bufferpool.Get()
+
+	sw := proto.Writer(buffer)
 	defer sw.Close()
 
 	if err := sw.WriteEnvelopeBegin(stream.EnvelopeHeader{
@@ -246,18 +255,24 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		Type:  envType,
 		SeqID: 1, // don't care
 	}); err != nil {
+		bufferpool.Put(buffer)
 		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := reqBody.Encode(sw); err != nil {
+		bufferpool.Put(buffer)
 		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := sw.WriteEnvelopeEnd(); err != nil {
+		bufferpool.Put(buffer)
 		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
-	treq.Body = &buffer
-	treq.BodySize = buffer.Len()
+	body := append([]byte(nil), buffer.Bytes()...)
+	bufferpool.Put(buffer)
+
+	treq.Body = bytes.NewReader(body)
+	treq.BodySize = len(body)
 	return &treq, proto, nil
 }
