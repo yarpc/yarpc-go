@@ -178,6 +178,48 @@ func BenchmarkFromHTTPHeadersCapacity(b *testing.B) {
 	}
 }
 
+// BenchmarkOutboundResponseHeaderCapacity compares the zero-capacity Headers
+// that outbound.go previously handed to FromHTTPHeaders when parsing a
+// response against sizing by the raw response header count, mirroring the
+// "unfiltered" default already used on the inbound request path.
+func BenchmarkOutboundResponseHeaderCapacity(b *testing.B) {
+	scenarios := []struct {
+		name               string
+		applicationHeaders int
+		ignoredHeaders     int
+	}{
+		{name: "small", applicationHeaders: 2, ignoredHeaders: 2},
+		{name: "typical", applicationHeaders: 10, ignoredHeaders: 4},
+		{name: "header-heavy", applicationHeaders: 25, ignoredHeaders: 15},
+	}
+
+	for _, scenario := range scenarios {
+		from, _ := makeBenchmarkInboundHeaders(scenario.applicationHeaders, 0, 0, 0, scenario.ignoredHeaders)
+
+		b.Run(scenario.name, func(b *testing.B) {
+			capacityModes := []struct {
+				name     string
+				capacity func() int
+			}{
+				{name: "zero", capacity: func() int { return 0 }},
+				{name: "unfiltered", capacity: func() int { return len(from) }},
+			}
+			for _, mode := range capacityModes {
+				b.Run(mode.name, func(b *testing.B) {
+					b.ReportAllocs()
+					var got transport.Headers
+					for range b.N {
+						got = applicationHeaders.FromHTTPHeaders(from, transport.NewHeadersWithCapacity(mode.capacity()))
+					}
+					if got.Len() != scenario.applicationHeaders {
+						b.Fatalf("got %d headers, want %d", got.Len(), scenario.applicationHeaders)
+					}
+				})
+			}
+		})
+	}
+}
+
 func makeBenchmarkInboundHeaders(
 	application int,
 	tracing int,
