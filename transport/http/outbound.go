@@ -450,6 +450,15 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	return hpPeer, onFinish, nil
 }
 
+// BodyRewinder is an optional interface for the body of a transport.Request. A
+// body that implements it supplies net/http.Request.GetBody. Then net/http can
+// send the request again after an HTTP/2 GOAWAY or a retried connection error.
+//
+// GetBody must return a body that reads the whole request from the start.
+type BodyRewinder interface {
+	GetBody() (io.ReadCloser, error)
+}
+
 func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
 
@@ -468,12 +477,24 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 		return nil, err
 	}
 
+	// A body that can rewind itself supplies GetBody.
+	if rewinder, ok := treq.Body.(BodyRewinder); ok {
+		hreq.GetBody = rewinder.GetBody
+	}
+
 	// Patch net/http.Request.GetBody through bodyHelper
 	if helper != nil {
 		err := helper.EnsureGetBody(hreq)
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// net/http sets ContentLength only for *bytes.Buffer, *bytes.Reader, and
+	// *strings.Reader. Set it from the known size. Without it, the request goes
+	// out chunked and the inbound payload size metric reads zero.
+	if hreq.ContentLength == 0 && treq.BodySize > 0 {
+		hreq.ContentLength = int64(treq.BodySize)
 	}
 
 	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
@@ -834,6 +855,12 @@ type bodyHelper struct {
 // See https://cs.opensource.google/go/go/+/refs/tags/go1.26.5:src/net/http/request.go;l=884.
 func needBodyHelper(treq *transport.Request) bool {
 	if treq == nil || treq.Body == nil {
+		return false
+	}
+
+	// A body that rewinds itself already has a GetBody. A TeeReader would copy
+	// the whole payload for no reason.
+	if _, ok := treq.Body.(BodyRewinder); ok {
 		return false
 	}
 
