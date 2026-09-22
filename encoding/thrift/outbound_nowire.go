@@ -21,7 +21,6 @@
 package thrift
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -56,21 +55,6 @@ type NoWireClient interface {
 	// ClientOption. This ClientOption is toggled through the 'NoWire(bool)'
 	// option.
 	Enabled() bool
-}
-
-// readCloser wraps a bytes.Reader with a cleanup function that executes on Close.
-// This ensures the buffer is not returned to the pool until the transport finishes reading.
-type readCloser struct {
-	*bytes.Reader
-	cleanup func()
-}
-
-func (rc *readCloser) Close() error {
-	if rc.cleanup != nil {
-		rc.cleanup()
-		rc.cleanup = nil
-	}
-	return nil
 }
 
 // NewNoWire creates a new Thrift client that leverages ThriftRW's "streaming"
@@ -253,9 +237,38 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		)
 	}
 
-	// The buffer will be returned to the pool when treq.Body is closed by the transport.
-	buffer := bufferpool.Get()
+	// encode writes the whole request into a buffer from the pool. It runs
+	// once here, and again for every replay pooledBody.GetBody asks for.
+	encode := func() (*bufferpool.Buffer, error) {
+		buffer := bufferpool.Get()
+		if err := encodeEnvelopedRequest(proto, buffer, reqBody, envType); err != nil {
+			bufferpool.Put(buffer)
+			return nil, err
+		}
+		return buffer, nil
+	}
 
+	buffer, err := encode()
+	if err != nil {
+		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+	}
+
+	treq.Body = newPooledBody(buffer, encode)
+	treq.BodySize = buffer.Len()
+	return &treq, proto, nil
+}
+
+// encodeEnvelopedRequest writes one complete Thrift envelope into buffer.
+//
+// It must give the same bytes every time it runs for the same reqBody, since
+// pooledBody.GetBody replays a request by running it again. A stream.Enveloper
+// serializes itself, so it does.
+func encodeEnvelopedRequest(
+	proto stream.Protocol,
+	buffer *bufferpool.Buffer,
+	reqBody stream.Enveloper,
+	envType wire.EnvelopeType,
+) error {
 	sw := proto.Writer(buffer)
 	defer sw.Close()
 
@@ -264,24 +277,12 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		Type:  envType,
 		SeqID: 1, // don't care
 	}); err != nil {
-		bufferpool.Put(buffer)
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return err
 	}
 
 	if err := reqBody.Encode(sw); err != nil {
-		bufferpool.Put(buffer)
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return err
 	}
 
-	if err := sw.WriteEnvelopeEnd(); err != nil {
-		bufferpool.Put(buffer)
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
-	}
-
-	treq.Body = &readCloser{
-		Reader:  bytes.NewReader(buffer.Bytes()),
-		cleanup: func() { bufferpool.Put(buffer) },
-	}
-	treq.BodySize = buffer.Len()
-	return &treq, proto, nil
+	return sw.WriteEnvelopeEnd()
 }
