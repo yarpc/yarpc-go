@@ -183,6 +183,27 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				}),
 			},
 		},
+		{
+			Name: "No application headers",
+			MD: metadata.Pairs(
+				CallerHeader, "example-caller",
+				ServiceHeader, "example-service",
+				ShardKeyHeader, "example-shard-key",
+				RoutingKeyHeader, "example-routing-key",
+				RoutingDelegateHeader, "example-routing-delegate",
+				CallerProcedureHeader, "example-caller-procedure",
+				EncodingHeader, "example-encoding",
+			),
+			TransportRequest: &transport.Request{
+				Caller:          "example-caller",
+				Service:         "example-service",
+				ShardKey:        "example-shard-key",
+				RoutingKey:      "example-routing-key",
+				RoutingDelegate: "example-routing-delegate",
+				CallerProcedure: "example-caller-procedure",
+				Encoding:        "example-encoding",
+			},
+		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
 			md, err := transportRequestToMetadata(tt.TransportRequest)
@@ -532,4 +553,46 @@ func TestDuplicateAcceptEncodingHeader(t *testing.T) {
 			assert.Contains(t, err.Error(), "header has more than one value: test-header-dup")
 		})
 	})
+}
+
+func BenchmarkTransportRequestToMetadata(b *testing.B) {
+	tests := []struct {
+		name  string
+		count int
+	}{
+		{name: "no_application_headers"},
+		{name: "typical_two", count: 2},
+		{name: "eight", count: 8},
+		{name: "dense_sixteen", count: 16},
+	}
+	headerKeys := []string{
+		"header-0", "header-1", "header-2", "header-3",
+		"header-4", "header-5", "header-6", "header-7",
+		"header-8", "header-9", "header-10", "header-11",
+		"header-12", "header-13", "header-14", "header-15",
+	}
+
+	for _, test := range tests {
+		b.Run(test.name, func(b *testing.B) {
+			headers := transport.NewHeadersWithCapacity(test.count)
+			for _, key := range headerKeys[:test.count] {
+				headers = headers.With(key, "value")
+			}
+			request := transport.Request{
+				Caller:          "caller",
+				Service:         "service",
+				ShardKey:        "shard",
+				RoutingKey:      "routing",
+				RoutingDelegate: "delegate",
+				Encoding:        "proto",
+				CallerProcedure: "caller-procedure",
+				Headers:         headers,
+			}
+
+			b.ReportAllocs()
+			for b.Loop() {
+				_, _ = transportRequestToMetadata(&request)
+			}
+		})
+	}
 }
