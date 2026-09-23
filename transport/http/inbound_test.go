@@ -41,11 +41,13 @@ import (
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/yarpctest"
+	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -508,6 +510,202 @@ func TestInboundWithHTTPVersion(t *testing.T) {
 		require.Error(t, err, "expected error making request")
 		require.Nil(t, res, "expected response to be nil")
 	})
+}
+
+// TestInboundHTTP2OverTLS is a regression test: when the inbound terminates
+// TLS through the mux listener, the server must still speak HTTP/2 to clients
+// negotiating "h2" over ALPN as well as to clients using HTTP/2 with prior
+// knowledge and offering no ALPN at all.
+func TestInboundHTTP2OverTLS(t *testing.T) {
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
+
+	// Default server configuration for the cases below. "h2" is dropped so
+	// that the ALPN case only succeeds if the inbound adds it back.
+	defaultServerProtos := []string{"http/1.1"}
+
+	tests := []struct {
+		desc string
+		// serverProtos is the ALPN list configured on the inbound. Defaults to
+		// defaultServerProtos when nil.
+		serverProtos []string
+		scheme       string
+		wantProto    string
+		transport    func() http.RoundTripper
+	}{
+		{
+			desc:      "tls client negotiating http2 over alpn",
+			scheme:    "https",
+			wantProto: "HTTP/2.0",
+			transport: func() http.RoundTripper {
+				clientTLSConfig := scenario.ClientTLSConfig()
+				clientTLSConfig.NextProtos = []string{"h2"}
+				return &http2.Transport{TLSClientConfig: clientTLSConfig}
+			},
+		},
+		{
+			desc:      "tls client using http2 with prior knowledge and no alpn",
+			scheme:    "http",
+			wantProto: "HTTP/2.0",
+			transport: func() http.RoundTripper {
+				return &http2.Transport{
+					AllowHTTP: true,
+					DialTLSContext: func(_ context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+						clientTLSConfig := scenario.ClientTLSConfig()
+						clientTLSConfig.NextProtos = nil
+						return tls.Dial(network, addr, clientTLSConfig)
+					},
+				}
+			},
+		},
+		{
+			desc:      "plaintext h2c client",
+			scheme:    "http",
+			wantProto: "HTTP/2.0",
+			transport: func() http.RoundTripper {
+				return &http2.Transport{
+					AllowHTTP: true,
+					DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+						var d net.Dialer
+						return d.DialContext(ctx, network, addr)
+					},
+				}
+			},
+		},
+		{
+			// Advertising "h2" must not downgrade peers that offer it over
+			// ALPN but only ever speak HTTP/1.1, as this package's HTTP/1.1
+			// outbound does.
+			desc:      "tls client speaking http1 while advertising h2",
+			scheme:    "http",
+			wantProto: "HTTP/1.1",
+			transport: func() http.RoundTripper {
+				return &http.Transport{
+					DialContext: func(_ context.Context, network, addr string) (net.Conn, error) {
+						clientTLSConfig := scenario.ClientTLSConfig()
+						clientTLSConfig.NextProtos = []string{"http/1.1", "h2"}
+						return tls.Dial(network, addr, clientTLSConfig)
+					},
+				}
+			},
+		},
+		{
+			// Regression guard for an "h2"-first server configuration: Go
+			// returns on the first exact ALPN match in server preference
+			// order, so without reordering the server would negotiate "h2"
+			// with this client and then receive HTTP/1.1.
+			desc:         "tls client speaking http1 while advertising h2 against h2 only server",
+			serverProtos: []string{"h2"},
+			scheme:       "http",
+			wantProto:    "HTTP/1.1",
+			transport: func() http.RoundTripper {
+				return &http.Transport{
+					DialContext: func(_ context.Context, network, addr string) (net.Conn, error) {
+						clientTLSConfig := scenario.ClientTLSConfig()
+						clientTLSConfig.NextProtos = []string{"http/1.1", "h2"}
+						return tls.Dial(network, addr, clientTLSConfig)
+					},
+				}
+			},
+		},
+		{
+			// A proxy that does not implement ALPN offers no protocols at all.
+			// The handshake must succeed, negotiate nothing, and still serve
+			// HTTP/2 through the h2c handler.
+			desc:         "tls client with no alpn against h2 only server",
+			serverProtos: []string{"h2"},
+			scheme:       "http",
+			wantProto:    "HTTP/2.0",
+			transport: func() http.RoundTripper {
+				return &http2.Transport{
+					AllowHTTP: true,
+					DialTLSContext: func(_ context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+						clientTLSConfig := scenario.ClientTLSConfig()
+						clientTLSConfig.NextProtos = nil
+						return tls.Dial(network, addr, clientTLSConfig)
+					},
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			serverProtos := tt.serverProtos
+			if serverProtos == nil {
+				serverProtos = defaultServerProtos
+			}
+			serverTLSConfig := scenario.ServerTLSConfig()
+			serverTLSConfig.NextProtos = append([]string(nil), serverProtos...)
+
+			testTransport := NewTransport()
+			inbound := testTransport.NewInbound(
+				"127.0.0.1:0",
+				InboundTLSConfiguration(serverTLSConfig),
+				// Permissive so that the plaintext h2c case is served by the
+				// same inbound configuration.
+				InboundTLSMode(yarpctls.Permissive),
+			)
+
+			dispatcher := yarpc.NewDispatcher(yarpc.Config{
+				Name:     "myservice",
+				Inbounds: yarpc.Inbounds{inbound},
+			})
+			require.NoError(t, dispatcher.Start(), "failed to start dispatcher")
+			t.Cleanup(func() { _ = dispatcher.Stop() })
+
+			client := http.Client{Transport: tt.transport()}
+			t.Cleanup(client.CloseIdleConnections)
+
+			res, err := client.Get(tt.scheme + "://" + inbound.Addr().String() + "/health")
+			require.NoError(t, err, "got error making request")
+			t.Cleanup(func() { _ = res.Body.Close() })
+
+			assert.Equal(t, tt.wantProto, res.Proto, "unexpected protocol used to serve the response")
+
+			// The caller owned configuration must never be mutated.
+			assert.Equal(t, serverProtos, serverTLSConfig.NextProtos)
+		})
+	}
+}
+
+// TestWithHTTP2ALPN verifies that the TLS configuration handed to the mux
+// listener advertises h2 ranked below http/1.1, that the relative order of the
+// other configured protocols is preserved, and that the caller owned
+// configuration is never mutated.
+func TestWithHTTP2ALPN(t *testing.T) {
+	tests := []struct {
+		desc string
+		give []string
+		want []string
+	}{
+		{desc: "empty", give: nil, want: []string{"http/1.1", "h2"}},
+		{desc: "http1 only", give: []string{"http/1.1"}, want: []string{"http/1.1", "h2"}},
+		{desc: "http1 and h2", give: []string{"http/1.1", "h2"}, want: []string{"http/1.1", "h2"}},
+		{desc: "custom protocol", give: []string{"myproto"}, want: []string{"myproto", "http/1.1", "h2"}},
+
+		// "h2" must never outrank "http/1.1": a client offering both, such as
+		// this package's HTTP/1.1 outbound, would otherwise negotiate "h2" and
+		// then speak HTTP/1.1.
+		{desc: "h2 only", give: []string{"h2"}, want: []string{"http/1.1", "h2"}},
+		{desc: "h2 before http1", give: []string{"h2", "http/1.1"}, want: []string{"http/1.1", "h2"}},
+		{desc: "h2 before custom protocol", give: []string{"h2", "myproto"}, want: []string{"http/1.1", "h2", "myproto"}},
+		{desc: "custom protocol before h2", give: []string{"myproto", "h2"}, want: []string{"myproto", "http/1.1", "h2"}},
+
+		// Already correct: "http/1.1" outranks "h2", so the list is untouched
+		// even though the two are not adjacent.
+		{desc: "http1 and h2 with protocol between", give: []string{"http/1.1", "myproto", "h2"}, want: []string{"http/1.1", "myproto", "h2"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			config := &tls.Config{NextProtos: append([]string(nil), tt.give...)}
+
+			got := withHTTP2ALPN(config)
+
+			assert.Equal(t, tt.want, got.NextProtos)
+			assert.Equal(t, tt.give, config.NextProtos, "the given config must not be mutated")
+		})
+	}
 }
 
 func TestInboundWithTimeouts(t *testing.T) {
