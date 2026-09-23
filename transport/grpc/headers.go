@@ -97,6 +97,9 @@ const (
 	// proxies in the wild send it repeated rather than comma-joined, and it is
 	// a hop-by-hop hint that YARPC does not act on.
 	_acceptEncodingHeader = "grpc-accept-encoding"
+
+	// _requestMetadataReservedHeaderCount is the number of reserved fields added by transportRequestToMetadata.
+	_requestMetadataReservedHeaderCount = 7
 )
 
 var (
@@ -121,6 +124,10 @@ func isReserved(header string) bool {
 // from the Request into a new MD.
 func transportRequestToMetadata(request *transport.Request) (metadata.MD, error) {
 	md := metadata.New(nil)
+	if applicationHeaderCount := request.Headers.Len(); applicationHeaderCount > 0 {
+		md = make(metadata.MD, _requestMetadataReservedHeaderCount+applicationHeaderCount)
+	}
+
 	if err := multierr.Combine(
 		addToMetadata(md, CallerHeader, request.Caller),
 		addToMetadata(md, ServiceHeader, request.Service),
