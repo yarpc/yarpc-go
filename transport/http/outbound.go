@@ -395,7 +395,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	tres := &transport.Response{
-		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
+		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeadersWithCapacity(len(response.Header))),
 		Body:             response.Body,
 		BodySize:         int(response.ContentLength),
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
@@ -671,7 +671,7 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
 			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
 			CallerProcedure: hreq.Header.Get(CallerProcedureHeader),
-			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
+			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.NewHeadersWithCapacity(len(hreq.Header))),
 		}
 	}
 
