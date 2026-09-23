@@ -21,12 +21,16 @@
 package v2
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestUnhandledEncoding(t *testing.T) {
@@ -34,4 +38,99 @@ func TestUnhandledEncoding(t *testing.T) {
 		yarpcerrors.FromError(unmarshal(transport.Encoding("foo"), strings.NewReader("foo"), nil, newCodec(nil))).Code())
 	_, _, err := marshal(transport.Encoding("foo"), nil, newCodec(nil))
 	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
+}
+
+// testBytesReader simulates a body from gRPC transport that exposes raw bytes
+// via a Bytes() method, allowing the unmarshal fast path to skip bufferpool copies.
+type testBytesReader struct {
+	data        []byte
+	reader      *bytes.Reader
+	bytesCalled bool
+	readCalled  bool
+}
+
+func newTestBytesReader(data []byte) *testBytesReader {
+	return &testBytesReader{data: data, reader: bytes.NewReader(data)}
+}
+
+func (r *testBytesReader) Read(p []byte) (int, error) {
+	r.readCalled = true
+	return r.reader.Read(p)
+}
+
+func (r *testBytesReader) Bytes() []byte {
+	r.bytesCalled = true
+	return r.data
+}
+
+// TestUnmarshalFastPath verifies that when the reader exposes a Bytes() method,
+// unmarshal uses the zero-copy path and never calls Read().
+func TestUnmarshalFastPath(t *testing.T) {
+	c := newCodec(nil)
+
+	t.Run("Bytes called and Read not called", func(t *testing.T) {
+		original := &wrapperspb.StringValue{Value: "hello"}
+		data, err := proto.Marshal(original)
+		require.NoError(t, err)
+
+		reader := newTestBytesReader(data)
+		got := &wrapperspb.StringValue{}
+
+		err = unmarshal(Encoding, reader, got, c)
+		assert.NoError(t, err)
+		assert.Equal(t, original.Value, got.Value, "Message should be deserialized correctly via fast path")
+		assert.True(t, reader.bytesCalled, "Bytes() should be called on fast path")
+		assert.False(t, reader.readCalled, "Read() should not be called on fast path")
+	})
+
+	t.Run("empty body returns nil", func(t *testing.T) {
+		reader := newTestBytesReader([]byte{})
+
+		err := unmarshal(Encoding, reader, nil, c)
+		assert.NoError(t, err, "Empty body on fast path should return nil")
+		assert.True(t, reader.bytesCalled, "Bytes() should still be called for empty body")
+		assert.False(t, reader.readCalled, "Read() should not be called for empty body")
+	})
+
+	t.Run("invalid encoding returns error", func(t *testing.T) {
+		reader := newTestBytesReader([]byte("data"))
+
+		err := unmarshal(transport.Encoding("unknown"), reader, nil, c)
+		assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code(),
+			"Fast path should still return encoding error for unrecognized encoding")
+	})
+
+	t.Run("malformed protobuf returns unmarshal error", func(t *testing.T) {
+		reader := newTestBytesReader([]byte{0xff, 0xff, 0xff})
+
+		err := unmarshal(Encoding, reader, &wrapperspb.StringValue{}, c)
+		assert.Error(t, err, "Malformed protobuf should return an error on fast path")
+	})
+}
+
+// TestUnmarshalBytesDoesNotAliasBuffer pins an ownership invariant that the
+// decode path already depends on: unmarshalBytes must copy data out of the
+// buffer it is handed, never retain a view into it.
+//
+// unmarshal calls unmarshalBytes with a pooled bufferpool buffer and returns
+// that buffer to the pool as soon as it returns, so a decoder that aliased the
+// input would hand callers a message backed by memory the pool is free to reset
+// and lease to the next request.
+func TestUnmarshalBytesDoesNotAliasBuffer(t *testing.T) {
+	payload := []byte("payload-bytes")
+
+	body, err := proto.Marshal(&wrapperspb.BytesValue{Value: payload})
+	require.NoError(t, err)
+
+	got := &wrapperspb.BytesValue{}
+	require.NoError(t, unmarshalBytes(Encoding, body, got, newCodec(nil)))
+	require.Equal(t, payload, got.Value)
+
+	// Scribble over the buffer the way a recycled pool buffer would be.
+	for i := range body {
+		body[i] = 0xff
+	}
+
+	assert.Equal(t, payload, got.Value,
+		"decoded message must not alias the buffer passed to unmarshalBytes")
 }

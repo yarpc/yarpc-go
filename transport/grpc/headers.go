@@ -91,6 +91,12 @@ const (
 
 	baseContentType   = "application/grpc"
 	contentTypeHeader = "content-type"
+
+	// _acceptEncodingHeader is the gRPC compression negotiation header. Unlike
+	// every other header, it is tolerated with more than one value: clients and
+	// proxies in the wild send it repeated rather than comma-joined, and it is
+	// a hop-by-hop hint that YARPC does not act on.
+	_acceptEncodingHeader = "grpc-accept-encoding"
 )
 
 var (
@@ -143,10 +149,13 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		case 1:
 			value = values[0]
 		default:
-			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			if header == _acceptEncodingHeader {
+				value = values[0]
+			} else {
+				return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			}
 		}
-		header = transport.CanonicalizeHeaderKey(header)
-		// skip routing header
+		// gRPC metadata keys are already lowercase.
 		if routingHeaders[header] {
 			continue
 		}
@@ -203,7 +212,7 @@ func metadataToApplicationErrorMeta(responseMD metadata.MD) *transport.Applicati
 // addApplicationHeaders adds the headers to md.
 func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 	for header, value := range headers.Items() {
-		header = transport.CanonicalizeHeaderKey(header)
+		// Items() keys are already canonical (lowercased on insertion via With).
 		if isReserved(header) {
 			return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
 		}
@@ -221,7 +230,7 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 	}
 	headers := transport.NewHeadersWithCapacity(md.Len())
 	for header, values := range md {
-		header = transport.CanonicalizeHeaderKey(header)
+		// gRPC metadata keys are already lowercase.
 		if isReserved(header) {
 			continue
 		}
@@ -232,7 +241,11 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 		case 1:
 			value = values[0]
 		default:
-			return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			if header == _acceptEncodingHeader {
+				value = values[0]
+			} else {
+				return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			}
 		}
 		headers = headers.With(header, value)
 	}

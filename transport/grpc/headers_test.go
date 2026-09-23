@@ -253,7 +253,7 @@ func TestGetApplicationHeaders(t *testing.T) {
 				"rpc-service":         []string{"foo"}, // reserved header
 				"test-header-empty":   []string{},      // no value
 				"test-header-valid-1": []string{"test-value-1"},
-				"test-Header-Valid-2": []string{"test-value-2"},
+				"test-header-valid-2": []string{"test-value-2"},
 			},
 			wantHeaders: map[string]string{
 				"test-header-valid-1": "test-value-1",
@@ -403,4 +403,133 @@ func BenchmarkIsReserved(b *testing.B) {
 			}
 		})
 	}
+}
+
+func BenchmarkMetadataToTransportRequest(b *testing.B) {
+	md := metadata.Pairs(
+		CallerHeader, "example-caller",
+		ServiceHeader, "example-service",
+		ShardKeyHeader, "example-shard-key",
+		RoutingKeyHeader, "example-routing-key",
+		RoutingDelegateHeader, "example-routing-delegate",
+		EncodingHeader, "raw",
+		CallerProcedureHeader, "example-caller-procedure",
+		"x-uber-source", "service-a",
+		"x-request-id", "abc-123",
+		"x-trace-id", "trace-456",
+		"x-custom-1", "val1",
+		"x-custom-2", "val2",
+	)
+
+	b.ResetTimer()
+	for range b.N {
+		_, _ = metadataToTransportRequest(md)
+	}
+}
+
+func BenchmarkGetApplicationHeaders(b *testing.B) {
+	md := metadata.MD{
+		"rpc-caller":    []string{"example-caller"},
+		"rpc-service":   []string{"example-service"},
+		"rpc-encoding":  []string{"raw"},
+		"x-uber-source": []string{"service-a"},
+		"x-request-id":  []string{"abc-123"},
+		"x-trace-id":    []string{"trace-456"},
+		"x-custom-1":    []string{"val1"},
+		"x-custom-2":    []string{"val2"},
+		"x-custom-3":    []string{"val3"},
+		"x-custom-4":    []string{"val4"},
+	}
+
+	b.ResetTimer()
+	for range b.N {
+		_, _ = getApplicationHeaders(md)
+	}
+}
+
+func BenchmarkAddApplicationHeaders(b *testing.B) {
+	headers := transport.HeadersFromMap(map[string]string{
+		"x-uber-source": "service-a",
+		"x-request-id":  "abc-123",
+		"x-trace-id":    "trace-456",
+		"x-custom-1":    "val1",
+		"x-custom-2":    "val2",
+	})
+
+	b.ResetTimer()
+	for range b.N {
+		md := metadata.New(nil)
+		_ = addApplicationHeaders(md, headers)
+	}
+}
+
+func TestDuplicateAcceptEncodingHeader(t *testing.T) {
+	t.Parallel()
+
+	// gRPC clients and proxies in the wild repeat grpc-accept-encoding instead
+	// of comma-joining it. That must not fail the request, while every other
+	// repeated header keeps erroring.
+	t.Run("metadataToTransportRequest", func(t *testing.T) {
+		t.Run("duplicate accept-encoding is tolerated", func(t *testing.T) {
+			md := metadata.MD{
+				CallerHeader:          []string{"example-caller"},
+				ServiceHeader:         []string{"example-service"},
+				EncodingHeader:        []string{"example-encoding"},
+				_acceptEncodingHeader: []string{"gzip", "identity"},
+			}
+
+			request, err := metadataToTransportRequest(md)
+			require.NoError(t, err)
+			assert.Equal(t, "gzip", request.Headers.Items()[_acceptEncodingHeader],
+				"first value wins for %s", _acceptEncodingHeader)
+		})
+
+		t.Run("single accept-encoding is unchanged", func(t *testing.T) {
+			md := metadata.MD{_acceptEncodingHeader: []string{"gzip"}}
+
+			request, err := metadataToTransportRequest(md)
+			require.NoError(t, err)
+			assert.Equal(t, "gzip", request.Headers.Items()[_acceptEncodingHeader])
+		})
+
+		t.Run("other duplicate headers still error", func(t *testing.T) {
+			md := metadata.MD{
+				_acceptEncodingHeader: []string{"gzip", "identity"},
+				"test-header-dup":     []string{"value-1", "value-2"},
+			}
+
+			_, err := metadataToTransportRequest(md)
+			require.Error(t, err)
+			assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(err).Code())
+			assert.Contains(t, err.Error(), "header has more than one value: test-header-dup")
+		})
+	})
+
+	t.Run("getApplicationHeaders", func(t *testing.T) {
+		t.Run("duplicate accept-encoding is tolerated", func(t *testing.T) {
+			md := metadata.MD{
+				_acceptEncodingHeader: []string{"gzip", "identity"},
+				"test-header":         []string{"test-value"},
+			}
+
+			headers, err := getApplicationHeaders(md)
+			require.NoError(t, err)
+			assert.Equal(t, map[string]string{
+				_acceptEncodingHeader: "gzip",
+				"test-header":         "test-value",
+			}, headers.Items())
+		})
+
+		t.Run("other duplicate headers still error", func(t *testing.T) {
+			md := metadata.MD{
+				_acceptEncodingHeader: []string{"gzip", "identity"},
+				"test-header-dup":     []string{"value-1", "value-2"},
+			}
+
+			_, err := getApplicationHeaders(md)
+			require.Error(t, err)
+			assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(err).Code())
+			assert.Contains(t, err.Error(), "header has more than one value: test-header-dup")
+		})
+	})
 }
