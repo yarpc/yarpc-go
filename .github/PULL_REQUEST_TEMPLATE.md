@@ -20,9 +20,5 @@ before/after behaviour. Write "N/a" for docs-only or comment-only changes.
 <!-- Why this risk level? e.g. "No behavior change, allocation efficiency only,
 on an already-covered code path." -->
 
-## Checklist
-- [ ] Description and context for reviewers: one partner, one stranger
-- [ ] Docs (package doc)
-
 RELEASE NOTES:
 <!-- Significant changes, used to compile the release notes. Write "N/a" if none. -->
