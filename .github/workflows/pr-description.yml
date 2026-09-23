@@ -1,9 +1,9 @@
 name: PR Description Check
 
 # Validates that every pull request has a meaningful Description, a Test Plan,
-# and a filled-in RELEASE NOTES block. Runs on GitHub Actions (not Buildkite)
-# because it needs the `edited` event so it re-runs when an author fixes the
-# description without pushing new commits.
+# a Risk level with a Reason, and a filled-in RELEASE NOTES block. Runs on
+# GitHub Actions (not Buildkite) because it needs the `edited` event so it
+# re-runs when an author fixes the description without pushing new commits.
 
 on:
   pull_request:
@@ -42,11 +42,13 @@ jobs:
           text = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL).replace("\r", "")
 
           def section(name):
-              """Text under a `## <name>` heading, up to the next heading,
-              the RELEASE NOTES block, or EOF."""
+              """Text under a `## <name>` heading, up to the next top-level
+              (H1/H2) heading, the RELEASE NOTES block, or EOF. A subheading
+              inside a section (e.g. "### Reason" under "## Risk") stays
+              part of that section instead of ending it."""
               m = re.search(
                   rf"^\#{{1,6}}\s*{re.escape(name)}\s*$(.*?)"
-                  rf"(?=^\#{{1,6}}\s|^RELEASE NOTES:|\Z)",
+                  rf"(?=^\#{{1,2}}\s|^RELEASE NOTES:|\Z)",
                   text, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
               return m.group(1).strip() if m else None
 
@@ -86,6 +88,36 @@ jobs:
               errors.append(
                   "**## Test Plan** is a placeholder (`tbd`/`todo`) — describe how "
                   "you verified the change, or write `N/a` for docs-only changes.")
+
+          risk = section("Risk")
+          if risk is None:
+              errors.append(
+                  "Missing **## Risk** section — check exactly one of "
+                  "`Low`/`Medium`/`High` and give a Reason.")
+          else:
+              # Checkbox style is `[X]Low` (template) or `- [x] Low` — both accepted.
+              boxes = re.findall(
+                  r"^\s*[-*]?\s*\[([ xX])\]\s*(Low|Medium|High)\b",
+                  risk, flags=re.IGNORECASE | re.MULTILINE)
+              if len(boxes) < 3:
+                  errors.append(
+                      "**## Risk** must list all three checkboxes — "
+                      "`[ ]Low`, `[ ]Medium`, `[ ]High`.")
+              else:
+                  checked = [level for mark, level in boxes if mark.strip()]
+                  if len(checked) != 1:
+                      errors.append(
+                          "**## Risk** must have exactly one level checked "
+                          f"(found {len(checked)}: {', '.join(checked) or 'none'}).")
+
+              # "Reason:" may be its own line or a "### Reason:" subheading.
+              reason_m = re.search(r"Reason:\s*(.*)", risk,
+                                    flags=re.IGNORECASE | re.DOTALL)
+              reason = reason_m.group(1).strip() if reason_m else ""
+              if not reason or PLACEHOLDER.fullmatch(reason):
+                  errors.append(
+                      "**## Risk** is missing a Reason — explain why that "
+                      "risk level applies.")
 
           # yarpc-go convention: RELEASE NOTES must be present and filled ("N/a" ok).
           rn = re.search(r"RELEASE NOTES:(.*)\Z", text, flags=re.IGNORECASE | re.DOTALL)
