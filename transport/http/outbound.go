@@ -476,6 +476,14 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 		}
 	}
 
+	// net/http sets ContentLength on its own only for *bytes.Buffer,
+	// *bytes.Reader and *strings.Reader. YARPC knows the size of every other
+	// body, so carry it. Without it the request goes out chunked, and the
+	// inbound request payload size metric reads zero.
+	if hreq.ContentLength == 0 && treq.BodySize > 0 {
+		hreq.ContentLength = int64(treq.BodySize)
+	}
+
 	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
 	// was propagated from a YARPC transport middleware to a HTTP/1 service.
 	// It should be noted that net/http will return an error if a pseudo
