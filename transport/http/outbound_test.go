@@ -122,6 +122,59 @@ func TestCreateRequest(t *testing.T) {
 	}
 }
 
+func TestCreateRequestContentLength(t *testing.T) {
+	payload := []byte("some-payload")
+	tests := []struct {
+		desc              string
+		body              io.Reader
+		bodySize          int
+		wantContentLength int64
+	}{
+		{
+			desc:              "bytes.Reader is sized by net/http",
+			body:              bytes.NewReader(payload),
+			bodySize:          len(payload),
+			wantContentLength: int64(len(payload)),
+		},
+		{
+			desc:              "net/http size wins over a mismatched BodySize",
+			body:              bytes.NewReader(payload),
+			bodySize:          1,
+			wantContentLength: int64(len(payload)),
+		},
+		{
+			desc:              "unsized ReadCloser uses BodySize",
+			body:              io.NopCloser(bytes.NewReader(payload)),
+			bodySize:          len(payload),
+			wantContentLength: int64(len(payload)),
+		},
+		{
+			desc:              "unsized ReadCloser without BodySize stays unknown",
+			body:              io.NopCloser(bytes.NewReader(payload)),
+			bodySize:          0,
+			wantContentLength: 0,
+		},
+		{
+			desc:              "no body",
+			body:              nil,
+			bodySize:          0,
+			wantContentLength: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			o := &Outbound{urlTemplate: defaultURLTemplate}
+			hreq, err := o.createRequest(&transport.Request{
+				Body:     tt.body,
+				BodySize: tt.bodySize,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantContentLength, hreq.ContentLength)
+		})
+	}
+}
+
 func getBenchRequest() *transport.Request {
 	return &transport.Request{
 		Caller:    "caller",
