@@ -23,7 +23,9 @@ package thrift
 import (
 	"bytes"
 	"io"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -229,4 +231,45 @@ func TestPooledBodySeekAfterReleaseIsRefused(t *testing.T) {
 	n, err := body.Read(make([]byte, 8))
 	assert.Zero(t, n)
 	require.ErrorIs(t, err, ErrRequestBodyClosed)
+}
+
+// startPoolChurn keeps taking buffers from the global pool, writing to them,
+// and giving them back, until the returned function is called. It stands in
+// for all the other outbound traffic in a real process.
+//
+// If the request body's buffer goes back to the pool while the HTTP/2 writer
+// still reads it, this loop takes that buffer and writes over those bytes.
+// go test -race then reports the read and the write as a data race.
+func startPoolChurn(size int) func() {
+	var (
+		stop    atomic.Bool
+		wg      sync.WaitGroup
+		workers = runtime.GOMAXPROCS(0)
+	)
+	if workers < 2 {
+		workers = 2
+	}
+	if workers > 4 {
+		workers = 4
+	}
+
+	// One worker per P. sync.Pool keeps per-P free lists, so a single worker
+	// often never sees the buffer that another P released.
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			pattern := bytes.Repeat([]byte{0xAB}, size)
+			for !stop.Load() {
+				buf := bufferpool.Get()
+				_, _ = buf.Write(pattern)
+				bufferpool.Put(buf)
+			}
+		}()
+	}
+
+	return func() {
+		stop.Store(true)
+		wg.Wait()
+	}
 }
