@@ -128,7 +128,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		stoppedC:     make(chan struct{}),
 		grpcDialOpts: dialOptions,
 		metrics:      newPeerPoolReporter(t.metrics),
-		poolCfg: connPoolConfig{
+		poolCfg: options.resolvedPoolConfig(connPoolConfig{
 			dynamicScalingEnabled:  t.options.clientConnPoolDynamicScalingEnabled,
 			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
 			scaleUpThreshold:       t.options.clientConnPoolScaleUpThreshold,
@@ -137,7 +137,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 			maxConnections:         t.options.clientConnPoolMaxConnections,
 			idleTimeout:            t.options.clientConnPoolIdleTimeout,
 			scalingMonitorInterval: t.options.clientConnPoolScalingMonitorInterval,
-		},
+		}),
 	}
 	t.options.logger.Debug("grpc: connection pool config resolved",
 		zap.String("peer", address),

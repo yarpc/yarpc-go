@@ -129,6 +129,8 @@ func TestTransportSpec(t *testing.T) {
 		WantCustomContextDialer bool
 		Keepalive               *keepalive.ClientParameters
 		TLSConfig               bool
+		Isolated                bool
+		PoolMaxConnections      int
 	}
 
 	type test struct {
@@ -770,6 +772,116 @@ func TestTransportSpec(t *testing.T) {
 				"myservice": {Address: "localhost:54593"},
 			},
 		},
+		{
+			desc: "outbound clientConnectionPool overrides transport-wide maxConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "5",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54594",
+						"clientConnectionPool": attrs{
+							"maxConnections": "9",
+						},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:            "localhost:54594",
+					Isolated:           true,
+					PoolMaxConnections: 9,
+				},
+			},
+		},
+		{
+			desc: "outbound clientConnectionPool unset inherits transport-wide pool",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "5",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54595"},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:            "localhost:54595",
+					PoolMaxConnections: 5,
+				},
+			},
+		},
+		{
+			desc: "outbound clientConnectionPool empty object isolates and inherits transport",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "5",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address":              "localhost:54596",
+						"clientConnectionPool": attrs{},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:            "localhost:54596",
+					Isolated:           true,
+					PoolMaxConnections: 5,
+				},
+			},
+		},
+		{
+			desc: "outbound clientConnectionPool negative maxConnections",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54597",
+						"clientConnectionPool": attrs{
+							"maxConnections": "-1",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.maxConnections must be non-negative"},
+		},
+		{
+			desc: "outbound clientConnectionPool scaleUpThreshold out of range",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54598",
+						"clientConnectionPool": attrs{
+							"scaleUpThreshold": "1.5",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.scaleUpThreshold must be in [0, 1]"},
+		},
+		{
+			desc: "outbound clientConnectionPool min greater than max",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54599",
+						"clientConnectionPool": attrs{
+							"minConnections": "8",
+							"maxConnections": "2",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.maxConnections (2) must be >= minConnections (8)"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -889,6 +1001,17 @@ func TestTransportSpec(t *testing.T) {
 					} else {
 						require.Nil(t, dialer.options.keepaliveParams, "unexpected keepalive paramters")
 					}
+					assert.Equal(t, wantOutbound.Isolated, dialer.options.connectionPerOutbound)
+					if wantOutbound.Isolated {
+						require.NotNil(t, dialer.connectionScope)
+					} else {
+						assert.Nil(t, dialer.connectionScope)
+					}
+					if wantOutbound.PoolMaxConnections > 0 {
+						gp, ok := peer.(*grpcPeer)
+						require.True(t, ok, "expected *grpcPeer, got %T", peer)
+						assert.Equal(t, wantOutbound.PoolMaxConnections, gp.poolCfg.maxConnections)
+					}
 				}
 			}
 		})
@@ -944,6 +1067,78 @@ func TestContextDialerOptionUsage(t *testing.T) {
 	}
 	require.Equal(t, connectivity.Ready, grpcPeer.loadConns()[0].clientConn.GetState(), "expected gRPC connection in Ready state")
 	require.Equal(t, 1, dialContextInvoked, "counter should increment by one from dialer invocation")
+}
+
+// TestOutboundYAMLClientConnectionPoolMixed verifies that two gRPC outbounds
+// to the same address can take different pool configs: the one with
+// clientConnectionPool is isolated and overrides the transport, the other
+// keeps the transport-wide values and shares the default peer key.
+func TestOutboundYAMLClientConnectionPoolMixed(t *testing.T) {
+	type attrs map[string]interface{}
+
+	configurator := yarpcconfig.New()
+	require.NoError(t, configurator.RegisterTransport(TransportSpec()))
+	cfg, err := configurator.LoadConfig("foo", attrs{
+		"transports": attrs{
+			TransportName: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "5",
+				},
+			},
+		},
+		"outbounds": attrs{
+			"tuned": attrs{
+				TransportName: attrs{
+					"address": "localhost:54600",
+					"clientConnectionPool": attrs{
+						"maxConnections": "9",
+					},
+				},
+			},
+			"shared": attrs{
+				TransportName: attrs{"address": "localhost:54600"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	tuned, ok := cfg.Outbounds["tuned"].Unary.(*Outbound)
+	require.True(t, ok)
+	shared, ok := cfg.Outbounds["shared"].Unary.(*Outbound)
+	require.True(t, ok)
+
+	tunedSingle, ok := tuned.peerChooser.(*peer.Single)
+	require.True(t, ok)
+	sharedSingle, ok := shared.peerChooser.(*peer.Single)
+	require.True(t, ok)
+	require.NoError(t, tunedSingle.Start())
+	defer tunedSingle.Stop()
+	require.NoError(t, sharedSingle.Start())
+	defer sharedSingle.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	tunedPeer, _, err := tunedSingle.Choose(ctx, &transport.Request{})
+	require.NoError(t, err)
+	sharedPeer, _, err := sharedSingle.Choose(ctx, &transport.Request{})
+	require.NoError(t, err)
+
+	assert.NotSame(t, tunedPeer, sharedPeer)
+
+	tunedGP, ok := tunedPeer.(*grpcPeer)
+	require.True(t, ok)
+	sharedGP, ok := sharedPeer.(*grpcPeer)
+	require.True(t, ok)
+	assert.Equal(t, 9, tunedGP.poolCfg.maxConnections)
+	assert.Equal(t, 5, sharedGP.poolCfg.maxConnections)
+
+	tunedDialer, ok := tunedSingle.Transport().(*Dialer)
+	require.True(t, ok)
+	sharedDialer, ok := sharedSingle.Transport().(*Dialer)
+	require.True(t, ok)
+	assert.True(t, tunedDialer.options.connectionPerOutbound)
+	assert.False(t, sharedDialer.options.connectionPerOutbound)
 }
 
 func mapResolver(m map[string]string) func(string) (string, bool) {

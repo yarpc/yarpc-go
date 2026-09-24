@@ -100,8 +100,10 @@ type TransportConfig struct {
 	ClientConnectionPool ClientConnectionPoolConfig `config:"clientConnectionPool"`
 }
 
-// ClientConnectionPoolConfig configures the dynamic gRPC connection pool for all
-// peers on this transport.
+// ClientConnectionPoolConfig configures the dynamic gRPC connection pool.
+// Set it under transports.grpc for every outbound, or under a single
+// outbound's grpc section to override the transport-wide values for that
+// outbound only (see OutboundConfig.ClientConnectionPool).
 //
 //	transports:
 //	  grpc:
@@ -255,6 +257,19 @@ func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredenti
 //	        time:    10s
 //	        timeout: 30s
 //	        permit-without-stream: true
+//
+// A gRPC outbound can override the transport-wide clientConnectionPool.
+// The outbound is isolated so its peers (and therefore connection pools)
+// are not shared with other outbounds. Fields left unset inherit the
+// transport-wide configuration.
+//
+//	outbounds:
+//	  myservice:
+//	    grpc:
+//	      address: ":80"
+//	      clientConnectionPool:
+//	        maxConcurrentStreams: 100
+//	        maxConnections: 20
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
 
@@ -264,6 +279,10 @@ type OutboundConfig struct {
 	// Compressor to use by default if the server side supports it
 	Compressor string                  `config:"compressor"`
 	Keepalive  OutboundKeepaliveConfig `config:"grpc-keepalive"`
+	// ClientConnectionPool optionally overrides the transport-wide
+	// clientConnectionPool for this outbound. When set, the outbound uses
+	// an isolated Dialer. Zero-value fields inherit the transport config.
+	ClientConnectionPool *ClientConnectionPoolConfig `config:"clientConnectionPool"`
 }
 
 func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit, tlsConfigProvider yarpctls.OutboundTLSConfigProvider) ([]DialOption, error) {
@@ -278,6 +297,12 @@ func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit, tlsConfigProvider yarp
 	}
 
 	opts = append(opts, keepaliveOpts...)
+	if c.ClientConnectionPool != nil {
+		if err := validateClientConnectionPoolConfig(*c.ClientConnectionPool); err != nil {
+			return nil, err
+		}
+		opts = append(opts, ClientConnectionPool(*c.ClientConnectionPool))
+	}
 	return opts, nil
 }
 
@@ -418,26 +443,8 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	// programmatic TransportOption defaults set by the caller are not
 	// silently overridden by the zero value of an omitted YAML field.
 	cp := transportConfig.ClientConnectionPool
-	if cp.MinConnections < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.minConnections must be non-negative, got %d", cp.MinConnections)
-	}
-	if cp.MaxConnections < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.maxConnections must be non-negative, got %d", cp.MaxConnections)
-	}
-	if cp.MaxConcurrentStreams < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.maxConcurrentStreams must be non-negative, got %d", cp.MaxConcurrentStreams)
-	}
-	if cp.ScaleUpThreshold < 0 || cp.ScaleUpThreshold > 1 {
-		return nil, fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in [0, 1], got %v", cp.ScaleUpThreshold)
-	}
-	if cp.ScaleDownGap < 0 || cp.ScaleDownGap >= 1 {
-		return nil, fmt.Errorf("clientConnectionPool.scaleDownGap must be in [0, 1), got %v", cp.ScaleDownGap)
-	}
-	if cp.IdleTimeout < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.idleTimeout must be non-negative, got %v", cp.IdleTimeout)
-	}
-	if cp.ScalingMonitorInterval < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.scalingMonitorInterval must be non-negative, got %v", cp.ScalingMonitorInterval)
+	if err := validateClientConnectionPoolConfig(cp); err != nil {
+		return nil, err
 	}
 	// DynamicScalingEnabled is only applied when explicitly set to false in YAML,
 	// which acts as a service-level opt-out that overrides the central OC value.
@@ -529,6 +536,9 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 
 	opts := append(dialOpts, t.DialOptions...)
 	dialer := trans.NewDialer(append([]DialOption{DialerDestinationServiceName(kit.OutboundServiceName())}, opts...)...)
+	if outboundConfig.ClientConnectionPool != nil {
+		dialer = dialer.WithConnectionIsolation()
+	}
 	var chooser peer.Chooser
 	if outboundConfig.Empty() {
 		if outboundConfig.Address == "" {
@@ -554,4 +564,32 @@ func newTransportCastError(tr transport.Transport) error {
 
 func newRequiredFieldMissingError(field string) error {
 	return fmt.Errorf("required field missing: %v", field)
+}
+
+func validateClientConnectionPoolConfig(cp ClientConnectionPoolConfig) error {
+	if cp.MinConnections < 0 {
+		return fmt.Errorf("clientConnectionPool.minConnections must be non-negative, got %d", cp.MinConnections)
+	}
+	if cp.MaxConnections < 0 {
+		return fmt.Errorf("clientConnectionPool.maxConnections must be non-negative, got %d", cp.MaxConnections)
+	}
+	if cp.MaxConnections > 0 && cp.MinConnections > cp.MaxConnections {
+		return fmt.Errorf("clientConnectionPool.maxConnections (%d) must be >= minConnections (%d)", cp.MaxConnections, cp.MinConnections)
+	}
+	if cp.MaxConcurrentStreams < 0 {
+		return fmt.Errorf("clientConnectionPool.maxConcurrentStreams must be non-negative, got %d", cp.MaxConcurrentStreams)
+	}
+	if cp.ScaleUpThreshold < 0 || cp.ScaleUpThreshold > 1 {
+		return fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in [0, 1], got %v", cp.ScaleUpThreshold)
+	}
+	if cp.ScaleDownGap < 0 || cp.ScaleDownGap >= 1 {
+		return fmt.Errorf("clientConnectionPool.scaleDownGap must be in [0, 1), got %v", cp.ScaleDownGap)
+	}
+	if cp.IdleTimeout < 0 {
+		return fmt.Errorf("clientConnectionPool.idleTimeout must be non-negative, got %v", cp.IdleTimeout)
+	}
+	if cp.ScalingMonitorInterval < 0 {
+		return fmt.Errorf("clientConnectionPool.scalingMonitorInterval must be non-negative, got %v", cp.ScalingMonitorInterval)
+	}
+	return nil
 }

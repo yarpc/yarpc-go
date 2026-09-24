@@ -426,6 +426,24 @@ func KeepaliveParams(params keepalive.ClientParameters) DialOption {
 	}
 }
 
+// ClientConnectionPool returns a DialOption that overrides the transport's
+// shared dynamic connection pool configuration (see
+// TransportConfig.ClientConnectionPool and the MaxConcurrentStreams /
+// ScaleUpThreshold / ScaleDownGap / MinConnections / MaxConnections /
+// ConnIdleTimeout / ScalingMonitorInterval / WithDynamicConnectionScaling
+// TransportOptions) for peers retained through this Dialer.
+//
+// This override only takes effect on a Dialer isolated via
+// Dialer.WithConnectionIsolation: outbounds sharing a peer with other
+// dialers also share that peer's connection pool, so a per-outbound override
+// would be ambiguous and is ignored on a non-isolated Dialer. Any field left
+// at its zero value falls back to the transport-wide configuration.
+func ClientConnectionPool(cfg ClientConnectionPoolConfig) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.connPoolOverride = &cfg
+	}
+}
+
 type transportOptions struct {
 	backoffStrategy           backoff.Strategy
 	tracer                    opentracing.Tracer
@@ -537,6 +555,17 @@ type dialOptions struct {
 	keepaliveParams   *keepalive.ClientParameters
 	tlsConfig         *tls.Config
 	destServiceName   string
+
+	// connectionPerOutbound is true for a Dialer produced by
+	// Dialer.WithConnectionIsolation, i.e. one whose peers are not shared
+	// with other dialers. connPoolOverride only takes effect when this is
+	// true.
+	connectionPerOutbound bool
+
+	// connPoolOverride, when set on an isolated (connectionPerOutbound)
+	// Dialer, overrides the transport-wide dynamic connection pool
+	// configuration for peers retained through it. See ClientConnectionPool.
+	connPoolOverride *ClientConnectionPoolConfig
 }
 
 func (d *dialOptions) grpcOptions(t *Transport) []grpc.DialOption {
@@ -589,4 +618,47 @@ func newDialOptions(options []DialOption) *dialOptions {
 		option(&dopts)
 	}
 	return &dopts
+}
+
+// resolvedPoolConfig returns the connPoolConfig to use for a peer retained
+// through this Dialer: the transport-wide base config, overridden field by
+// field by connPoolOverride when this Dialer is isolated per-outbound
+// (connectionPerOutbound). A non-isolated Dialer's override, if any, is
+// ignored — its peers are shared with other dialers, so a per-outbound pool
+// configuration would be ambiguous.
+//
+// Fields left at their zero value in the override are inherited from base,
+// mirroring how TransportConfig.ClientConnectionPool fields are applied over
+// programmatic TransportOption defaults in buildTransport.
+func (d *dialOptions) resolvedPoolConfig(base connPoolConfig) connPoolConfig {
+	if !d.connectionPerOutbound || d.connPoolOverride == nil {
+		return base
+	}
+	cfg := base
+	override := d.connPoolOverride
+	if override.DynamicScalingEnabled != nil && !*override.DynamicScalingEnabled {
+		cfg.dynamicScalingEnabled = false
+	}
+	if override.MaxConcurrentStreams > 0 {
+		cfg.maxConcurrentStreams = override.MaxConcurrentStreams
+	}
+	if override.ScaleUpThreshold > 0 {
+		cfg.scaleUpThreshold = override.ScaleUpThreshold
+	}
+	if override.ScaleDownGap > 0 {
+		cfg.scaleDownGap = override.ScaleDownGap
+	}
+	if override.MinConnections > 0 {
+		cfg.minConnections = override.MinConnections
+	}
+	if override.MaxConnections > 0 {
+		cfg.maxConnections = override.MaxConnections
+	}
+	if override.IdleTimeout > 0 {
+		cfg.idleTimeout = override.IdleTimeout
+	}
+	if override.ScalingMonitorInterval > 0 {
+		cfg.scalingMonitorInterval = override.ScalingMonitorInterval
+	}
+	return cfg
 }
