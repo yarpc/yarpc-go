@@ -83,27 +83,32 @@ func validateResolvedConnPool(cfg connPoolConfig) error {
 	return nil
 }
 
+func (p *grpcPeer) liveProvider() ConnectionPoolConfigProvider {
+	if p.poolConfigProvider != nil {
+		return p.poolConfigProvider
+	}
+	if p.t != nil && p.t.options != nil {
+		return p.t.options.poolConfigProvider
+	}
+	return nil
+}
+
 // livePoolCfg returns the pool knobs for this scale decision: the startup
-// snapshot, overlaid by ConnectionPoolConfigProvider when set. A broken
-// live overlay is dropped and the last valid snapshot is used. The whole
-// struct is swapped so the scaler never sees a torn mix of old and new
-// fields.
+// snapshot, overlaid by the live hook when set. A broken live overlay is
+// dropped and the last valid snapshot is used. The whole struct is swapped
+// so the scaler never sees a torn mix of old and new fields.
 func (p *grpcPeer) livePoolCfg() connPoolConfig {
 	base := p.poolCfg
-	if p.t == nil || p.t.options == nil || p.t.options.poolConfigProvider == nil {
+	provider := p.liveProvider()
+	if provider == nil {
 		return base
 	}
-	dest := ""
-	if p.isolated {
-		dest = p.destServiceName
-	}
-	overlay := p.t.options.poolConfigProvider.ConnectionPoolConfig(dest)
+	overlay := provider()
 	next := applyPoolOverride(base, &overlay)
 	if err := validateResolvedConnPool(next); err != nil {
 		if p.invalidLiveLogged.CompareAndSwap(false, true) {
 			p.t.options.logger.Warn("grpc: ignoring invalid live connection pool config",
 				zap.String("peer", p.HostPort()),
-				zap.String("dest", dest),
 				zap.Error(err))
 		}
 		if v := p.liveCfg.Load(); v != nil {

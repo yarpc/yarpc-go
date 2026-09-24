@@ -86,12 +86,11 @@ type grpcPeer struct {
 	connCount atomic.Int32
 
 	// poolCfg is the startup snapshot (TransportOptions, YAML, outbound
-	// overlay). livePoolCfg overlays ConnectionPoolConfigProvider on top.
-	poolCfg           connPoolConfig
-	destServiceName   string
-	isolated          bool
-	liveCfg           atomic.Value // connPoolConfig, last valid live snapshot
-	invalidLiveLogged atomic.Bool
+	// overlay). livePoolCfg overlays the live hook on top.
+	poolCfg            connPoolConfig
+	poolConfigProvider ConnectionPoolConfigProvider // isolated Dialer hook; nil uses transport hook
+	liveCfg            atomic.Value                 // connPoolConfig, last valid live snapshot
+	invalidLiveLogged  atomic.Bool
 }
 
 // loadConns returns the current immutable connection snapshot.
@@ -144,8 +143,9 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 			idleTimeout:            t.options.clientConnPoolIdleTimeout,
 			scalingMonitorInterval: t.options.clientConnPoolScalingMonitorInterval,
 		}),
-		destServiceName: options.destServiceName,
-		isolated:        options.connectionPerOutbound,
+	}
+	if options.connectionPerOutbound {
+		p.poolConfigProvider = options.poolConfigProvider
 	}
 	p.liveCfg.Store(p.poolCfg)
 	t.options.logger.Debug("grpc: connection pool config resolved",

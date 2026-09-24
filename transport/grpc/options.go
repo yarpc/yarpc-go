@@ -312,26 +312,24 @@ func WithDynamicConnectionScaling(enabled bool) TransportOption {
 	}
 }
 
-// ConnectionPoolConfigProvider supplies live connection-pool overrides.
-// Object Config / Flipr adapters implement this; yarpc-go does not
-// subscribe to those systems itself.
-//
-// Dest is the outbound service name for an isolated Dialer, or "" for the
-// shared transport pool. The implementation must be safe for concurrent
-// calls from the RPC and monitor paths.
+// ConnectionPoolConfigProvider is a hook that returns live pool overrides.
+// It must be safe for concurrent calls from the RPC and monitor paths.
 //
 // Zero-value fields mean "no opinion" and keep the peer's startup config
 // (TransportOptions, YAML, and outbound ClientConnectionPool). Explicit
 // DynamicScalingEnabled true is ignored, matching YAML; false disables
 // scale-up and scale-down. Invalid resolved configs are ignored and the
 // last valid snapshot is kept.
-type ConnectionPoolConfigProvider interface {
-	ConnectionPoolConfig(dest string) ClientConnectionPoolConfig
-}
+//
+// The hook returns ClientConnectionPoolConfig only. Callers that subscribe
+// to an external config system resolve that system themselves.
+type ConnectionPoolConfigProvider func() ClientConnectionPoolConfig
 
-// WithConnectionPoolConfigProvider installs a live source for pool knobs.
-// The scaler reads it on every scale-up and monitor tick. The monitor
-// ticker interval is fixed at peer creation and is not updated live.
+// WithConnectionPoolConfigProvider installs a live source for the
+// transport-wide pool. Isolated Dialers that need a different live source
+// can pass ClientConnectionPoolProvider. The scaler reads the hook on
+// every scale-up and monitor tick. The monitor ticker interval is fixed
+// at peer creation and is not updated live.
 func WithConnectionPoolConfigProvider(p ConnectionPoolConfigProvider) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.poolConfigProvider = p
@@ -470,6 +468,15 @@ func ClientConnectionPool(cfg ClientConnectionPoolConfig) DialOption {
 	}
 }
 
+// ClientConnectionPoolProvider installs a live source for peers retained
+// through this Dialer. Like ClientConnectionPool, it only takes effect on
+// a Dialer isolated via WithConnectionIsolation.
+func ClientConnectionPoolProvider(p ConnectionPoolConfigProvider) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.poolConfigProvider = p
+	}
+}
+
 type transportOptions struct {
 	backoffStrategy           backoff.Strategy
 	tracer                    opentracing.Tracer
@@ -593,6 +600,10 @@ type dialOptions struct {
 	// Dialer, overrides the transport-wide dynamic connection pool
 	// configuration for peers retained through it. See ClientConnectionPool.
 	connPoolOverride *ClientConnectionPoolConfig
+
+	// poolConfigProvider, when set on an isolated Dialer, is the live
+	// hook for peers retained through it. See ClientConnectionPoolProvider.
+	poolConfigProvider ConnectionPoolConfigProvider
 }
 
 func (d *dialOptions) grpcOptions(t *Transport) []grpc.DialOption {

@@ -82,7 +82,7 @@ func (p *grpcPeer) maybeScaleDown() {
 	// Startup-disabled peers never start this monitor. Tests also call
 	// maybeScaleDown with a snapshot that leaves the flag unset. Only skip
 	// when a live provider has explicitly disabled scaling.
-	if p.t != nil && p.t.options != nil && p.t.options.poolConfigProvider != nil && !cfg.dynamicScalingEnabled {
+	if p.liveProvider() != nil && !cfg.dynamicScalingEnabled {
 		return
 	}
 
