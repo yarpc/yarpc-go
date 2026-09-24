@@ -23,7 +23,9 @@ package thrift
 import (
 	"bytes"
 	"io"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -223,5 +225,43 @@ func TestPooledBodyCloseDuringReads(t *testing.T) {
 
 		require.True(t, released, "the buffer must be released once both goroutines are done")
 		require.False(t, reading, "no Read may remain in flight")
+	}
+}
+
+// startPoolChurn takes buffers from the global pool, writes to them, and puts
+// them back. It runs until the returned function is called. If a body buffer
+// is released too early, this loop reuses it and go test -race reports a data
+// race.
+func startPoolChurn(size int) func() {
+	var (
+		stop    atomic.Bool
+		wg      sync.WaitGroup
+		workers = runtime.GOMAXPROCS(0)
+	)
+	if workers < 2 {
+		workers = 2
+	}
+	if workers > 4 {
+		workers = 4
+	}
+
+	// One worker for each P. sync.Pool keeps a free list for each P. One worker
+	// can miss a buffer that another P released.
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			pattern := bytes.Repeat([]byte{0xAB}, size)
+			for !stop.Load() {
+				buf := bufferpool.Get()
+				_, _ = buf.Write(pattern)
+				bufferpool.Put(buf)
+			}
+		}()
+	}
+
+	return func() {
+		stop.Store(true)
+		wg.Wait()
 	}
 }
