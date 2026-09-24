@@ -349,7 +349,7 @@ func (o *Outbound) DirectCallOneway(ctx context.Context, treq *transport.Request
 		return nil, err
 	}
 	if err = res.Body.Close(); err != nil {
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 	}
 	return time.Now(), nil
 }
@@ -387,7 +387,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
 		if err = response.Body.Close(); err != nil {
-			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 		return nil, transport.UpdateSpanWithErr(span,
 			yarpcerrors.InternalErrorf("service name sent from the request "+
@@ -573,10 +573,10 @@ func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response
 			var err error
 			details, err = ioutil.ReadAll(response.Body)
 			if err != nil {
-				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 			}
 			if err := response.Body.Close(); err != nil {
-				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 			}
 			// nil out body so that it isn't read later
 			tres.Body = nil
@@ -584,11 +584,11 @@ func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response
 	} else {
 		contentsBytes, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 		contents = string(contentsBytes)
 		if err := response.Body.Close(); err != nil {
-			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 	}
 	// use the status code if we can't get a code from the headers
@@ -603,7 +603,6 @@ func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response
 	yarpcErr := intyarpcerrors.NewWithNamef(
 		code,
 		response.Header.Get(ErrorNameHeader),
-		"%s",
 		strings.TrimSuffix(contents, "\n"),
 	).WithDetails(details)
 
