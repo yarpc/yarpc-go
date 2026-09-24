@@ -24,8 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"context"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tchannel "github.com/uber/tchannel-go"
@@ -34,6 +32,7 @@ import (
 	wc "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherclient"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/net/context"
 )
 
 func TestSanitization(t *testing.T) {

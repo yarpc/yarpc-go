@@ -131,7 +131,7 @@ func TestToGRPCError(t *testing.T) {
 
 	t.Run("yarpcerror", func(t *testing.T) {
 		msg := "foo"
-		yErr := yarpcerrors.FailedPreconditionErrorf("%s", msg)
+		yErr := yarpcerrors.FailedPreconditionErrorf(msg)
 
 		grpcSt, ok := status.FromError(toGRPCError(yErr))
 		require.True(t, ok, "expected gRPC error")
