@@ -85,7 +85,13 @@ type grpcPeer struct {
 	// pool size without a full slice load.
 	connCount atomic.Int32
 
-	poolCfg connPoolConfig
+	// poolCfg is the startup snapshot (TransportOptions, YAML, outbound
+	// overlay). livePoolCfg overlays ConnectionPoolConfigProvider on top.
+	poolCfg           connPoolConfig
+	destServiceName   string
+	isolated          bool
+	liveCfg           atomic.Value // connPoolConfig, last valid live snapshot
+	invalidLiveLogged atomic.Bool
 }
 
 // loadConns returns the current immutable connection snapshot.
@@ -138,7 +144,10 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 			idleTimeout:            t.options.clientConnPoolIdleTimeout,
 			scalingMonitorInterval: t.options.clientConnPoolScalingMonitorInterval,
 		}),
+		destServiceName: options.destServiceName,
+		isolated:        options.connectionPerOutbound,
 	}
+	p.liveCfg.Store(p.poolCfg)
 	t.options.logger.Debug("grpc: connection pool config resolved",
 		zap.String("peer", address),
 		zap.Bool("dynamicScalingEnabled", p.poolCfg.dynamicScalingEnabled),

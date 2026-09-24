@@ -312,6 +312,32 @@ func WithDynamicConnectionScaling(enabled bool) TransportOption {
 	}
 }
 
+// ConnectionPoolConfigProvider supplies live connection-pool overrides.
+// Object Config / Flipr adapters implement this; yarpc-go does not
+// subscribe to those systems itself.
+//
+// Dest is the outbound service name for an isolated Dialer, or "" for the
+// shared transport pool. The implementation must be safe for concurrent
+// calls from the RPC and monitor paths.
+//
+// Zero-value fields mean "no opinion" and keep the peer's startup config
+// (TransportOptions, YAML, and outbound ClientConnectionPool). Explicit
+// DynamicScalingEnabled true is ignored, matching YAML; false disables
+// scale-up and scale-down. Invalid resolved configs are ignored and the
+// last valid snapshot is kept.
+type ConnectionPoolConfigProvider interface {
+	ConnectionPoolConfig(dest string) ClientConnectionPoolConfig
+}
+
+// WithConnectionPoolConfigProvider installs a live source for pool knobs.
+// The scaler reads it on every scale-up and monitor tick. The monitor
+// ticker interval is fixed at peer creation and is not updated live.
+func WithConnectionPoolConfigProvider(p ConnectionPoolConfigProvider) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.poolConfigProvider = p
+	}
+}
+
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
@@ -472,6 +498,7 @@ type transportOptions struct {
 	clientConnPoolIdleTimeout            time.Duration
 	clientConnPoolScalingMonitorInterval time.Duration
 	clientConnPoolDynamicScalingEnabled  bool
+	poolConfigProvider                   ConnectionPoolConfigProvider
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -634,31 +661,5 @@ func (d *dialOptions) resolvedPoolConfig(base connPoolConfig) connPoolConfig {
 	if !d.connectionPerOutbound || d.connPoolOverride == nil {
 		return base
 	}
-	cfg := base
-	override := d.connPoolOverride
-	if override.DynamicScalingEnabled != nil && !*override.DynamicScalingEnabled {
-		cfg.dynamicScalingEnabled = false
-	}
-	if override.MaxConcurrentStreams > 0 {
-		cfg.maxConcurrentStreams = override.MaxConcurrentStreams
-	}
-	if override.ScaleUpThreshold > 0 {
-		cfg.scaleUpThreshold = override.ScaleUpThreshold
-	}
-	if override.ScaleDownGap > 0 {
-		cfg.scaleDownGap = override.ScaleDownGap
-	}
-	if override.MinConnections > 0 {
-		cfg.minConnections = override.MinConnections
-	}
-	if override.MaxConnections > 0 {
-		cfg.maxConnections = override.MaxConnections
-	}
-	if override.IdleTimeout > 0 {
-		cfg.idleTimeout = override.IdleTimeout
-	}
-	if override.ScalingMonitorInterval > 0 {
-		cfg.scalingMonitorInterval = override.ScalingMonitorInterval
-	}
-	return cfg
+	return applyPoolOverride(base, d.connPoolOverride)
 }
