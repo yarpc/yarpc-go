@@ -219,6 +219,24 @@ func TestClientConnectionPoolProvider_IsolatedOnly(t *testing.T) {
 	require.NoError(t, isolated.ReleasePeer(id, idSubscriber{2}))
 }
 
+func TestNewPeer_OutboundOverrideValidatedAfterMerge(t *testing.T) {
+	tr := NewTransport()
+
+	_, err := tr.newPeer("127.0.0.1:1", &dialOptions{
+		connectionPerOutbound: true,
+		connPoolOverride:      &ClientConnectionPoolConfig{MinConnections: 80},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "minConnections (80)")
+
+	_, err = tr.newPeer("127.0.0.1:1", &dialOptions{
+		connectionPerOutbound: true,
+		connPoolOverride:      &ClientConnectionPoolConfig{ScaleDownGap: 0.8},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "scaleDownGap")
+}
+
 func TestLivePoolCfg_LogsInvalidOnce(t *testing.T) {
 	base := baseTestPoolConfig()
 	p := liveTestPeer(t, base, staticPoolProvider(ClientConnectionPoolConfig{

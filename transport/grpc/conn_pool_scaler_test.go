@@ -987,10 +987,14 @@ func TestRunScalingMonitorClampsAndWarns(t *testing.T) {
 func TestTransportOptionDefaults(t *testing.T) {
 	t.Parallel()
 	opts := newTransportOptions(nil)
-	assert.Equal(t, defaultClientConnPoolScaleDownGap, opts.clientConnPoolScaleDownGap,
-		"scaleDownGap default should be %.2f", defaultClientConnPoolScaleDownGap)
-	assert.Equal(t, defaultClientConnPoolScalingMonitorInterval, opts.clientConnPoolScalingMonitorInterval,
-		"scalingMonitorInterval default should be %v", defaultClientConnPoolScalingMonitorInterval)
+	assert.True(t, opts.clientConnPoolDynamicScalingEnabled)
+	assert.Equal(t, defaultClientConnPoolMaxConcurrentStreams, opts.clientConnPoolMaxConcurrentStreams)
+	assert.Equal(t, defaultClientConnPoolScaleUpThreshold, opts.clientConnPoolScaleUpThreshold)
+	assert.Equal(t, defaultClientConnPoolScaleDownGap, opts.clientConnPoolScaleDownGap)
+	assert.Equal(t, defaultClientConnPoolMinConnections, opts.clientConnPoolMinConnections)
+	assert.Equal(t, defaultClientConnPoolMaxConnections, opts.clientConnPoolMaxConnections)
+	assert.Equal(t, defaultClientConnPoolIdleTimeout, opts.clientConnPoolIdleTimeout)
+	assert.Equal(t, defaultClientConnPoolScalingMonitorInterval, opts.clientConnPoolScalingMonitorInterval)
 }
 
 // between cleanupIdleConns (which cancels idle connections) and

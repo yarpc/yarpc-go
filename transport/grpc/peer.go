@@ -125,6 +125,14 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	poolCfg := options.resolvedPoolConfig(t.baseConnPoolConfig())
+	if options.connectionPerOutbound && options.connPoolOverride != nil {
+		if err := validateResolvedConnPool(poolCfg); err != nil {
+			cancel()
+			return nil, err
+		}
+	}
+
 	p := &grpcPeer{
 		Peer:         abstractpeer.NewPeer(abstractpeer.PeerIdentifier(address), t),
 		t:            t,
@@ -133,16 +141,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		stoppedC:     make(chan struct{}),
 		grpcDialOpts: dialOptions,
 		metrics:      newPeerPoolReporter(t.metrics),
-		poolCfg: options.resolvedPoolConfig(connPoolConfig{
-			dynamicScalingEnabled:  t.options.clientConnPoolDynamicScalingEnabled,
-			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
-			scaleUpThreshold:       t.options.clientConnPoolScaleUpThreshold,
-			scaleDownGap:           t.options.clientConnPoolScaleDownGap,
-			minConnections:         t.options.clientConnPoolMinConnections,
-			maxConnections:         t.options.clientConnPoolMaxConnections,
-			idleTimeout:            t.options.clientConnPoolIdleTimeout,
-			scalingMonitorInterval: t.options.clientConnPoolScalingMonitorInterval,
-		}),
+		poolCfg:      poolCfg,
 	}
 	if options.connectionPerOutbound {
 		p.poolConfigProvider = options.poolConfigProvider

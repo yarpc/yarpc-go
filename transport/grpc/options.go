@@ -55,13 +55,12 @@ const (
 	defaultServerMaxRecvMsgSize = 1024 * 1024 * 64
 	defaultClientMaxRecvMsgSize = 1024 * 1024 * 64
 	// Client connection pool defaults.
-	// defaultClientConnPoolMaxConcurrentStreams matches Go's net/http2 server default (SETTINGS_MAX_CONCURRENT_STREAMS = 250).
-	defaultClientConnPoolMaxConcurrentStreams   int32         = 250
-	defaultClientConnPoolScaleUpThreshold       float64       = 0.8
+	defaultClientConnPoolMaxConcurrentStreams   int32         = 100
+	defaultClientConnPoolScaleUpThreshold       float64       = 0.7
 	defaultClientConnPoolScaleDownGap           float64       = 0.1
 	defaultClientConnPoolMinConnections         int           = 1
-	defaultClientConnPoolMaxConnections         int           = 5
-	defaultClientConnPoolIdleTimeout            time.Duration = 15 * time.Minute
+	defaultClientConnPoolMaxConnections         int           = 50
+	defaultClientConnPoolIdleTimeout            time.Duration = 5 * time.Minute
 	defaultClientConnPoolScalingMonitorInterval time.Duration = 30 * time.Second
 )
 
@@ -219,8 +218,7 @@ func ClientMaxHeaderListSize(clientMaxHeaderListSize uint32) TransportOption {
 // an additional connection to a peer.
 //
 // The gRPC client does not expose the server-advertised limit, so this must be
-// configured manually.  The default is 250, which matches Go's net/http2 server
-// default.
+// configured manually.  The default is 100.
 func MaxConcurrentStreams(n int32) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolMaxConcurrentStreams = n
@@ -228,11 +226,11 @@ func MaxConcurrentStreams(n int32) TransportOption {
 }
 
 // ScaleUpThreshold sets the fraction of MaxConcurrentStreams at which YARPC
-// opens an additional connection to a peer.  For example, a value of 0.8 means
+// opens an additional connection to a peer.  For example, a value of 0.7 means
 // a new connection is opened when any existing connection carries more than
-// 80% of its stream budget.
+// 70% of its stream budget.
 //
-// The default is 0.8.
+// The default is 0.7.
 func ScaleUpThreshold(f float64) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolScaleUpThreshold = f
@@ -240,9 +238,9 @@ func ScaleUpThreshold(f float64) TransportOption {
 }
 
 // ScaleDownGap sets the hysteresis gap subtracted from ScaleUpThreshold to
-// derive the scale-down threshold.  For example, with ScaleUpThreshold=0.8
+// derive the scale-down threshold.  For example, with ScaleUpThreshold=0.7
 // and ScaleDownGap=0.1, connections are drained only when aggregate load would
-// fit within 70% of capacity on the reduced pool.  This prevents oscillation
+// fit within 60% of capacity on the reduced pool.  This prevents oscillation
 // when stream counts hover near the scale-up boundary.
 //
 // The default is 0.1.
@@ -266,7 +264,7 @@ func MinConnections(n int) TransportOption {
 // MaxConnections sets the maximum number of connections YARPC may open to a
 // single peer.
 //
-// The default is 5.
+// The default is 50.
 func MaxConnections(n int) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolMaxConnections = n
@@ -276,7 +274,7 @@ func MaxConnections(n int) TransportOption {
 // ConnIdleTimeout sets how long a fully-drained connection remains idle before
 // YARPC closes it and removes it from the pool.
 //
-// The default is 15 minutes.
+// The default is 5 minutes.
 func ConnIdleTimeout(d time.Duration) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolIdleTimeout = d
@@ -301,11 +299,8 @@ func ScalingMonitorInterval(d time.Duration) TransportOption {
 // ScaleUpThreshold, and drains connections when aggregate utilization drops
 // low enough to consolidate load onto fewer connections.
 //
-// Because YARPC is an open-source project, Flipr/ObjectConfig based rollout is handled
-// externally: set this option to true only after validating the change in a
-// controlled environment.
-//
-// The default is false (disabled).
+// The default is true (enabled). Pass false, or set dynamicScalingEnabled: false
+// in YAML, to opt out. YAML true is ignored and does not override an explicit false.
 func WithDynamicConnectionScaling(enabled bool) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolDynamicScalingEnabled = enabled
@@ -523,6 +518,7 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 		clientConnPoolMaxConnections:         defaultClientConnPoolMaxConnections,
 		clientConnPoolIdleTimeout:            defaultClientConnPoolIdleTimeout,
 		clientConnPoolScalingMonitorInterval: defaultClientConnPoolScalingMonitorInterval,
+		clientConnPoolDynamicScalingEnabled:  true,
 	}
 	for _, option := range options {
 		option(transportOptions)

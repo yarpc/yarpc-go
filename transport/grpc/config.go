@@ -108,12 +108,12 @@ type TransportConfig struct {
 //	transports:
 //	  grpc:
 //	    clientConnectionPool:
-//	      dynamicScalingEnabled: false  # explicit opt-out (overrides central OC control)
-//	      maxConcurrentStreams: 250     # assumed server HTTP/2 stream limit
-//	      scaleUpThreshold: 0.8         # open a new conn at 80% utilization
+//	      dynamicScalingEnabled: true   # default; set false to opt out
+//	      maxConcurrentStreams: 100     # assumed server HTTP/2 stream limit
+//	      scaleUpThreshold: 0.7         # open a new conn at 70% utilization
 //	      scaleDownGap: 0.1             # hysteresis gap below scaleUpThreshold for drain decisions
 //	      minConnections: 1             # minimum connections per peer
-//	      maxConnections: 10            # maximum connections per peer
+//	      maxConnections: 50            # maximum connections per peer
 //	      idleTimeout: 5m               # close idle connections after this duration
 //	      scalingMonitorInterval: 30s   # how often to evaluate scale-down and idle cleanup
 type ClientConnectionPoolConfig struct {
@@ -121,22 +121,20 @@ type ClientConnectionPoolConfig struct {
 	// This field uses a pointer so that YAML "not set" and "explicitly false" can
 	// be distinguished:
 	//
-	//   - nil (field omitted from YAML): the central ObjectConfig value is used.
-	//   - false (explicitly set in YAML): always disabled, overrides ObjectConfig.
-	//   - true (explicitly set in YAML): ignored — enabling requires ObjectConfig.
-	//
-	// In practice, services should leave this field unset and rely on ObjectConfig.
-	// Set it to false only to explicitly opt out of dynamic scaling for this service.
+	//   - nil (field omitted): the transport default (enabled) or a programmatic option is used.
+	//   - false: always disabled.
+	//   - true: ignored, so an explicit programmatic false is preserved.
 	DynamicScalingEnabled *bool `config:"dynamicScalingEnabled"`
 
 	// MaxConcurrentStreams is the assumed HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS
 	// value enforced by the server.  YARPC uses this to decide when to open an
-	// additional connection.  Defaults to 250 (Go's net/http2 default).
+	// additional connection.  Defaults to 100.
 	MaxConcurrentStreams int32 `config:"maxConcurrentStreams"`
 
 	// ScaleUpThreshold is the fraction of MaxConcurrentStreams at which a
-	// new connection is opened (e.g. 0.8 → scale up at 200 active streams).
-	// Must be in the range (0, 1].  Defaults to 0.8.
+	// new connection is opened (e.g. 0.7 → scale up at 70 active streams when
+	// MaxConcurrentStreams is 100).
+	// Must be in the range (0, 1].  Defaults to 0.7.
 	ScaleUpThreshold float64 `config:"scaleUpThreshold"`
 
 	// ScaleDownGap is the hysteresis gap subtracted from ScaleUpThreshold to
@@ -150,12 +148,12 @@ type ClientConnectionPoolConfig struct {
 	MinConnections int `config:"minConnections"`
 
 	// MaxConnections is the maximum number of connections allowed per peer.
-	// Defaults to 5.
+	// Defaults to 50.
 	MaxConnections int `config:"maxConnections"`
 
 	// IdleTimeout is how long a fully-drained connection stays idle before
 	// YARPC closes it.
-	// Defaults to 15 minutes.
+	// Defaults to 5 minutes.
 	IdleTimeout time.Duration `config:"idleTimeout"`
 
 	// ScalingMonitorInterval is how often the background monitor evaluates
@@ -446,10 +444,8 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	if err := validateClientConnectionPoolConfig(cp); err != nil {
 		return nil, err
 	}
-	// DynamicScalingEnabled is only applied when explicitly set to false in YAML,
-	// which acts as a service-level opt-out that overrides the central OC value.
-	// YAML true and YAML unset both leave the OC-provided programmatic option intact.
-	// This means: enabling requires OC to set it; services can only opt out via YAML.
+	// DynamicScalingEnabled defaults to true. YAML false opts out and overrides
+	// a programmatic true. YAML true is ignored, so a programmatic false is kept.
 	if cp.DynamicScalingEnabled != nil && !*cp.DynamicScalingEnabled {
 		options = append(options, WithDynamicConnectionScaling(false))
 	}
@@ -537,6 +533,12 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 	opts := append(dialOpts, t.DialOptions...)
 	dialer := trans.NewDialer(append([]DialOption{DialerDestinationServiceName(kit.OutboundServiceName())}, opts...)...)
 	if outboundConfig.ClientConnectionPool != nil {
+		// Validate the pool the peer will actually use: outbound fields
+		// overlaid on the transport config, including fields the outbound left unset.
+		merged := applyPoolOverride(trans.baseConnPoolConfig(), outboundConfig.ClientConnectionPool)
+		if err := validateResolvedConnPool(merged); err != nil {
+			return nil, err
+		}
 		dialer = dialer.WithConnectionIsolation()
 	}
 	var chooser peer.Chooser

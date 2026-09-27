@@ -600,7 +600,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "minConnections exceeds default maxConnections",
 			transportCfg: attrs{
 				"clientConnectionPool": attrs{
-					"minConnections": "10",
+					"minConnections": "60",
 				},
 			},
 			outboundCfg: attrs{
@@ -608,7 +608,7 @@ func TestTransportSpec(t *testing.T) {
 					TransportName: attrs{"address": "localhost:54583"},
 				},
 			},
-			wantErrors: []string{"clientConnectionPool.maxConnections (5) must be >= minConnections (10)"},
+			wantErrors: []string{"clientConnectionPool.maxConnections (50) must be >= minConnections (60)"},
 		},
 		{
 			desc: "scaleUpThreshold out of range",
@@ -881,6 +881,39 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 			wantErrors: []string{"clientConnectionPool.maxConnections (2) must be >= minConnections (8)"},
+		},
+		{
+			desc: "outbound minConnections above merged transport max",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "10",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54600",
+						"clientConnectionPool": attrs{
+							"minConnections": "40",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.maxConnections (10) must be >= minConnections (40)"},
+		},
+		{
+			desc: "outbound scaleDownGap collapses merged scale-up threshold",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54601",
+						"clientConnectionPool": attrs{
+							"scaleDownGap": "0.8",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"scaleUpThreshold (0.70) minus scaleDownGap (0.80)"},
 		},
 	}
 

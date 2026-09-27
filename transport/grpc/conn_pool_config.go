@@ -60,6 +60,23 @@ func applyPoolOverride(base connPoolConfig, override *ClientConnectionPoolConfig
 	return cfg
 }
 
+func (t *Transport) baseConnPoolConfig() connPoolConfig {
+	if t == nil || t.options == nil {
+		return connPoolConfig{}
+	}
+	o := t.options
+	return connPoolConfig{
+		dynamicScalingEnabled:  o.clientConnPoolDynamicScalingEnabled,
+		maxConcurrentStreams:   o.clientConnPoolMaxConcurrentStreams,
+		scaleUpThreshold:       o.clientConnPoolScaleUpThreshold,
+		scaleDownGap:           o.clientConnPoolScaleDownGap,
+		minConnections:         o.clientConnPoolMinConnections,
+		maxConnections:         o.clientConnPoolMaxConnections,
+		idleTimeout:            o.clientConnPoolIdleTimeout,
+		scalingMonitorInterval: o.clientConnPoolScalingMonitorInterval,
+	}
+}
+
 func validateResolvedConnPool(cfg connPoolConfig) error {
 	if cfg.minConnections < 0 {
 		return fmt.Errorf("clientConnectionPool.minConnections must be non-negative, got %d", cfg.minConnections)
