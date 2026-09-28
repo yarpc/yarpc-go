@@ -44,6 +44,53 @@ func testMetricsParams(scope *metrics.Scope) connPoolMetricsParams {
 	}
 }
 
+func gaugeLoad(g *metrics.Gauge) int64 {
+	if g == nil {
+		return 0
+	}
+	return g.Load()
+}
+
+func counterLoad(c *metrics.Counter) int64 {
+	if c == nil {
+		return 0
+	}
+	return c.Load()
+}
+
+// loadedGauges samples gauges via atomic Load. Tests must not use
+// Root.Snapshot() while pool goroutines still Add: net/metrics copies
+// atomic.Int64 in snapshot() and the race detector flags it.
+func (m *connPoolMetrics) loadedGauges() map[string]int64 {
+	if m == nil {
+		return map[string]int64{
+			"conn_pool_active_connections":   0,
+			"conn_pool_draining_connections": 0,
+			"conn_pool_idle_connections":     0,
+		}
+	}
+	return map[string]int64{
+		"conn_pool_active_connections":   gaugeLoad(m.connectionCount),
+		"conn_pool_draining_connections": gaugeLoad(m.drainingConnectionCount),
+		"conn_pool_idle_connections":     gaugeLoad(m.idleConnectionCount),
+	}
+}
+
+func (m *connPoolMetrics) loadedCounters() map[string]int64 {
+	if m == nil {
+		return map[string]int64{
+			"conn_pool_scale_up_total":          0,
+			"conn_pool_scale_down_total":        0,
+			"conn_pool_idle_reactivation_total": 0,
+		}
+	}
+	return map[string]int64{
+		"conn_pool_scale_up_total":          counterLoad(m.scaleUpTotal),
+		"conn_pool_scale_down_total":        counterLoad(m.scaleDownTotal),
+		"conn_pool_idle_reactivation_total": counterLoad(m.idleReactivationTotal),
+	}
+}
+
 func wantConnPoolMetricTags(serviceName string) map[string]string {
 	return map[string]string{
 		_componentTag: _componentTagValueYarpc,

@@ -75,9 +75,11 @@ func peerForScaleDown(t *testing.T, conns []*grpcClientConnWrapper, cfg connPool
 // defaultCfg is a pool config used across maybeScaleDown tests.
 // threshold = int32(100 * 0.8) = 80.
 var defaultScaleDownCfg = connPoolConfig{
-	minConnections:       1,
-	maxConcurrentStreams: 100,
-	scaleUpThreshold:     0.8,
+	dynamicScalingEnabled: true,
+	minConnections:        1,
+	maxConnections:        50,
+	maxConcurrentStreams:  100,
+	scaleUpThreshold:      0.8,
 }
 
 // makeConnWithCancel creates a grpcClientConnWrapper with a real context so
@@ -278,9 +280,10 @@ func TestMaybeScaleDown(t *testing.T) {
 				makeConn(connStateActive, 10),
 			},
 			cfg: connPoolConfig{
-				minConnections:       2,
-				maxConcurrentStreams: 100,
-				scaleUpThreshold:     0.8,
+				dynamicScalingEnabled: true,
+				minConnections:        2,
+				maxConcurrentStreams:  100,
+				scaleUpThreshold:      0.8,
 			},
 			wantStates: []connState{connStateActive},
 		},
@@ -379,9 +382,10 @@ func TestMaybeScaleDown(t *testing.T) {
 				makeConn(connStateActive, 40),
 			},
 			cfg: connPoolConfig{
-				minConnections:       1,
-				maxConcurrentStreams: 100,
-				scaleUpThreshold:     0.8, // threshold=80, capacity=80*2=160, total=85 < 160
+				dynamicScalingEnabled: true,
+				minConnections:        1,
+				maxConcurrentStreams:  100,
+				scaleUpThreshold:      0.8, // threshold=80, capacity=80*2=160, total=85 < 160
 			},
 			wantStates: []connState{connStateDraining, connStateActive, connStateDraining, connStateActive},
 		},
@@ -546,6 +550,15 @@ func TestTryScaleUp(t *testing.T) {
 		assert.Equal(t, 1, maxConnLogs.Len(), "at-max log should fire once per saturation episode")
 	})
 
+	t.Run("nil least-loaded conn - no panic, no scale-up when at min", func(t *testing.T) {
+		t.Parallel()
+		p := peerForPool(t)
+		p.storeConns([]*grpcClientConnWrapper{underBudget})
+		p.tryScaleUp(nil)
+		assert.Equal(t, int32(0), atomic.LoadInt32(&p.isScaling))
+		assert.Equal(t, 1, len(p.loadConns()))
+	})
+
 	t.Run("already scaling - no second goroutine launched", func(t *testing.T) {
 		t.Parallel()
 		p := peerForPool(t)
@@ -625,6 +638,116 @@ func TestEvaluateScaling_FillsMinConnections(t *testing.T) {
 	p.evaluateScaling()
 
 	assert.Equal(t, int32(3), p.connCount.Load())
+}
+
+func TestEvaluateScaling_DisabledDrainsTowardOne(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.startupPool.idleTimeout = time.Hour
+	c1 := makeConn(connStateActive, 30)
+	c2 := makeConn(connStateActive, 10)
+	c3 := makeConn(connStateActive, 1)
+	p.storeConns([]*grpcClientConnWrapper{c1, c2, c3})
+	disabled := false
+	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{
+		DynamicScalingEnabled: &disabled,
+	})
+	p.lastValidLivePool.Store(p.startupPool)
+
+	p.evaluateScaling()
+	assert.Equal(t, 2, p.activeConnCount())
+	assert.Equal(t, connStateDraining, c3.getState(), "least-loaded extra drains first")
+
+	p.evaluateScaling()
+	assert.Equal(t, 1, p.activeConnCount())
+	assert.Equal(t, connStateActive, c1.getState())
+
+	p.evaluateScaling()
+	assert.Equal(t, 1, p.activeConnCount(), "must not drain the last connection")
+}
+
+func TestEvaluateScaling_DisabledDoesNotFillMin(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.storeConns([]*grpcClientConnWrapper{makeConn(connStateActive, 0)})
+	p.connCount.Store(1)
+	disabled := false
+	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{
+		DynamicScalingEnabled: &disabled,
+		MinConnections:        3,
+	})
+	p.lastValidLivePool.Store(p.startupPool)
+
+	p.evaluateScaling()
+
+	assert.Equal(t, 1, p.activeConnCount())
+	assert.Equal(t, int32(1), p.connCount.Load())
+}
+
+func TestMaybeScaleDown_DisabledDrainsDespiteLoad(t *testing.T) {
+	t.Parallel()
+	disabled := false
+	conns := []*grpcClientConnWrapper{
+		makeConn(connStateActive, 80),
+		makeConn(connStateActive, 80),
+		makeConn(connStateActive, 80),
+	}
+	p := peerForScaleDown(t, conns, defaultScaleDownCfg)
+	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{
+		DynamicScalingEnabled: &disabled,
+	})
+	p.lastValidLivePool.Store(p.startupPool)
+
+	p.maybeScaleDown()
+
+	draining := 0
+	for _, c := range p.loadConns() {
+		if c.getState() == connStateDraining {
+			draining++
+		}
+	}
+	assert.Equal(t, 1, draining, "scaling off must drain an extra even when load is high")
+	assert.Equal(t, 2, p.activeConnCount())
+}
+
+func TestMaybeScaleDown_MinCappedByMax(t *testing.T) {
+	t.Parallel()
+	conns := []*grpcClientConnWrapper{
+		makeConn(connStateActive, 5),
+		makeConn(connStateActive, 5),
+		makeConn(connStateActive, 5),
+	}
+	p := peerForScaleDown(t, conns, connPoolConfig{
+		dynamicScalingEnabled: true,
+		minConnections:        8,
+		maxConnections:        2,
+		maxConcurrentStreams:  100,
+		scaleUpThreshold:      0.8,
+	})
+
+	p.maybeScaleDown()
+
+	assert.Equal(t, 2, p.activeConnCount(), "scale-down floor must be min capped by max")
+}
+
+func TestScaleDownFloor(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, 1, scaleDownFloor(connPoolConfig{}))
+	assert.Equal(t, 3, scaleDownFloor(connPoolConfig{
+		dynamicScalingEnabled: true,
+		minConnections:        3,
+		maxConnections:        10,
+	}))
+	assert.Equal(t, 2, scaleDownFloor(connPoolConfig{
+		dynamicScalingEnabled: true,
+		minConnections:        8,
+		maxConnections:        2,
+	}))
+	assert.Equal(t, 1, scaleDownFloor(connPoolConfig{
+		dynamicScalingEnabled: false,
+		minConnections:        5,
+		maxConnections:        10,
+	}))
 }
 
 func TestEvaluateScaling_ReactivatesIdleToMeetLiveMin(t *testing.T) {
@@ -969,9 +1092,10 @@ func TestMaybeScaleDownMetrics(t *testing.T) {
 
 	p, _ := peerWithMetrics(t)
 	p.startupPool = connPoolConfig{
-		minConnections:       1,
-		maxConcurrentStreams: 100,
-		scaleUpThreshold:     0.8, // threshold = 80
+		dynamicScalingEnabled: true,
+		minConnections:        1,
+		maxConcurrentStreams:  100,
+		scaleUpThreshold:      0.8, // threshold = 80
 	}
 	p.storeConns([]*grpcClientConnWrapper{
 		makeConn(connStateActive, 10),
@@ -1288,11 +1412,12 @@ func TestConcurrentScaleDownAndScaleUpRace(t *testing.T) {
 		// maybeScaleDown: totalStreams=160, capacityAfterDrain=80*1=80 → 160>=80 → no drain.
 		// Keep load high so tryScaleUp also fires (least-loaded is at threshold).
 		cfg := connPoolConfig{
-			minConnections:       1,
-			maxConnections:       5,
-			maxConcurrentStreams: 100,
-			scaleUpThreshold:     0.8,
-			scaleDownGap:         0.1,
+			dynamicScalingEnabled: true,
+			minConnections:        1,
+			maxConnections:        5,
+			maxConcurrentStreams:  100,
+			scaleUpThreshold:      0.8,
+			scaleDownGap:          0.1,
 		}
 		c1 := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
 		c1.setState(connStateActive)
@@ -1340,10 +1465,11 @@ func TestMaybeScaleDownHysteresis(t *testing.T) {
 	// maxConcurrentStreams=100 → scaleDownThreshold=70
 	// With 3 active conns: capacityAfterDrain = 70 * 2 = 140
 	cfg := connPoolConfig{
-		minConnections:       1,
-		maxConcurrentStreams: 100,
-		scaleUpThreshold:     0.8,
-		scaleDownGap:         0.1,
+		dynamicScalingEnabled: true,
+		minConnections:        1,
+		maxConcurrentStreams:  100,
+		scaleUpThreshold:      0.8,
+		scaleDownGap:          0.1,
 	}
 
 	t.Run("load between scale-down and scale-up thresholds - no drain", func(t *testing.T) {

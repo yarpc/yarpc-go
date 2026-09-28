@@ -255,7 +255,7 @@ func ScaleDownGap(f float64) TransportOption {
 // each peer.  Connections are pre-established up to this count when the peer
 // is first retained.
 //
-// The default is 1.
+// The default is 1. Must be <= MaxConnections; newPeer rejects min > max.
 func MinConnections(n int) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolMinConnections = n
@@ -265,7 +265,7 @@ func MinConnections(n int) TransportOption {
 // MaxConnections sets the maximum number of connections YARPC may open to a
 // single peer.
 //
-// The default is 50.
+// The default is 50. Must be >= MinConnections; newPeer rejects min > max.
 func MaxConnections(n int) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolMaxConnections = n
@@ -305,10 +305,10 @@ func ScalingMonitorInterval(d time.Duration) TransportOption {
 // The default is true (enabled). An omitted YAML field leaves this value in
 // place. dynamicScalingEnabled: true or false in YAML overrides it.
 //
-// If this is false at peer creation, the scale-down/idle monitor is still
-// started when a live pool provider is installed, so a later live true can
-// scale down and fill minConnections. Scale-up on RPC also starts the
-// monitor if live config enables scaling.
+// If this is false (startup or live), the pool does not grow. The monitor
+// still winds extra connections down to 1 via drain → idle → close so
+// in-flight RPCs finish. A later live true can fill minConnections again.
+// Scale-up on RPC also starts the monitor if live config enables scaling.
 func WithDynamicConnectionScaling(enabled bool) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolDynamicScalingEnabled = enabled
@@ -467,11 +467,9 @@ func KeepaliveParams(params keepalive.ClientParameters) DialOption {
 // ConnIdleTimeout / ScalingMonitorInterval / WithDynamicConnectionScaling
 // TransportOptions) for peers retained through this Dialer.
 //
-// This override only takes effect on a Dialer isolated via
-// Dialer.WithConnectionIsolation: outbounds sharing a peer with other
-// dialers also share that peer's connection pool, so a per-outbound override
-// would be ambiguous and is ignored on a non-isolated Dialer. Any field left
-// at its zero value falls back to the transport-wide configuration.
+// Applies to peers retained through this Dialer. Use WithConnectionIsolation
+// so two outbounds do not share a peer (and therefore this override). Any
+// field left at its zero value falls back to the transport-wide configuration.
 func OutboundConnectionPool(cfg ClientConnectionPoolConfig) DialOption {
 	return func(dialOptions *dialOptions) {
 		dialOptions.connPoolOverride = &cfg
@@ -479,9 +477,9 @@ func OutboundConnectionPool(cfg ClientConnectionPoolConfig) DialOption {
 }
 
 // WithOutboundLiveConnectionPoolProvider installs a live provider for peers
-// retained through this Dialer. Like OutboundConnectionPool, it only takes
-// effect on a Dialer isolated via WithConnectionIsolation. When set, it
-// replaces WithGlobalLiveConnectionPoolProvider for those peers.
+// retained through this Dialer. When set, it replaces
+// WithGlobalLiveConnectionPoolProvider for those peers. Use
+// WithConnectionIsolation so two outbounds do not share a peer.
 func WithOutboundLiveConnectionPoolProvider(p LiveConnectionPoolProvider) DialOption {
 	return func(dialOptions *dialOptions) {
 		dialOptions.poolConfigProvider = p
@@ -602,19 +600,13 @@ type dialOptions struct {
 	tlsConfig         *tls.Config
 	destServiceName   string
 
-	// connectionPerOutbound is true for a Dialer produced by
-	// Dialer.WithConnectionIsolation, i.e. one whose peers are not shared
-	// with other dialers. connPoolOverride only takes effect when this is
-	// true.
-	connectionPerOutbound bool
-
-	// connPoolOverride, when set on an isolated (connectionPerOutbound)
-	// Dialer, overrides the transport-wide dynamic connection pool
-	// configuration for peers retained through it. See OutboundConnectionPool.
+	// connPoolOverride, when set, overrides the transport-wide dynamic
+	// connection pool configuration for peers retained through this Dialer.
+	// See OutboundConnectionPool.
 	connPoolOverride *ClientConnectionPoolConfig
 
-	// poolConfigProvider, when set on an isolated Dialer, is the live
-	// provider for peers retained through it. See WithOutboundLiveConnectionPoolProvider.
+	// poolConfigProvider, when set, is the live provider for peers retained
+	// through this Dialer. See WithOutboundLiveConnectionPoolProvider.
 	poolConfigProvider LiveConnectionPoolProvider
 }
 
@@ -672,16 +664,13 @@ func newDialOptions(options []DialOption) *dialOptions {
 
 // resolvedPoolConfig returns the connPoolConfig to use for a peer retained
 // through this Dialer: the transport-wide base config, overridden field by
-// field by connPoolOverride when this Dialer is isolated per-outbound
-// (connectionPerOutbound). A non-isolated Dialer's override, if any, is
-// ignored — its peers are shared with other dialers, so a per-outbound pool
-// configuration would be ambiguous.
+// field by connPoolOverride when set.
 //
 // Fields left at their zero value in the override are inherited from base,
 // mirroring how TransportConfig.ClientConnectionPool fields are applied over
 // programmatic TransportOption defaults in buildTransport.
 func (d *dialOptions) resolvedPoolConfig(base connPoolConfig) connPoolConfig {
-	if !d.connectionPerOutbound || d.connPoolOverride == nil {
+	if d.connPoolOverride == nil {
 		return base
 	}
 	return applyPoolOverride(base, d.connPoolOverride)

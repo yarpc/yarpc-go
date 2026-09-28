@@ -48,8 +48,8 @@ const (
 // connPoolConfig holds configuration for the per-peer connection pool.
 // Values are derived from transportOptions at peer creation time.
 type connPoolConfig struct {
-	// dynamicScalingEnabled gates all automatic connection-pool scaling.
-	// When false the pool is never grown or shrunk automatically.
+	// dynamicScalingEnabled gates automatic connection-pool growth.
+	// When false the pool does not grow; extras drain to 1 via idle timeout.
 	dynamicScalingEnabled bool
 	// maxConcurrentStreams is the HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS
 	// value enforced by the server (default 100).

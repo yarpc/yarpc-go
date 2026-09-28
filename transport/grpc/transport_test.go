@@ -382,9 +382,8 @@ func TestIsolatedDialersDoNotSharePeer(t *testing.T) {
 }
 
 // TestOutboundConnectionPoolOverride verifies that an OutboundConnectionPool
-// DialOption only affects the pool configuration of peers retained through an
-// isolated (per-outbound) Dialer, leaving a shared Dialer's peer on the
-// transport-wide configuration.
+// DialOption applies to peers retained through that Dialer. Isolation keeps
+// those peers from being shared with other dialers.
 func TestOutboundConnectionPoolOverride(t *testing.T) {
 	address := startTestServer(t)
 
@@ -401,7 +400,7 @@ func TestOutboundConnectionPoolOverride(t *testing.T) {
 	require.NoError(t, err)
 	sp, ok := sharedPeer.(*grpcPeer)
 	require.True(t, ok)
-	assert.Equal(t, 5, sp.startupPool.maxConnections, "override on a non-isolated dialer must be ignored")
+	assert.Equal(t, 9, sp.startupPool.maxConnections, "override applies to peers retained through this Dialer")
 
 	isolatedDialer := transport.NewDialer(OutboundConnectionPool(ClientConnectionPoolConfig{
 		MaxConnections: 9,
@@ -410,7 +409,8 @@ func TestOutboundConnectionPoolOverride(t *testing.T) {
 	require.NoError(t, err)
 	ip, ok := isolatedPeer.(*grpcPeer)
 	require.True(t, ok)
-	assert.Equal(t, 9, ip.startupPool.maxConnections, "override on an isolated dialer must take priority over the common config")
+	assert.Equal(t, 9, ip.startupPool.maxConnections)
+	assert.NotSame(t, sp, ip)
 
 	require.NoError(t, sharedDialer.ReleasePeer(id, idSubscriber{1}))
 	require.NoError(t, isolatedDialer.ReleasePeer(id, idSubscriber{2}))
