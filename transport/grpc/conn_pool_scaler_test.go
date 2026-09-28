@@ -474,6 +474,8 @@ func TestScalingHelperMethodsDoNotPanic(t *testing.T) {
 
 	assert.NotPanics(t, p.cleanupIdleConns)
 	assert.NotPanics(t, p.maybeScaleDown)
+	assert.NotPanics(t, p.ensureMinConnections)
+	assert.NotPanics(t, p.fillToMinConnections)
 }
 
 // TestTryScaleUp covers all branches of tryScaleUp.
@@ -495,8 +497,10 @@ func TestTryScaleUp(t *testing.T) {
 	t.Run("under threshold - no scale-up", func(t *testing.T) {
 		t.Parallel()
 		p := peerForPool(t)
+		p.storeConns([]*grpcClientConnWrapper{underBudget})
 		p.tryScaleUp(underBudget)
 		assert.Equal(t, int32(0), atomic.LoadInt32(&p.isScaling))
+		assert.Equal(t, 1, len(p.loadConns()))
 	})
 
 	t.Run("at max connections - no scale-up", func(t *testing.T) {
@@ -507,6 +511,7 @@ func TestTryScaleUp(t *testing.T) {
 			conns[i] = makeConn(connStateActive, 0)
 		}
 		p.storeConns(conns)
+		p.connCount.Store(int32(len(conns)))
 		p.tryScaleUp(overBudget)
 
 		// atMax check now runs inside the goroutine; wait for it to finish.
@@ -528,6 +533,7 @@ func TestTryScaleUp(t *testing.T) {
 			conns[i] = makeConn(connStateActive, 85)
 		}
 		p.storeConns(conns)
+		p.connCount.Store(int32(len(conns)))
 
 		for i := 0; i < 10; i++ {
 			p.tryScaleUp(overBudget)
@@ -551,7 +557,10 @@ func TestTryScaleUp(t *testing.T) {
 	t.Run("triggers goroutine and adds connection", func(t *testing.T) {
 		t.Parallel()
 		p := peerForPool(t)
-		p.tryScaleUp(overBudget)
+		conn := makeConn(connStateActive, 85)
+		conn.clientConn = dialTestClientConn(t)
+		p.storeConns([]*grpcClientConnWrapper{conn})
+		p.tryScaleUp(conn)
 
 		// isScaling resets to 0 once the goroutine completes.
 		assert.Eventually(t, func() bool {
@@ -560,20 +569,21 @@ func TestTryScaleUp(t *testing.T) {
 
 		// One connection was added to the pool.
 		n := len(p.loadConns())
-		assert.Equal(t, 1, n, "one connection should be added to the pool")
+		assert.Equal(t, 2, n, "one connection should be added to the pool")
 	})
 
 	t.Run("reactivates idle connection instead of dialing", func(t *testing.T) {
 		t.Parallel()
 		p := peerForPool(t)
 
-		// Seed an idle connection with a live context.
+		// Seed an idle connection plus an active one so min-fill does not
+		// consume the idle conn before load scale-up.
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		idleConn := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
 		idleConn.setState(connStateIdle)
 		idleConn.setIdleNow()
-		p.storeConns(append(p.loadConns(), idleConn))
+		p.storeConns([]*grpcClientConnWrapper{overBudget, idleConn})
 
 		p.tryScaleUp(overBudget)
 
@@ -583,10 +593,222 @@ func TestTryScaleUp(t *testing.T) {
 
 		// Pool size unchanged — reactivation, not a new dial.
 		n := len(p.loadConns())
-		assert.Equal(t, 1, n, "pool size should not grow on reactivation")
+		assert.Equal(t, 2, n, "pool size should not grow on reactivation")
 		assert.Equal(t, connStateActive, idleConn.getState(), "idle conn should be active after reactivation")
 		assert.True(t, idleConn.idleSince().IsZero(), "idle timestamp should be cleared")
 	})
+}
+
+func TestTryScaleUp_FillsLiveMinConnections(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.lastValidLivePool.Store(p.startupPool)
+	p.t = NewTransport(WithGlobalLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
+		MinConnections: 3,
+	})))
+
+	p.tryScaleUp(makeConn(connStateActive, 10)) // under load threshold
+
+	require.Eventually(t, func() bool {
+		return p.connCount.Load() == 3 && atomic.LoadInt32(&p.isScaling) == 0
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func TestEvaluateScaling_FillsMinConnections(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.lastValidLivePool.Store(p.startupPool)
+	p.t = NewTransport(WithGlobalLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
+		MinConnections: 3,
+	})))
+
+	p.evaluateScaling()
+
+	assert.Equal(t, int32(3), p.connCount.Load())
+}
+
+func TestEvaluateScaling_ReactivatesIdleToMeetLiveMin(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	idle := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+	idle.setState(connStateIdle)
+	idle.setIdleNow()
+	active := makeConn(connStateActive, 0)
+	p.storeConns([]*grpcClientConnWrapper{active, idle})
+	p.lastValidLivePool.Store(p.startupPool)
+	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{
+		MinConnections: 2,
+	})
+
+	p.evaluateScaling()
+
+	assert.Equal(t, connStateActive, idle.getState(), "idle conn should be reused before dialing")
+	assert.Equal(t, 2, len(p.loadConns()), "must not dial when idle can meet minConnections")
+	assert.Equal(t, 2, p.activeConnCount())
+}
+
+func TestEvaluateScaling_ReactivatesDrainingToMeetLiveMin(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	draining := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+	draining.setState(connStateDraining)
+	p.storeConns([]*grpcClientConnWrapper{draining})
+	p.lastValidLivePool.Store(p.startupPool)
+	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{
+		MinConnections: 1,
+	})
+
+	p.evaluateScaling()
+
+	assert.Equal(t, connStateActive, draining.getState())
+	assert.Equal(t, 1, len(p.loadConns()), "must not dial when draining can meet minConnections")
+}
+
+func TestEvaluateScaling_ReactivatesIdleThenDials(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	idle := &grpcClientConnWrapper{ctx: ctx, cancel: cancel, clientConn: dialTestClientConn(t)}
+	idle.setState(connStateIdle)
+	p.storeConns([]*grpcClientConnWrapper{idle})
+	p.lastValidLivePool.Store(p.startupPool)
+	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{
+		MinConnections: 2,
+	})
+
+	p.evaluateScaling()
+
+	assert.Equal(t, connStateActive, idle.getState())
+	assert.Equal(t, int32(2), p.connCount.Load())
+	assert.Equal(t, 2, p.activeConnCount())
+}
+
+func TestTryScaleUp_ReactivatesIdleForLiveMin(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	idle := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+	idle.setState(connStateIdle)
+	active := makeConn(connStateActive, 10)
+	p.storeConns([]*grpcClientConnWrapper{active, idle})
+	p.lastValidLivePool.Store(p.startupPool)
+	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{
+		MinConnections: 2,
+	})
+
+	p.tryScaleUp(active)
+
+	require.Eventually(t, func() bool {
+		return idle.getState() == connStateActive && atomic.LoadInt32(&p.isScaling) == 0
+	}, 2*time.Second, 10*time.Millisecond)
+	assert.Equal(t, 2, len(p.loadConns()), "must not dial when idle can meet minConnections")
+}
+
+func TestScalingMonitorInterval_UsesLiveOverlay(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.startupPool.scalingMonitorInterval = 30 * time.Second
+	p.lastValidLivePool.Store(p.startupPool)
+	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{
+		ScalingMonitorInterval: time.Minute,
+	})
+
+	assert.Equal(t, time.Minute, p.scalingMonitorInterval())
+}
+
+func TestScalingMonitorInterval_ClampsLiveBelowMinimum(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.startupPool.scalingMonitorInterval = 60 * time.Second
+	p.lastValidLivePool.Store(p.startupPool)
+	p.outboundLiveProvider = staticPoolProvider(ClientConnectionPoolConfig{
+		ScalingMonitorInterval: 5 * time.Second,
+	})
+
+	assert.Equal(t, _defaultScalingMonitorInterval, p.scalingMonitorInterval())
+}
+
+func TestTryScaleUp_StartsMonitorWhenLiveEnables(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.startupPool.dynamicScalingEnabled = false
+	p.lastValidLivePool.Store(p.startupPool)
+	enabled := true
+	p.t = NewTransport(WithGlobalLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
+		DynamicScalingEnabled: &enabled,
+	})))
+	p.storeConns([]*grpcClientConnWrapper{makeConn(connStateActive, 0)})
+
+	assert.False(t, p.monitorStarted.Load())
+	p.tryScaleUp(makeConn(connStateActive, 10))
+	assert.True(t, p.monitorStarted.Load())
+	require.Eventually(t, func() bool {
+		return atomic.LoadInt32(&p.isScaling) == 0
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func TestStartScalingMonitor_Idempotent(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.startupPool.dynamicScalingEnabled = false
+	p.startScalingMonitor()
+	p.startScalingMonitor()
+	assert.True(t, p.monitorStarted.Load())
+	p.cancel()
+	p.connWg.Wait()
+}
+
+func TestNewPeer_StartsMonitorAndFillsLiveMinWhenStartupScalingDisabled(t *testing.T) {
+	t.Parallel()
+	address := startTestServer(t)
+	enabled := true
+	tr := NewTransport(
+		WithDynamicConnectionScaling(false),
+		MinConnections(1),
+		MaxConnections(10),
+		WithGlobalLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
+			DynamicScalingEnabled: &enabled,
+			MinConnections:        3,
+		})),
+	)
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { require.NoError(t, tr.Stop()) })
+
+	p, err := tr.newPeer(address, emptyDialOpts)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		p.stop()
+		p.wait()
+	})
+
+	assert.True(t, p.monitorStarted.Load())
+	require.Eventually(t, func() bool {
+		return p.connCount.Load() == 3
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func TestNewPeer_NoMonitorWhenScalingDisabledWithoutLiveProvider(t *testing.T) {
+	t.Parallel()
+	address := startTestServer(t)
+	tr := NewTransport(WithDynamicConnectionScaling(false), MinConnections(1))
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { require.NoError(t, tr.Stop()) })
+
+	p, err := tr.newPeer(address, emptyDialOpts)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		p.stop()
+		p.wait()
+	})
+
+	assert.False(t, p.monitorStarted.Load())
+	assert.Equal(t, int32(1), p.connCount.Load())
 }
 
 // TestReactivateIdleConn covers all branches of reactivateIdleConn.
@@ -776,6 +998,8 @@ func TestTryScaleUpDialMetrics(t *testing.T) {
 
 	p, root := peerWithMetrics(t)
 	overBudget := makeConn(connStateActive, 85) // threshold=80
+	overBudget.clientConn = dialTestClientConn(t)
+	p.storeConns([]*grpcClientConnWrapper{overBudget})
 
 	p.tryScaleUp(overBudget)
 
@@ -786,9 +1010,9 @@ func TestTryScaleUpDialMetrics(t *testing.T) {
 	c := countersFromSnapshot(root.Snapshot())
 	assert.Equal(t, int64(1), c["conn_pool_scale_up_total"])
 
-	// Gauge must reflect the newly added connection.
+	// Gauge must reflect the seeded connection plus the new dial.
 	g := gaugesFromSnapshot(root.Snapshot())
-	assert.Equal(t, int64(1), g["conn_pool_active_connections"])
+	assert.Equal(t, int64(2), g["conn_pool_active_connections"])
 }
 
 // TestTryScaleUpReactivationMetrics verifies that tryScaleUp increments the
@@ -798,14 +1022,15 @@ func TestTryScaleUpReactivationMetrics(t *testing.T) {
 
 	p, root := peerWithMetrics(t)
 
-	// Seed an idle connection with a live context.
+	// Seed an idle connection plus an active over-budget conn so min-fill
+	// does not consume the idle conn before load scale-up.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	idleConn := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
 	idleConn.setState(connStateIdle)
-	p.storeConns(append(p.loadConns(), idleConn))
-
 	overBudget := makeConn(connStateActive, 85)
+	p.storeConns([]*grpcClientConnWrapper{overBudget, idleConn})
+
 	p.tryScaleUp(overBudget)
 
 	require.Eventually(t, func() bool {
@@ -817,7 +1042,7 @@ func TestTryScaleUpReactivationMetrics(t *testing.T) {
 	assert.Equal(t, int64(0), c["conn_pool_scale_up_total"], "no new dial should happen")
 
 	g := gaugesFromSnapshot(root.Snapshot())
-	assert.Equal(t, int64(1), g["conn_pool_active_connections"])
+	assert.Equal(t, int64(2), g["conn_pool_active_connections"])
 	assert.Equal(t, int64(0), g["conn_pool_idle_connections"])
 }
 
@@ -903,6 +1128,7 @@ func TestRunScalingMonitorUsesConfiguredInterval(t *testing.T) {
 	p := peerForPool(t)
 	// 5s is below the 30s minimum → will be clamped; the monitor still exits
 	// promptly when the context is cancelled.
+	p.startupPool.dynamicScalingEnabled = false
 	p.startupPool.scalingMonitorInterval = 5 * time.Second
 
 	done := make(chan struct{})
@@ -926,6 +1152,7 @@ func TestRunScalingMonitorUsesConfiguredInterval(t *testing.T) {
 func TestRunScalingMonitorValidCustomInterval(t *testing.T) {
 	t.Parallel()
 	p := peerForPool(t)
+	p.startupPool.dynamicScalingEnabled = false
 	p.startupPool.scalingMonitorInterval = 60 * time.Second // valid, above minimum
 
 	done := make(chan struct{})
