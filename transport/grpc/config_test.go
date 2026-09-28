@@ -1028,8 +1028,7 @@ func TestTransportSpec(t *testing.T) {
 					} else {
 						require.Nil(t, dialer.options.keepaliveParams, "unexpected keepalive paramters")
 					}
-					assert.True(t, dialer.options.connectionPerOutbound, "YAML outbounds get an isolated Dialer")
-					require.NotNil(t, dialer.connectionScope)
+					require.NotNil(t, dialer.connectionScope, "YAML outbounds get an isolated Dialer")
 					if wantOutbound.PoolMaxConnections > 0 {
 						gp, ok := peer.(*grpcPeer)
 						require.True(t, ok, "expected *grpcPeer, got %T", peer)
@@ -1164,8 +1163,8 @@ func TestOutboundYAMLClientConnectionPoolMixed(t *testing.T) {
 	require.True(t, ok)
 	sharedDialer, ok := sharedSingle.Transport().(*Dialer)
 	require.True(t, ok)
-	assert.True(t, tunedDialer.options.connectionPerOutbound)
-	assert.True(t, sharedDialer.options.connectionPerOutbound)
+	require.NotNil(t, tunedDialer.connectionScope)
+	require.NotNil(t, sharedDialer.connectionScope)
 	assert.NotSame(t, tunedDialer.connectionScope, sharedDialer.connectionScope)
 }
 

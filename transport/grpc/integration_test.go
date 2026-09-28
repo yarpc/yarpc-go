@@ -27,7 +27,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net"
 	"strings"
 	"sync"
@@ -211,11 +210,22 @@ func TestGRPCResponseAndError(t *testing.T) {
 }
 
 func TestYARPCMaxMsgSize(t *testing.T) {
-	// Not parallel: ~64MB payloads starve under -race when the rest of the
-	// package is also running in parallel.
-	value := strings.Repeat("a", defaultServerMaxRecvMsgSize+1)
+	t.Parallel()
+	// Small custom limits so this does not transfer 64MiB. The same payload
+	// is rejected at 32KiB and accepted at 64KiB, which is what the
+	// MaxRecv/Send options must control. Avoids a -race timeout in the full
+	// package suite without build-tagged skip files.
+	const limit = 32 * 1024
+	value := strings.Repeat("a", limit+1)
 	t.Run("too big", func(t *testing.T) {
-		te := testEnvOptions{}
+		te := testEnvOptions{
+			TransportOptions: []TransportOption{
+				ClientMaxRecvMsgSize(limit),
+				ClientMaxSendMsgSize(limit),
+				ServerMaxRecvMsgSize(limit),
+				ServerMaxSendMsgSize(limit),
+			},
+		}
 		te.do(t, func(t *testing.T, e *testEnv) {
 			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*5)
 			defer cancel()
@@ -226,20 +236,16 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 		})
 	})
 	t.Run("just right", func(t *testing.T) {
-		if raceDetectorEnabled {
-			t.Skip("4MiB+ payload times out under -race when the full package runs")
-		}
 		te := testEnvOptions{
 			TransportOptions: []TransportOption{
-				ClientMaxRecvMsgSize(math.MaxInt32),
-				ClientMaxSendMsgSize(math.MaxInt32),
-				ServerMaxRecvMsgSize(math.MaxInt32),
-				ServerMaxSendMsgSize(math.MaxInt32),
+				ClientMaxRecvMsgSize(limit * 2),
+				ClientMaxSendMsgSize(limit * 2),
+				ServerMaxRecvMsgSize(limit * 2),
+				ServerMaxSendMsgSize(limit * 2),
 			},
 		}
 		te.do(t, func(t *testing.T, e *testEnv) {
-			// The value is ~64 MB; allow extra headroom under race detector and parallel load.
-			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*30)
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*5)
 			defer cancel()
 
 			if assert.NoError(t, e.SetValueYARPC(ctx, "foo", value)) {
@@ -1579,6 +1585,84 @@ func TestYARPCErrorsConverted(t *testing.T) {
 // Load so tests can sample them while pool goroutines are still running.
 func poolMetricSnapshot(m *connPoolMetrics) (gauges, counters map[string]int64) {
 	return m.loadedGauges(), m.loadedCounters()
+}
+
+// TestConnectionPoolMinConnectionsAtStartup verifies the pool is pre-warmed
+// to minConnections when the peer is created.
+func TestConnectionPoolMinConnectionsAtStartup(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+	te := testEnvOptions{
+		TransportOptions: []TransportOption{
+			WithDynamicConnectionScaling(true),
+			MinConnections(2),
+			MaxConnections(5),
+			Meter(root.Scope()),
+		},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		gauges, _ := poolMetricSnapshot(e.Transport.metrics)
+		assert.Equal(t, int64(2), gauges["conn_pool_active_connections"],
+			"pool should be pre-warmed to minConnections")
+	})
+}
+
+// TestConnectionPoolScaleUpOnLoad verifies that a request which puts the
+// least-loaded connection at the scale-up threshold dials another connection.
+func TestConnectionPoolScaleUpOnLoad(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+	te := testEnvOptions{
+		TransportOptions: []TransportOption{
+			WithDynamicConnectionScaling(true),
+			MinConnections(1),
+			MaxConnections(5),
+			MaxConcurrentStreams(2),
+			ScaleUpThreshold(0.5), // threshold = 1
+			Meter(root.Scope()),
+		},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		require.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
+
+		assert.Eventually(t, func() bool {
+			_, counters := poolMetricSnapshot(e.Transport.metrics)
+			return counters["conn_pool_scale_up_total"] >= 1
+		}, 3*time.Second, 10*time.Millisecond,
+			"conn_pool_scale_up_total should increment after load exceeds threshold")
+	})
+}
+
+// TestConnectionPoolMaxConnectionsCapRespected verifies that scale-up does
+// not dial past MaxConnections.
+func TestConnectionPoolMaxConnectionsCapRespected(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+	te := testEnvOptions{
+		TransportOptions: []TransportOption{
+			WithDynamicConnectionScaling(true),
+			MinConnections(1),
+			MaxConnections(1),
+			MaxConcurrentStreams(2),
+			ScaleUpThreshold(0.5),
+			Meter(root.Scope()),
+		},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		ctx := context.Background()
+		require.NoError(t, e.SetValueYARPC(ctx, "foo", "bar"))
+		_, err := e.GetValueYARPC(ctx, "foo")
+		require.NoError(t, err)
+
+		assert.Eventually(t, func() bool {
+			_, counters := poolMetricSnapshot(e.Transport.metrics)
+			return counters["conn_pool_scale_up_total"] == 0
+		}, 2*time.Second, 10*time.Millisecond,
+			"scale-up must not dial when MaxConnections is already reached")
+
+		gauges, _ := poolMetricSnapshot(e.Transport.metrics)
+		assert.Equal(t, int64(1), gauges["conn_pool_active_connections"])
+	})
 }
 
 // TestConnectionPoolScaleDown verifies that evaluateScaling drains a

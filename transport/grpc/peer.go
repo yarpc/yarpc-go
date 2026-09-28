@@ -128,25 +128,21 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	ctx, cancel := context.WithCancel(context.Background())
 
 	startupPool := options.resolvedPoolConfig(t.baseConnPoolConfig())
-	if options.connectionPerOutbound && options.connPoolOverride != nil {
-		if err := validateResolvedConnPool(startupPool); err != nil {
-			cancel()
-			return nil, err
-		}
+	if err := validateResolvedConnPool(startupPool); err != nil {
+		cancel()
+		return nil, err
 	}
 
 	p := &grpcPeer{
-		Peer:         abstractpeer.NewPeer(abstractpeer.PeerIdentifier(address), t),
-		t:            t,
-		ctx:          ctx,
-		cancel:       cancel,
-		stoppedC:     make(chan struct{}),
-		grpcDialOpts: dialOptions,
-		metrics:      newPeerPoolReporter(t.metrics),
-		startupPool:  startupPool,
-	}
-	if options.connectionPerOutbound {
-		p.outboundLiveProvider = options.poolConfigProvider
+		Peer:                 abstractpeer.NewPeer(abstractpeer.PeerIdentifier(address), t),
+		t:                    t,
+		ctx:                  ctx,
+		cancel:               cancel,
+		stoppedC:             make(chan struct{}),
+		grpcDialOpts:         dialOptions,
+		metrics:              newPeerPoolReporter(t.metrics),
+		startupPool:          startupPool,
+		outboundLiveProvider: options.poolConfigProvider,
 	}
 	p.lastValidLivePool.Store(p.startupPool)
 	t.options.logger.Debug("grpc: connection pool config resolved",
@@ -165,10 +161,9 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	p.storeConns(nil)
 
 	// All connections are created via addConn — no special primary connection.
-	initialConnCount := 1
-	if p.startupPool.dynamicScalingEnabled {
-		initialConnCount = p.startupPool.minConnections
-	}
+	// scaleDownFloor is 1 when scaling is off and min capped by max when on,
+	// so an invalid MinConnections > MaxConnections cannot over-dial.
+	initialConnCount := scaleDownFloor(p.startupPool)
 	for i := 0; i < initialConnCount; i++ {
 		if err := p.addConn(); err != nil {
 			p.cancel()
@@ -177,8 +172,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	}
 
 	// Start the monitor when scaling is on at create, or when a live hook
-	// may enable it later. Without this, a startup-disabled peer never
-	// scale-down/idles even after live config turns scaling on.
+	// may enable it later (and to wind extras down if live turns scaling off).
 	if p.startupPool.dynamicScalingEnabled || p.liveProvider() != nil {
 		p.startScalingMonitor()
 	}

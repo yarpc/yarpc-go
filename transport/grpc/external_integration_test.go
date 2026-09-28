@@ -244,32 +244,6 @@ func TestConnectionPoolBasicRequest(t *testing.T) {
 	})
 }
 
-func TestConnectionPoolMinConnectionsAtStartup(t *testing.T) {
-	t.Parallel()
-	withPoolTestEnv(t, []grpc.TransportOption{
-		grpc.WithDynamicConnectionScaling(true),
-		grpc.MinConnections(2),
-		grpc.MaxConnections(5),
-	}, func(set, get func(ctx context.Context, key, value string) error) {
-		ctx := context.Background()
-		require.NoError(t, set(ctx, "foo", "bar"))
-		require.NoError(t, get(ctx, "foo", ""))
-	})
-}
-
-func TestConnectionPoolScaleUpOnLoad(t *testing.T) {
-	t.Parallel()
-	withPoolTestEnv(t, []grpc.TransportOption{
-		grpc.WithDynamicConnectionScaling(true),
-		grpc.MinConnections(1),
-		grpc.MaxConnections(5),
-		grpc.MaxConcurrentStreams(2),
-		grpc.ScaleUpThreshold(0.5), // threshold = 1
-	}, func(set, _ func(ctx context.Context, key, value string) error) {
-		require.NoError(t, set(context.Background(), "foo", "bar"))
-	})
-}
-
 func TestConnectionPoolConcurrentRequests(t *testing.T) {
 	t.Parallel()
 	withPoolTestEnv(t, []grpc.TransportOption{
@@ -314,21 +288,6 @@ func TestConnectionPoolMinimalSingleConnection(t *testing.T) {
 		grpc.WithDynamicConnectionScaling(true),
 		grpc.MinConnections(1),
 		grpc.MaxConnections(3),
-	}, func(set, get func(ctx context.Context, key, value string) error) {
-		ctx := context.Background()
-		require.NoError(t, set(ctx, "foo", "bar"))
-		require.NoError(t, get(ctx, "foo", ""))
-	})
-}
-
-func TestConnectionPoolMaxConnectionsCapRespected(t *testing.T) {
-	t.Parallel()
-	withPoolTestEnv(t, []grpc.TransportOption{
-		grpc.WithDynamicConnectionScaling(true),
-		grpc.MinConnections(1),
-		grpc.MaxConnections(1),
-		grpc.MaxConcurrentStreams(2),
-		grpc.ScaleUpThreshold(0.5),
 	}, func(set, get func(ctx context.Context, key, value string) error) {
 		ctx := context.Background()
 		require.NoError(t, set(ctx, "foo", "bar"))

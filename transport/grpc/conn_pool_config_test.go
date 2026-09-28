@@ -134,9 +134,9 @@ func TestValidateResolvedConnPool(t *testing.T) {
 func TestMaybeScaleDown_LiveDisabled(t *testing.T) {
 	disabled := false
 	conns := []*grpcClientConnWrapper{
+		makeConn(connStateActive, 30),
 		makeConn(connStateActive, 5),
-		makeConn(connStateActive, 5),
-		makeConn(connStateActive, 5),
+		makeConn(connStateActive, 20),
 	}
 	transport := NewTransport(WithGlobalLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
 		DynamicScalingEnabled: &disabled,
@@ -155,9 +155,9 @@ func TestMaybeScaleDown_LiveDisabled(t *testing.T) {
 
 	p.maybeScaleDown()
 
-	for i, c := range conns {
-		assert.Equal(t, connStateActive, c.getState(), "conn[%d] must stay active when live config disables scaling", i)
-	}
+	assert.Equal(t, connStateActive, conns[0].getState(), "busiest conn should stay active")
+	assert.Equal(t, connStateDraining, conns[1].getState(), "least-loaded extra should drain when scaling is off")
+	assert.Equal(t, connStateActive, conns[2].getState())
 }
 
 func TestTryScaleUp_LiveDisabled(t *testing.T) {
@@ -186,7 +186,7 @@ func TestWithGlobalLiveConnectionPoolProvider(t *testing.T) {
 	assert.Equal(t, 3, opts.poolConfigProvider().MaxConnections)
 }
 
-func TestWithOutboundLiveConnectionPoolProvider_IsolatedOnly(t *testing.T) {
+func TestWithOutboundLiveConnectionPoolProvider_AppliesOnDialer(t *testing.T) {
 	address := startTestServer(t)
 	transport := NewTransport(
 		MaxConnections(5),
@@ -203,8 +203,8 @@ func TestWithOutboundLiveConnectionPoolProvider_IsolatedOnly(t *testing.T) {
 	sp, err := shared.RetainPeer(id, idSubscriber{1})
 	require.NoError(t, err)
 	sharedPeer := sp.(*grpcPeer)
-	assert.Nil(t, sharedPeer.outboundLiveProvider)
-	assert.Equal(t, 7, sharedPeer.livePoolCfg().maxConnections, "shared dialer uses the transport hook")
+	require.NotNil(t, sharedPeer.outboundLiveProvider)
+	assert.Equal(t, 20, sharedPeer.livePoolCfg().maxConnections, "dialer live provider replaces the transport hook")
 
 	isolated := transport.NewDialer(WithOutboundLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
 		MaxConnections: 20,
@@ -213,7 +213,8 @@ func TestWithOutboundLiveConnectionPoolProvider_IsolatedOnly(t *testing.T) {
 	require.NoError(t, err)
 	isolatedPeer := ip.(*grpcPeer)
 	require.NotNil(t, isolatedPeer.outboundLiveProvider)
-	assert.Equal(t, 20, isolatedPeer.livePoolCfg().maxConnections, "isolated dialer uses its own hook")
+	assert.Equal(t, 20, isolatedPeer.livePoolCfg().maxConnections)
+	assert.NotSame(t, sharedPeer, isolatedPeer)
 
 	require.NoError(t, shared.ReleasePeer(id, idSubscriber{1}))
 	require.NoError(t, isolated.ReleasePeer(id, idSubscriber{2}))
@@ -223,18 +224,30 @@ func TestNewPeer_OutboundOverrideValidatedAfterMerge(t *testing.T) {
 	tr := NewTransport()
 
 	_, err := tr.newPeer("127.0.0.1:1", &dialOptions{
-		connectionPerOutbound: true,
-		connPoolOverride:      &ClientConnectionPoolConfig{MinConnections: 80},
+		connPoolOverride: &ClientConnectionPoolConfig{MinConnections: 80},
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "minConnections (80)")
 
 	_, err = tr.newPeer("127.0.0.1:1", &dialOptions{
-		connectionPerOutbound: true,
-		connPoolOverride:      &ClientConnectionPoolConfig{ScaleDownGap: 0.8},
+		connPoolOverride: &ClientConnectionPoolConfig{ScaleDownGap: 0.8},
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "scaleDownGap")
+}
+
+func TestNewPeer_ProgrammaticMinGreaterThanMax(t *testing.T) {
+	tr := NewTransport(MinConnections(100), MaxConnections(50))
+	_, err := tr.newPeer("127.0.0.1:1", emptyDialOpts)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "maxConnections (50) must be >= minConnections (100)")
+}
+
+func TestNewPeer_ProgrammaticMinExceedsDefaultMax(t *testing.T) {
+	tr := NewTransport(MinConnections(80))
+	_, err := tr.newPeer("127.0.0.1:1", emptyDialOpts)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "maxConnections (50) must be >= minConnections (80)")
 }
 
 func TestLivePoolCfg_LogsInvalidOnce(t *testing.T) {

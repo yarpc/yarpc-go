@@ -40,34 +40,18 @@ func baseTestPoolConfig() connPoolConfig {
 	}
 }
 
-func TestResolvedPoolConfig_NotIsolated_OverrideIgnored(t *testing.T) {
+func TestResolvedPoolConfig_NoOverride(t *testing.T) {
 	base := baseTestPoolConfig()
-	d := &dialOptions{
-		connectionPerOutbound: false,
-		connPoolOverride: &ClientConnectionPoolConfig{
-			MaxConcurrentStreams: 50,
-			MaxConnections:       20,
-		},
-	}
+	d := &dialOptions{}
 
 	got := d.resolvedPoolConfig(base)
 
-	assert.Equal(t, base, got, "override on a non-isolated dialer must be ignored")
+	assert.Equal(t, base, got, "no override must leave the common config unchanged")
 }
 
-func TestResolvedPoolConfig_Isolated_NoOverride(t *testing.T) {
-	base := baseTestPoolConfig()
-	d := &dialOptions{connectionPerOutbound: true}
-
-	got := d.resolvedPoolConfig(base)
-
-	assert.Equal(t, base, got, "isolation alone (no override set) must leave the common config unchanged")
-}
-
-func TestResolvedPoolConfig_Isolated_OverrideTakesPriority(t *testing.T) {
+func TestResolvedPoolConfig_OverrideTakesPriority(t *testing.T) {
 	base := baseTestPoolConfig()
 	d := &dialOptions{
-		connectionPerOutbound: true,
 		connPoolOverride: &ClientConnectionPoolConfig{
 			MaxConcurrentStreams:   50,
 			ScaleUpThreshold:       0.5,
@@ -93,10 +77,9 @@ func TestResolvedPoolConfig_Isolated_OverrideTakesPriority(t *testing.T) {
 	}, got)
 }
 
-func TestResolvedPoolConfig_Isolated_PartialOverrideFallsBackToBase(t *testing.T) {
+func TestResolvedPoolConfig_PartialOverrideFallsBackToBase(t *testing.T) {
 	base := baseTestPoolConfig()
 	d := &dialOptions{
-		connectionPerOutbound: true,
 		connPoolOverride: &ClientConnectionPoolConfig{
 			MaxConnections: 20,
 		},
@@ -109,11 +92,10 @@ func TestResolvedPoolConfig_Isolated_PartialOverrideFallsBackToBase(t *testing.T
 	assert.Equal(t, want, got, "fields left unset in the override must fall back to the common config")
 }
 
-func TestResolvedPoolConfig_Isolated_ExplicitDisable(t *testing.T) {
+func TestResolvedPoolConfig_ExplicitDisable(t *testing.T) {
 	base := baseTestPoolConfig()
 	disabled := false
 	d := &dialOptions{
-		connectionPerOutbound: true,
 		connPoolOverride: &ClientConnectionPoolConfig{
 			DynamicScalingEnabled: &disabled,
 		},
@@ -124,12 +106,11 @@ func TestResolvedPoolConfig_Isolated_ExplicitDisable(t *testing.T) {
 	assert.False(t, got.dynamicScalingEnabled)
 }
 
-func TestResolvedPoolConfig_Isolated_ExplicitEnable(t *testing.T) {
+func TestResolvedPoolConfig_ExplicitEnable(t *testing.T) {
 	base := baseTestPoolConfig()
 	base.dynamicScalingEnabled = false
 	enabled := true
 	d := &dialOptions{
-		connectionPerOutbound: true,
 		connPoolOverride: &ClientConnectionPoolConfig{
 			DynamicScalingEnabled: &enabled,
 		},

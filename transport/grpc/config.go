@@ -110,7 +110,7 @@ type TransportConfig struct {
 //	transports:
 //	  grpc:
 //	    clientConnectionPool:
-//	      dynamicScalingEnabled: true   # default; set false to opt out
+//	      dynamicScalingEnabled: true   # default; false stops growth and drains extras to 1
 //	      maxConcurrentStreams: 100     # assumed server HTTP/2 stream limit
 //	      scaleUpThreshold: 0.7         # open a new conn at 70% utilization
 //	      scaleDownGap: 0.1             # hysteresis gap below scaleUpThreshold for drain decisions
@@ -126,7 +126,7 @@ type ClientConnectionPoolConfig struct {
 	//
 	//   - nil (field omitted): no opinion. The programmatic option is kept,
 	//     or the default (enabled) when that option was not passed.
-	//   - false: scaling is turned off.
+	//   - false: the pool does not grow; extras drain to 1 (drain → idle → close).
 	//   - true: scaling is turned on.
 	//
 	// When the field is set, it overrides WithDynamicConnectionScaling, same
@@ -166,7 +166,7 @@ type ClientConnectionPoolConfig struct {
 	// ScalingMonitorInterval is how often the background monitor evaluates
 	// the pool for scale-down and idle cleanup.
 	// Defaults to 30 seconds. Values under 30s are clamped to 30s.
-	// Applied at peer creation; a live hook cannot retune a running peer.
+	// The running monitor rereads this after each pass, including live overlays.
 	ScalingMonitorInterval time.Duration `config:"scalingMonitorInterval"`
 }
 
