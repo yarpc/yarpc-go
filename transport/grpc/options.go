@@ -285,8 +285,9 @@ func ConnIdleTimeout(d time.Duration) TransportOption {
 // ScalingMonitorInterval sets how often the background monitor goroutine
 // evaluates the connection pool for scale-down and idle cleanup.
 //
-// The default is 30 seconds. Values under 30s are clamped to 30s. This is
-// applied at peer creation and is not updated by a live config hook.
+// The default is 30 seconds. Values under 30s are clamped to 30s. A live
+// provider may change the interval; the running monitor picks it up on the
+// next wait without restarting.
 func ScalingMonitorInterval(d time.Duration) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolScalingMonitorInterval = d
@@ -303,6 +304,11 @@ func ScalingMonitorInterval(d time.Duration) TransportOption {
 //
 // The default is true (enabled). An omitted YAML field leaves this value in
 // place. dynamicScalingEnabled: true or false in YAML overrides it.
+//
+// If this is false at peer creation, the scale-down/idle monitor is still
+// started when a live pool provider is installed, so a later live true can
+// scale down and fill minConnections. Scale-up on RPC also starts the
+// monitor if live config enables scaling.
 func WithDynamicConnectionScaling(enabled bool) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolDynamicScalingEnabled = enabled
@@ -331,10 +337,9 @@ type LiveConnectionPoolProvider func() ClientConnectionPoolConfig
 // WithOutboundLiveConnectionPoolProvider. The scaler reads the provider on every
 // scale-up and monitor tick.
 //
-// Note: scalingMonitorInterval is not live. YAML, ScalingMonitorInterval, or
-// an outbound clientConnectionPool block can set it at peer creation. A live
-// provider that returns a new interval is stored but does not retune the
-// ticker; the running peer keeps the startup interval until process restart.
+// scalingMonitorInterval is live: the monitor rereads it after each pass and
+// waits that long (still clamped to 30s). Changing it does not restart the
+// goroutine.
 func WithGlobalLiveConnectionPoolProvider(p LiveConnectionPoolProvider) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.poolConfigProvider = p

@@ -91,6 +91,8 @@ type grpcPeer struct {
 	outboundLiveProvider LiveConnectionPoolProvider // WithOutboundLiveConnectionPoolProvider; nil uses the global hook
 	lastValidLivePool    atomic.Value               // connPoolConfig, last snapshot that passed validation
 	invalidLiveWarned    atomic.Bool                // warn once per invalid live streak; skip later ticks until valid again
+	monitorStarted       atomic.Bool                // runScalingMonitor started once; live enable can start it after create
+	intervalClampWarned  atomic.Bool                // warn once while live/startup interval stays below 30s
 }
 
 // loadConns returns the current immutable connection snapshot.
@@ -174,9 +176,11 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		}
 	}
 
-	if p.startupPool.dynamicScalingEnabled {
-		p.connWg.Add(1)
-		go p.runScalingMonitor()
+	// Start the monitor when scaling is on at create, or when a live hook
+	// may enable it later. Without this, a startup-disabled peer never
+	// scale-down/idles even after live config turns scaling on.
+	if p.startupPool.dynamicScalingEnabled || p.liveProvider() != nil {
+		p.startScalingMonitor()
 	}
 
 	// Close stoppedC once all pool goroutines have finished. shutdownStarted
