@@ -311,9 +311,9 @@ func testTransportWithConnPoolMetrics(t *testing.T, opts ...TransportOption) (*T
 	return NewTransport(append(baseOpts, opts...)...), root
 }
 
-func assertConnPoolGaugesZero(t *testing.T, root *metrics.Root) {
+func assertConnPoolGaugesZero(t *testing.T, m *connPoolMetrics) {
 	t.Helper()
-	g := gaugesFromSnapshot(root.Snapshot())
+	g := m.loadedGauges()
 	assert.Equal(t, int64(0), g["conn_pool_active_connections"])
 	assert.Equal(t, int64(0), g["conn_pool_draining_connections"])
 	assert.Equal(t, int64(0), g["conn_pool_idle_connections"])
@@ -332,13 +332,13 @@ func TestConnPoolMetrics_PeerTeardownZerosSharedGauges(t *testing.T) {
 	require.NoError(t, p.addConn())
 	require.NoError(t, p.addConn())
 
-	g := gaugesFromSnapshot(root.Snapshot())
+	g := tr.metrics.loadedGauges()
 	require.Greater(t, g["conn_pool_active_connections"], int64(0))
 
 	p.stop()
 	p.wait()
 
-	assertConnPoolGaugesZero(t, root)
+	assertConnPoolGaugesZero(t, tr.metrics)
 	assertConnPoolMetricTags(t, root.Snapshot(), testConnPoolServiceName)
 }
 
@@ -383,7 +383,7 @@ func TestConnPoolMetrics_DynamicScalingTeardownRace(t *testing.T) {
 		wg.Wait()
 		p.wait()
 
-		assertConnPoolGaugesZero(t, root)
+		assertConnPoolGaugesZero(t, tr.metrics)
 		assertConnPoolMetricTags(t, root.Snapshot(), testConnPoolServiceName)
 	}
 }
