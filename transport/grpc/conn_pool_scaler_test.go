@@ -914,20 +914,18 @@ func peerWithMetrics(t *testing.T) (*grpcPeer, *metrics.Root) {
 	return p, root
 }
 
-func gaugesFromSnapshot(snap *metrics.RootSnapshot) map[string]int64 {
-	m := make(map[string]int64, len(snap.Gauges))
-	for _, g := range snap.Gauges {
-		m[g.Name] = g.Value
+func gaugesFromPool(p *grpcPeer) map[string]int64 {
+	if p.metrics != nil && p.metrics.shared != nil {
+		return p.metrics.shared.loadedGauges()
 	}
-	return m
+	return p.t.metrics.loadedGauges()
 }
 
-func countersFromSnapshot(snap *metrics.RootSnapshot) map[string]int64 {
-	m := make(map[string]int64, len(snap.Counters))
-	for _, c := range snap.Counters {
-		m[c.Name] = c.Value
+func countersFromPool(p *grpcPeer) map[string]int64 {
+	if p.metrics != nil && p.metrics.shared != nil {
+		return p.metrics.shared.loadedCounters()
 	}
-	return m
+	return p.t.metrics.loadedCounters()
 }
 
 // TestRefreshPoolMetrics verifies that refreshPoolMetrics correctly derives
@@ -937,9 +935,9 @@ func TestRefreshPoolMetrics(t *testing.T) {
 
 	t.Run("empty pool sets all gauges to zero", func(t *testing.T) {
 		t.Parallel()
-		p, root := peerWithMetrics(t)
+		p, _ := peerWithMetrics(t)
 		p.refreshPoolMetrics()
-		g := gaugesFromSnapshot(root.Snapshot())
+		g := gaugesFromPool(p)
 		assert.Equal(t, int64(0), g["conn_pool_active_connections"])
 		assert.Equal(t, int64(0), g["conn_pool_draining_connections"])
 		assert.Equal(t, int64(0), g["conn_pool_idle_connections"])
@@ -947,7 +945,7 @@ func TestRefreshPoolMetrics(t *testing.T) {
 
 	t.Run("mixed pool reports correct counts", func(t *testing.T) {
 		t.Parallel()
-		p, root := peerWithMetrics(t)
+		p, _ := peerWithMetrics(t)
 		p.storeConns([]*grpcClientConnWrapper{
 			makeConn(connStateActive, 0),
 			makeConn(connStateActive, 0),
@@ -957,7 +955,7 @@ func TestRefreshPoolMetrics(t *testing.T) {
 
 		p.refreshPoolMetrics()
 
-		g := gaugesFromSnapshot(root.Snapshot())
+		g := gaugesFromPool(p)
 		assert.Equal(t, int64(2), g["conn_pool_active_connections"])
 		assert.Equal(t, int64(1), g["conn_pool_draining_connections"])
 		assert.Equal(t, int64(1), g["conn_pool_idle_connections"])
@@ -969,7 +967,7 @@ func TestRefreshPoolMetrics(t *testing.T) {
 func TestMaybeScaleDownMetrics(t *testing.T) {
 	t.Parallel()
 
-	p, root := peerWithMetrics(t)
+	p, _ := peerWithMetrics(t)
 	p.startupPool = connPoolConfig{
 		minConnections:       1,
 		maxConcurrentStreams: 100,
@@ -983,10 +981,10 @@ func TestMaybeScaleDownMetrics(t *testing.T) {
 
 	p.maybeScaleDown()
 
-	c := countersFromSnapshot(root.Snapshot())
+	c := countersFromPool(p)
 	assert.Equal(t, int64(1), c["conn_pool_scale_down_total"], "scale-down counter should increment")
 
-	g := gaugesFromSnapshot(root.Snapshot())
+	g := gaugesFromPool(p)
 	assert.Equal(t, int64(2), g["conn_pool_active_connections"])
 	assert.Equal(t, int64(1), g["conn_pool_draining_connections"])
 }
@@ -996,7 +994,7 @@ func TestMaybeScaleDownMetrics(t *testing.T) {
 func TestTryScaleUpDialMetrics(t *testing.T) {
 	t.Parallel()
 
-	p, root := peerWithMetrics(t)
+	p, _ := peerWithMetrics(t)
 	overBudget := makeConn(connStateActive, 85) // threshold=80
 	overBudget.clientConn = dialTestClientConn(t)
 	p.storeConns([]*grpcClientConnWrapper{overBudget})
@@ -1007,11 +1005,11 @@ func TestTryScaleUpDialMetrics(t *testing.T) {
 		return atomic.LoadInt32(&p.isScaling) == 0
 	}, 2*time.Second, 10*time.Millisecond)
 
-	c := countersFromSnapshot(root.Snapshot())
+	c := countersFromPool(p)
 	assert.Equal(t, int64(1), c["conn_pool_scale_up_total"])
 
 	// Gauge must reflect the seeded connection plus the new dial.
-	g := gaugesFromSnapshot(root.Snapshot())
+	g := gaugesFromPool(p)
 	assert.Equal(t, int64(2), g["conn_pool_active_connections"])
 }
 
@@ -1020,7 +1018,7 @@ func TestTryScaleUpDialMetrics(t *testing.T) {
 func TestTryScaleUpReactivationMetrics(t *testing.T) {
 	t.Parallel()
 
-	p, root := peerWithMetrics(t)
+	p, _ := peerWithMetrics(t)
 
 	// Seed an idle connection plus an active over-budget conn so min-fill
 	// does not consume the idle conn before load scale-up.
@@ -1037,11 +1035,11 @@ func TestTryScaleUpReactivationMetrics(t *testing.T) {
 		return atomic.LoadInt32(&p.isScaling) == 0
 	}, 2*time.Second, 10*time.Millisecond)
 
-	c := countersFromSnapshot(root.Snapshot())
+	c := countersFromPool(p)
 	assert.Equal(t, int64(1), c["conn_pool_idle_reactivation_total"])
 	assert.Equal(t, int64(0), c["conn_pool_scale_up_total"], "no new dial should happen")
 
-	g := gaugesFromSnapshot(root.Snapshot())
+	g := gaugesFromPool(p)
 	assert.Equal(t, int64(2), g["conn_pool_active_connections"])
 	assert.Equal(t, int64(0), g["conn_pool_idle_connections"])
 }
@@ -1051,7 +1049,7 @@ func TestTryScaleUpReactivationMetrics(t *testing.T) {
 func TestCleanupIdleConnsMetrics(t *testing.T) {
 	t.Parallel()
 
-	p, root := peerWithMetrics(t)
+	p, _ := peerWithMetrics(t)
 	p.startupPool = connPoolConfig{idleTimeout: time.Hour}
 	p.storeConns([]*grpcClientConnWrapper{
 		makeConn(connStateActive, 5),
@@ -1060,7 +1058,7 @@ func TestCleanupIdleConnsMetrics(t *testing.T) {
 
 	p.cleanupIdleConns()
 
-	g := gaugesFromSnapshot(root.Snapshot())
+	g := gaugesFromPool(p)
 	assert.Equal(t, int64(1), g["conn_pool_active_connections"])
 	assert.Equal(t, int64(0), g["conn_pool_draining_connections"])
 	assert.Equal(t, int64(1), g["conn_pool_idle_connections"])
