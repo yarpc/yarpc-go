@@ -207,7 +207,7 @@ func peerForPool(t *testing.T) *grpcPeer {
 		grpcDialOpts: []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		},
-		poolCfg: connPoolConfig{
+		startupPool: connPoolConfig{
 			dynamicScalingEnabled: true,
 			maxConcurrentStreams:  100,
 			scaleUpThreshold:      0.8, // threshold = 80

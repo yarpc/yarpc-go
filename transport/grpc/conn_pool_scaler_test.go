@@ -62,11 +62,11 @@ func peerForScaleDown(t *testing.T, conns []*grpcClientConnWrapper, cfg connPool
 	t.Cleanup(cancel)
 	transport := NewTransport()
 	p := &grpcPeer{
-		Peer:    abstractpeer.NewPeer(abstractpeer.PeerIdentifier("10.0.0.1:9000"), transport),
-		t:       transport,
-		ctx:     ctx,
-		cancel:  cancel,
-		poolCfg: cfg,
+		Peer:        abstractpeer.NewPeer(abstractpeer.PeerIdentifier("10.0.0.1:9000"), transport),
+		t:           transport,
+		ctx:         ctx,
+		cancel:      cancel,
+		startupPool: cfg,
 	}
 	p.storeConns(conns)
 	return p
@@ -487,7 +487,7 @@ func TestTryScaleUp(t *testing.T) {
 	t.Run("flag disabled - no scale-up", func(t *testing.T) {
 		t.Parallel()
 		p := peerForPool(t)
-		p.poolCfg.dynamicScalingEnabled = false
+		p.startupPool.dynamicScalingEnabled = false
 		p.tryScaleUp(overBudget)
 		assert.Equal(t, int32(0), atomic.LoadInt32(&p.isScaling))
 	})
@@ -502,7 +502,7 @@ func TestTryScaleUp(t *testing.T) {
 	t.Run("at max connections - no scale-up", func(t *testing.T) {
 		t.Parallel()
 		p := peerForPool(t)
-		conns := make([]*grpcClientConnWrapper, p.poolCfg.maxConnections)
+		conns := make([]*grpcClientConnWrapper, p.startupPool.maxConnections)
 		for i := range conns {
 			conns[i] = makeConn(connStateActive, 0)
 		}
@@ -515,7 +515,7 @@ func TestTryScaleUp(t *testing.T) {
 		}, 2*time.Second, 10*time.Millisecond)
 
 		n := len(p.loadConns())
-		assert.Equal(t, p.poolCfg.maxConnections, n, "pool should not grow beyond max")
+		assert.Equal(t, p.startupPool.maxConnections, n, "pool should not grow beyond max")
 	})
 
 	t.Run("at max connections - logs once per saturation", func(t *testing.T) {
@@ -523,7 +523,7 @@ func TestTryScaleUp(t *testing.T) {
 		core, logs := observer.New(zap.InfoLevel)
 		p := peerForPool(t)
 		p.t.options.logger = zap.New(core)
-		conns := make([]*grpcClientConnWrapper, p.poolCfg.maxConnections)
+		conns := make([]*grpcClientConnWrapper, p.startupPool.maxConnections)
 		for i := range conns {
 			conns[i] = makeConn(connStateActive, 85)
 		}
@@ -748,7 +748,7 @@ func TestMaybeScaleDownMetrics(t *testing.T) {
 	t.Parallel()
 
 	p, root := peerWithMetrics(t)
-	p.poolCfg = connPoolConfig{
+	p.startupPool = connPoolConfig{
 		minConnections:       1,
 		maxConcurrentStreams: 100,
 		scaleUpThreshold:     0.8, // threshold = 80
@@ -827,7 +827,7 @@ func TestCleanupIdleConnsMetrics(t *testing.T) {
 	t.Parallel()
 
 	p, root := peerWithMetrics(t)
-	p.poolCfg = connPoolConfig{idleTimeout: time.Hour}
+	p.startupPool = connPoolConfig{idleTimeout: time.Hour}
 	p.storeConns([]*grpcClientConnWrapper{
 		makeConn(connStateActive, 5),
 		makeConn(connStateDraining, 0), // 0 streams → advances to idle
@@ -893,7 +893,7 @@ func TestCleanupIdleConnsDrainingCASFailure(t *testing.T) {
 }
 
 // TestRunScalingMonitorUsesConfiguredInterval verifies that a non-zero
-// scalingMonitorInterval from poolCfg is used instead of the default,
+// scalingMonitorInterval from startupPool is used instead of the default,
 // and that a value below the 30s minimum is clamped (with a warning) rather
 // than causing a panic or hard error.
 func TestRunScalingMonitorUsesConfiguredInterval(t *testing.T) {
@@ -903,7 +903,7 @@ func TestRunScalingMonitorUsesConfiguredInterval(t *testing.T) {
 	p := peerForPool(t)
 	// 5s is below the 30s minimum → will be clamped; the monitor still exits
 	// promptly when the context is cancelled.
-	p.poolCfg.scalingMonitorInterval = 5 * time.Second
+	p.startupPool.scalingMonitorInterval = 5 * time.Second
 
 	done := make(chan struct{})
 	p.connWg.Add(1)
@@ -926,7 +926,7 @@ func TestRunScalingMonitorUsesConfiguredInterval(t *testing.T) {
 func TestRunScalingMonitorValidCustomInterval(t *testing.T) {
 	t.Parallel()
 	p := peerForPool(t)
-	p.poolCfg.scalingMonitorInterval = 60 * time.Second // valid, above minimum
+	p.startupPool.scalingMonitorInterval = 60 * time.Second // valid, above minimum
 
 	done := make(chan struct{})
 	p.connWg.Add(1)
@@ -954,11 +954,11 @@ func TestRunScalingMonitorClampsAndWarns(t *testing.T) {
 	tr := NewTransport(Logger(observedLogger))
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &grpcPeer{
-		Peer:    abstractpeer.NewPeer(abstractpeer.PeerIdentifier("10.0.0.1:9000"), tr),
-		t:       tr,
-		ctx:     ctx,
-		cancel:  cancel,
-		poolCfg: connPoolConfig{scalingMonitorInterval: 5 * time.Second},
+		Peer:        abstractpeer.NewPeer(abstractpeer.PeerIdentifier("10.0.0.1:9000"), tr),
+		t:           tr,
+		ctx:         ctx,
+		cancel:      cancel,
+		startupPool: connPoolConfig{scalingMonitorInterval: 5 * time.Second},
 	}
 	t.Cleanup(cancel)
 
@@ -987,10 +987,14 @@ func TestRunScalingMonitorClampsAndWarns(t *testing.T) {
 func TestTransportOptionDefaults(t *testing.T) {
 	t.Parallel()
 	opts := newTransportOptions(nil)
-	assert.Equal(t, defaultClientConnPoolScaleDownGap, opts.clientConnPoolScaleDownGap,
-		"scaleDownGap default should be %.2f", defaultClientConnPoolScaleDownGap)
-	assert.Equal(t, defaultClientConnPoolScalingMonitorInterval, opts.clientConnPoolScalingMonitorInterval,
-		"scalingMonitorInterval default should be %v", defaultClientConnPoolScalingMonitorInterval)
+	assert.Equal(t, defaultClientConnPoolDynamicScalingEnabled, opts.clientConnPoolDynamicScalingEnabled)
+	assert.Equal(t, defaultClientConnPoolMaxConcurrentStreams, opts.clientConnPoolMaxConcurrentStreams)
+	assert.Equal(t, defaultClientConnPoolScaleUpThreshold, opts.clientConnPoolScaleUpThreshold)
+	assert.Equal(t, defaultClientConnPoolScaleDownGap, opts.clientConnPoolScaleDownGap)
+	assert.Equal(t, defaultClientConnPoolMinConnections, opts.clientConnPoolMinConnections)
+	assert.Equal(t, defaultClientConnPoolMaxConnections, opts.clientConnPoolMaxConnections)
+	assert.Equal(t, defaultClientConnPoolIdleTimeout, opts.clientConnPoolIdleTimeout)
+	assert.Equal(t, defaultClientConnPoolScalingMonitorInterval, opts.clientConnPoolScalingMonitorInterval)
 }
 
 // between cleanupIdleConns (which cancels idle connections) and

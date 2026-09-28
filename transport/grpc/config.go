@@ -72,11 +72,13 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 //	    serverMaxHeaderListSize: 2048
 //	    clientConnectionPool:
 //	      dynamicScalingEnabled: true
-//	      maxConcurrentStreams: 250
-//	      scaleUpThreshold: 0.8
+//	      maxConcurrentStreams: 100
+//	      scaleUpThreshold: 0.7
+//	      scaleDownGap: 0.1
 //	      minConnections: 1
-//	      maxConnections: 10
+//	      maxConnections: 50
 //	      idleTimeout: 5m
+//	      scalingMonitorInterval: 30s
 //
 // All parameters of TransportConfig are optional. This section
 // may be omitted in the transports section.
@@ -100,41 +102,46 @@ type TransportConfig struct {
 	ClientConnectionPool ClientConnectionPoolConfig `config:"clientConnectionPool"`
 }
 
-// ClientConnectionPoolConfig configures the dynamic gRPC connection pool for all
-// peers on this transport.
+// ClientConnectionPoolConfig configures the dynamic gRPC connection pool.
+// Set it under transports.grpc for every outbound, or under a single
+// outbound's grpc section to override the transport-wide values for that
+// outbound only (see OutboundConfig.ClientConnectionPool).
 //
 //	transports:
 //	  grpc:
 //	    clientConnectionPool:
-//	      dynamicScalingEnabled: false  # explicit opt-out (overrides central OC control)
-//	      maxConcurrentStreams: 250     # assumed server HTTP/2 stream limit
-//	      scaleUpThreshold: 0.8         # open a new conn at 80% utilization
+//	      dynamicScalingEnabled: true   # default; set false to opt out
+//	      maxConcurrentStreams: 100     # assumed server HTTP/2 stream limit
+//	      scaleUpThreshold: 0.7         # open a new conn at 70% utilization
 //	      scaleDownGap: 0.1             # hysteresis gap below scaleUpThreshold for drain decisions
 //	      minConnections: 1             # minimum connections per peer
-//	      maxConnections: 10            # maximum connections per peer
+//	      maxConnections: 50            # maximum connections per peer
 //	      idleTimeout: 5m               # close idle connections after this duration
 //	      scalingMonitorInterval: 30s   # how often to evaluate scale-down and idle cleanup
 type ClientConnectionPoolConfig struct {
 	// DynamicScalingEnabled controls the background connection scaling monitor.
-	// This field uses a pointer so that YAML "not set" and "explicitly false" can
-	// be distinguished:
+	// The transport default is enabled. This field is a pointer because a plain
+	// bool left out of YAML decodes as false and would turn scaling off for
+	// every service that omits the field.
 	//
-	//   - nil (field omitted from YAML): the central ObjectConfig value is used.
-	//   - false (explicitly set in YAML): always disabled, overrides ObjectConfig.
-	//   - true (explicitly set in YAML): ignored — enabling requires ObjectConfig.
+	//   - nil (field omitted): no opinion. The programmatic option is kept,
+	//     or the default (enabled) when that option was not passed.
+	//   - false: scaling is turned off.
+	//   - true: scaling is turned on.
 	//
-	// In practice, services should leave this field unset and rely on ObjectConfig.
-	// Set it to false only to explicitly opt out of dynamic scaling for this service.
+	// When the field is set, it overrides WithDynamicConnectionScaling, same
+	// as the other clientConnectionPool fields.
 	DynamicScalingEnabled *bool `config:"dynamicScalingEnabled"`
 
 	// MaxConcurrentStreams is the assumed HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS
 	// value enforced by the server.  YARPC uses this to decide when to open an
-	// additional connection.  Defaults to 250 (Go's net/http2 default).
+	// additional connection.  Defaults to 100.
 	MaxConcurrentStreams int32 `config:"maxConcurrentStreams"`
 
 	// ScaleUpThreshold is the fraction of MaxConcurrentStreams at which a
-	// new connection is opened (e.g. 0.8 → scale up at 200 active streams).
-	// Must be in the range (0, 1].  Defaults to 0.8.
+	// new connection is opened (e.g. 0.7 → scale up at 70 active streams when
+	// MaxConcurrentStreams is 100).
+	// Must be in the range (0, 1].  Defaults to 0.7.
 	ScaleUpThreshold float64 `config:"scaleUpThreshold"`
 
 	// ScaleDownGap is the hysteresis gap subtracted from ScaleUpThreshold to
@@ -148,17 +155,18 @@ type ClientConnectionPoolConfig struct {
 	MinConnections int `config:"minConnections"`
 
 	// MaxConnections is the maximum number of connections allowed per peer.
-	// Defaults to 5.
+	// Defaults to 50.
 	MaxConnections int `config:"maxConnections"`
 
 	// IdleTimeout is how long a fully-drained connection stays idle before
 	// YARPC closes it.
-	// Defaults to 15 minutes.
+	// Defaults to 5 minutes.
 	IdleTimeout time.Duration `config:"idleTimeout"`
 
 	// ScalingMonitorInterval is how often the background monitor evaluates
 	// the pool for scale-down and idle cleanup.
-	// Defaults to 30 seconds.
+	// Defaults to 30 seconds. Values under 30s are clamped to 30s.
+	// Applied at peer creation; a live hook cannot retune a running peer.
 	ScalingMonitorInterval time.Duration `config:"scalingMonitorInterval"`
 }
 
@@ -255,6 +263,18 @@ func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredenti
 //	        time:    10s
 //	        timeout: 30s
 //	        permit-without-stream: true
+//
+// A gRPC outbound can override the transport-wide clientConnectionPool.
+// The outbound is isolated so its peers (and therefore connection pools)
+// are not shared with other outbounds. Fields left unset inherit the
+// transport-wide configuration.
+//
+//	outbounds:
+//	  myservice:
+//	    grpc:
+//	      address: ":80"
+//	      clientConnectionPool:
+//	        minConnections: 20
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
 
@@ -264,6 +284,12 @@ type OutboundConfig struct {
 	// Compressor to use by default if the server side supports it
 	Compressor string                  `config:"compressor"`
 	Keepalive  OutboundKeepaliveConfig `config:"grpc-keepalive"`
+	// ClientConnectionPool optionally overrides the transport-wide
+	// clientConnectionPool for this outbound. Zero-value fields inherit
+	// the transport config. YAML-built outbounds always use an isolated
+	// Dialer, so this override applies even when another outbound dials
+	// the same address.
+	ClientConnectionPool *ClientConnectionPoolConfig `config:"clientConnectionPool"`
 }
 
 func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit, tlsConfigProvider yarpctls.OutboundTLSConfigProvider) ([]DialOption, error) {
@@ -278,6 +304,12 @@ func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit, tlsConfigProvider yarp
 	}
 
 	opts = append(opts, keepaliveOpts...)
+	if c.ClientConnectionPool != nil {
+		if err := validateClientConnectionPoolConfig(*c.ClientConnectionPool); err != nil {
+			return nil, err
+		}
+		opts = append(opts, OutboundConnectionPool(*c.ClientConnectionPool))
+	}
 	return opts, nil
 }
 
@@ -418,33 +450,13 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	// programmatic TransportOption defaults set by the caller are not
 	// silently overridden by the zero value of an omitted YAML field.
 	cp := transportConfig.ClientConnectionPool
-	if cp.MinConnections < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.minConnections must be non-negative, got %d", cp.MinConnections)
+	if err := validateClientConnectionPoolConfig(cp); err != nil {
+		return nil, err
 	}
-	if cp.MaxConnections < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.maxConnections must be non-negative, got %d", cp.MaxConnections)
-	}
-	if cp.MaxConcurrentStreams < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.maxConcurrentStreams must be non-negative, got %d", cp.MaxConcurrentStreams)
-	}
-	if cp.ScaleUpThreshold < 0 || cp.ScaleUpThreshold > 1 {
-		return nil, fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in [0, 1], got %v", cp.ScaleUpThreshold)
-	}
-	if cp.ScaleDownGap < 0 || cp.ScaleDownGap >= 1 {
-		return nil, fmt.Errorf("clientConnectionPool.scaleDownGap must be in [0, 1), got %v", cp.ScaleDownGap)
-	}
-	if cp.IdleTimeout < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.idleTimeout must be non-negative, got %v", cp.IdleTimeout)
-	}
-	if cp.ScalingMonitorInterval < 0 {
-		return nil, fmt.Errorf("clientConnectionPool.scalingMonitorInterval must be non-negative, got %v", cp.ScalingMonitorInterval)
-	}
-	// DynamicScalingEnabled is only applied when explicitly set to false in YAML,
-	// which acts as a service-level opt-out that overrides the central OC value.
-	// YAML true and YAML unset both leave the OC-provided programmatic option intact.
-	// This means: enabling requires OC to set it; services can only opt out via YAML.
-	if cp.DynamicScalingEnabled != nil && !*cp.DynamicScalingEnabled {
-		options = append(options, WithDynamicConnectionScaling(false))
+	// A set value overrides WithDynamicConnectionScaling. An omitted field
+	// leaves that option, or the default (enabled), in place.
+	if cp.DynamicScalingEnabled != nil {
+		options = append(options, WithDynamicConnectionScaling(*cp.DynamicScalingEnabled))
 	}
 	if cp.MaxConcurrentStreams > 0 {
 		options = append(options, MaxConcurrentStreams(cp.MaxConcurrentStreams))
@@ -528,7 +540,21 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 	}
 
 	opts := append(dialOpts, t.DialOptions...)
-	dialer := trans.NewDialer(append([]DialOption{DialerDestinationServiceName(kit.OutboundServiceName())}, opts...)...)
+	dialer := trans.NewDialer(append(
+		[]DialOption{DialerDestinationServiceName(kit.OutboundServiceName())},
+		opts...,
+	)...)
+	// Each outbound gets its own connections and pool. Two outbounds to the
+	// same address do not share a peer.
+	dialer = dialer.WithConnectionIsolation()
+	if outboundConfig.ClientConnectionPool != nil {
+		// Validate the pool the peer will actually use: outbound fields
+		// overlaid on the transport config, including fields the outbound left unset.
+		merged := applyPoolOverride(trans.baseConnPoolConfig(), outboundConfig.ClientConnectionPool)
+		if err := validateResolvedConnPool(merged); err != nil {
+			return nil, err
+		}
+	}
 	var chooser peer.Chooser
 	if outboundConfig.Empty() {
 		if outboundConfig.Address == "" {
@@ -554,4 +580,32 @@ func newTransportCastError(tr transport.Transport) error {
 
 func newRequiredFieldMissingError(field string) error {
 	return fmt.Errorf("required field missing: %v", field)
+}
+
+func validateClientConnectionPoolConfig(cp ClientConnectionPoolConfig) error {
+	if cp.MinConnections < 0 {
+		return fmt.Errorf("clientConnectionPool.minConnections must be non-negative, got %d", cp.MinConnections)
+	}
+	if cp.MaxConnections < 0 {
+		return fmt.Errorf("clientConnectionPool.maxConnections must be non-negative, got %d", cp.MaxConnections)
+	}
+	if cp.MaxConnections > 0 && cp.MinConnections > cp.MaxConnections {
+		return fmt.Errorf("clientConnectionPool.maxConnections (%d) must be >= minConnections (%d)", cp.MaxConnections, cp.MinConnections)
+	}
+	if cp.MaxConcurrentStreams < 0 {
+		return fmt.Errorf("clientConnectionPool.maxConcurrentStreams must be non-negative, got %d", cp.MaxConcurrentStreams)
+	}
+	if cp.ScaleUpThreshold < 0 || cp.ScaleUpThreshold > 1 {
+		return fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in [0, 1], got %v", cp.ScaleUpThreshold)
+	}
+	if cp.ScaleDownGap < 0 || cp.ScaleDownGap >= 1 {
+		return fmt.Errorf("clientConnectionPool.scaleDownGap must be in [0, 1), got %v", cp.ScaleDownGap)
+	}
+	if cp.IdleTimeout < 0 {
+		return fmt.Errorf("clientConnectionPool.idleTimeout must be non-negative, got %v", cp.IdleTimeout)
+	}
+	if cp.ScalingMonitorInterval < 0 {
+		return fmt.Errorf("clientConnectionPool.scalingMonitorInterval must be non-negative, got %v", cp.ScalingMonitorInterval)
+	}
+	return nil
 }

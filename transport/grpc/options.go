@@ -55,13 +55,13 @@ const (
 	defaultServerMaxRecvMsgSize = 1024 * 1024 * 64
 	defaultClientMaxRecvMsgSize = 1024 * 1024 * 64
 	// Client connection pool defaults.
-	// defaultClientConnPoolMaxConcurrentStreams matches Go's net/http2 server default (SETTINGS_MAX_CONCURRENT_STREAMS = 250).
-	defaultClientConnPoolMaxConcurrentStreams   int32         = 250
-	defaultClientConnPoolScaleUpThreshold       float64       = 0.8
+	defaultClientConnPoolDynamicScalingEnabled  bool          = true
+	defaultClientConnPoolMaxConcurrentStreams   int32         = 100
+	defaultClientConnPoolScaleUpThreshold       float64       = 0.7
 	defaultClientConnPoolScaleDownGap           float64       = 0.1
 	defaultClientConnPoolMinConnections         int           = 1
-	defaultClientConnPoolMaxConnections         int           = 5
-	defaultClientConnPoolIdleTimeout            time.Duration = 15 * time.Minute
+	defaultClientConnPoolMaxConnections         int           = 50
+	defaultClientConnPoolIdleTimeout            time.Duration = 5 * time.Minute
 	defaultClientConnPoolScalingMonitorInterval time.Duration = 30 * time.Second
 )
 
@@ -219,8 +219,7 @@ func ClientMaxHeaderListSize(clientMaxHeaderListSize uint32) TransportOption {
 // an additional connection to a peer.
 //
 // The gRPC client does not expose the server-advertised limit, so this must be
-// configured manually.  The default is 250, which matches Go's net/http2 server
-// default.
+// configured manually. The default is 100.
 func MaxConcurrentStreams(n int32) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolMaxConcurrentStreams = n
@@ -228,11 +227,11 @@ func MaxConcurrentStreams(n int32) TransportOption {
 }
 
 // ScaleUpThreshold sets the fraction of MaxConcurrentStreams at which YARPC
-// opens an additional connection to a peer.  For example, a value of 0.8 means
+// opens an additional connection to a peer.  For example, a value of 0.7 means
 // a new connection is opened when any existing connection carries more than
-// 80% of its stream budget.
+// 70% of its stream budget.
 //
-// The default is 0.8.
+// The default is 0.7.
 func ScaleUpThreshold(f float64) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolScaleUpThreshold = f
@@ -240,9 +239,9 @@ func ScaleUpThreshold(f float64) TransportOption {
 }
 
 // ScaleDownGap sets the hysteresis gap subtracted from ScaleUpThreshold to
-// derive the scale-down threshold.  For example, with ScaleUpThreshold=0.8
+// derive the scale-down threshold.  For example, with ScaleUpThreshold=0.7
 // and ScaleDownGap=0.1, connections are drained only when aggregate load would
-// fit within 70% of capacity on the reduced pool.  This prevents oscillation
+// fit within 60% of capacity on the reduced pool.  This prevents oscillation
 // when stream counts hover near the scale-up boundary.
 //
 // The default is 0.1.
@@ -266,7 +265,7 @@ func MinConnections(n int) TransportOption {
 // MaxConnections sets the maximum number of connections YARPC may open to a
 // single peer.
 //
-// The default is 5.
+// The default is 50.
 func MaxConnections(n int) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolMaxConnections = n
@@ -276,7 +275,7 @@ func MaxConnections(n int) TransportOption {
 // ConnIdleTimeout sets how long a fully-drained connection remains idle before
 // YARPC closes it and removes it from the pool.
 //
-// The default is 15 minutes.
+// The default is 5 minutes.
 func ConnIdleTimeout(d time.Duration) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolIdleTimeout = d
@@ -286,7 +285,8 @@ func ConnIdleTimeout(d time.Duration) TransportOption {
 // ScalingMonitorInterval sets how often the background monitor goroutine
 // evaluates the connection pool for scale-down and idle cleanup.
 //
-// The default is 30 seconds.
+// The default is 30 seconds. Values under 30s are clamped to 30s. This is
+// applied at peer creation and is not updated by a live config hook.
 func ScalingMonitorInterval(d time.Duration) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolScalingMonitorInterval = d
@@ -301,14 +301,43 @@ func ScalingMonitorInterval(d time.Duration) TransportOption {
 // ScaleUpThreshold, and drains connections when aggregate utilization drops
 // low enough to consolidate load onto fewer connections.
 //
-// Because YARPC is an open-source project, Flipr/ObjectConfig based rollout is handled
-// externally: set this option to true only after validating the change in a
-// controlled environment.
-//
-// The default is false (disabled).
+// The default is true (enabled). An omitted YAML field leaves this value in
+// place. dynamicScalingEnabled: true or false in YAML overrides it.
 func WithDynamicConnectionScaling(enabled bool) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolDynamicScalingEnabled = enabled
+	}
+}
+
+// LiveConnectionPoolProvider is a live provider that returns pool overrides
+// after peer creation. It must be safe for concurrent calls from the RPC
+// and monitor paths.
+//
+// Install it globally with WithGlobalLiveConnectionPoolProvider, or per
+// isolated outbound with WithOutboundLiveConnectionPoolProvider.
+//
+// Zero-value fields mean "no opinion" and keep the peer's startup config
+// (TransportOptions, YAML, and OutboundConnectionPool). A set
+// DynamicScalingEnabled replaces the startup flag. Invalid resolved configs
+// are ignored and the last valid snapshot is kept.
+//
+// The live provider returns ClientConnectionPoolConfig only. Callers that
+// subscribe to an external config system resolve that system themselves.
+type LiveConnectionPoolProvider func() ClientConnectionPoolConfig
+
+// WithGlobalLiveConnectionPoolProvider installs a live provider for the
+// transport-wide pool (every peer unless an outbound live provider is set).
+// Isolated Dialers that need a different live provider can pass
+// WithOutboundLiveConnectionPoolProvider. The scaler reads the provider on every
+// scale-up and monitor tick.
+//
+// Note: scalingMonitorInterval is not live. YAML, ScalingMonitorInterval, or
+// an outbound clientConnectionPool block can set it at peer creation. A live
+// provider that returns a new interval is stored but does not retune the
+// ticker; the running peer keeps the startup interval until process restart.
+func WithGlobalLiveConnectionPoolProvider(p LiveConnectionPoolProvider) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.poolConfigProvider = p
 	}
 }
 
@@ -426,6 +455,34 @@ func KeepaliveParams(params keepalive.ClientParameters) DialOption {
 	}
 }
 
+// OutboundConnectionPool returns a DialOption that overrides the transport's
+// shared dynamic connection pool configuration (see
+// TransportConfig.ClientConnectionPool and the MaxConcurrentStreams /
+// ScaleUpThreshold / ScaleDownGap / MinConnections / MaxConnections /
+// ConnIdleTimeout / ScalingMonitorInterval / WithDynamicConnectionScaling
+// TransportOptions) for peers retained through this Dialer.
+//
+// This override only takes effect on a Dialer isolated via
+// Dialer.WithConnectionIsolation: outbounds sharing a peer with other
+// dialers also share that peer's connection pool, so a per-outbound override
+// would be ambiguous and is ignored on a non-isolated Dialer. Any field left
+// at its zero value falls back to the transport-wide configuration.
+func OutboundConnectionPool(cfg ClientConnectionPoolConfig) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.connPoolOverride = &cfg
+	}
+}
+
+// WithOutboundLiveConnectionPoolProvider installs a live provider for peers
+// retained through this Dialer. Like OutboundConnectionPool, it only takes
+// effect on a Dialer isolated via WithConnectionIsolation. When set, it
+// replaces WithGlobalLiveConnectionPoolProvider for those peers.
+func WithOutboundLiveConnectionPoolProvider(p LiveConnectionPoolProvider) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.poolConfigProvider = p
+	}
+}
+
 type transportOptions struct {
 	backoffStrategy           backoff.Strategy
 	tracer                    opentracing.Tracer
@@ -454,6 +511,7 @@ type transportOptions struct {
 	clientConnPoolIdleTimeout            time.Duration
 	clientConnPoolScalingMonitorInterval time.Duration
 	clientConnPoolDynamicScalingEnabled  bool
+	poolConfigProvider                   LiveConnectionPoolProvider
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -471,6 +529,7 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 		clientConnPoolMaxConnections:         defaultClientConnPoolMaxConnections,
 		clientConnPoolIdleTimeout:            defaultClientConnPoolIdleTimeout,
 		clientConnPoolScalingMonitorInterval: defaultClientConnPoolScalingMonitorInterval,
+		clientConnPoolDynamicScalingEnabled:  defaultClientConnPoolDynamicScalingEnabled,
 	}
 	for _, option := range options {
 		option(transportOptions)
@@ -537,6 +596,21 @@ type dialOptions struct {
 	keepaliveParams   *keepalive.ClientParameters
 	tlsConfig         *tls.Config
 	destServiceName   string
+
+	// connectionPerOutbound is true for a Dialer produced by
+	// Dialer.WithConnectionIsolation, i.e. one whose peers are not shared
+	// with other dialers. connPoolOverride only takes effect when this is
+	// true.
+	connectionPerOutbound bool
+
+	// connPoolOverride, when set on an isolated (connectionPerOutbound)
+	// Dialer, overrides the transport-wide dynamic connection pool
+	// configuration for peers retained through it. See OutboundConnectionPool.
+	connPoolOverride *ClientConnectionPoolConfig
+
+	// poolConfigProvider, when set on an isolated Dialer, is the live
+	// provider for peers retained through it. See WithOutboundLiveConnectionPoolProvider.
+	poolConfigProvider LiveConnectionPoolProvider
 }
 
 func (d *dialOptions) grpcOptions(t *Transport) []grpc.DialOption {
@@ -589,4 +663,21 @@ func newDialOptions(options []DialOption) *dialOptions {
 		option(&dopts)
 	}
 	return &dopts
+}
+
+// resolvedPoolConfig returns the connPoolConfig to use for a peer retained
+// through this Dialer: the transport-wide base config, overridden field by
+// field by connPoolOverride when this Dialer is isolated per-outbound
+// (connectionPerOutbound). A non-isolated Dialer's override, if any, is
+// ignored — its peers are shared with other dialers, so a per-outbound pool
+// configuration would be ambiguous.
+//
+// Fields left at their zero value in the override are inherited from base,
+// mirroring how TransportConfig.ClientConnectionPool fields are applied over
+// programmatic TransportOption defaults in buildTransport.
+func (d *dialOptions) resolvedPoolConfig(base connPoolConfig) connPoolConfig {
+	if !d.connectionPerOutbound || d.connPoolOverride == nil {
+		return base
+	}
+	return applyPoolOverride(base, d.connPoolOverride)
 }

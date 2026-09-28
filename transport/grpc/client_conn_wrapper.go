@@ -52,16 +52,16 @@ type connPoolConfig struct {
 	// When false the pool is never grown or shrunk automatically.
 	dynamicScalingEnabled bool
 	// maxConcurrentStreams is the HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS
-	// value enforced by the server (default 250).
+	// value enforced by the server (default 100).
 	maxConcurrentStreams int32
 	// scaleUpThreshold is the fraction of maxConcurrentStreams at which a
-	// new connection is opened (e.g. 0.8 → scale up at 200 active streams).
+	// new connection is opened (e.g. 0.7 → scale up at 70 active streams).
 	scaleUpThreshold float64
 	// scaleDownGap is subtracted from scaleUpThreshold to derive the
 	// scale-down threshold, creating a hysteresis band that prevents
 	// oscillation when stream count hovers near the scale-up boundary.
-	// e.g. scaleUpThreshold=0.8, scaleDownGap=0.1 → drain only when load
-	// would fit within 70% of capacity on the reduced pool.
+	// e.g. scaleUpThreshold=0.7, scaleDownGap=0.1 → drain only when load
+	// would fit within 60% of capacity on the reduced pool.
 	scaleDownGap float64
 	// minConnections is the minimum number of connections kept in the pool.
 	minConnections int

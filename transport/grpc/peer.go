@@ -85,7 +85,12 @@ type grpcPeer struct {
 	// pool size without a full slice load.
 	connCount atomic.Int32
 
-	poolCfg connPoolConfig
+	// startupPool is the snapshot at peer creation (TransportOptions, YAML,
+	// outbound overlay). livePoolCfg() overlays the live provider on top.
+	startupPool          connPoolConfig
+	outboundLiveProvider LiveConnectionPoolProvider // WithOutboundLiveConnectionPoolProvider; nil uses the global hook
+	lastValidLivePool    atomic.Value               // connPoolConfig, last snapshot that passed validation
+	invalidLiveWarned    atomic.Bool                // warn once per invalid live streak; skip later ticks until valid again
 }
 
 // loadConns returns the current immutable connection snapshot.
@@ -120,6 +125,14 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	startupPool := options.resolvedPoolConfig(t.baseConnPoolConfig())
+	if options.connectionPerOutbound && options.connPoolOverride != nil {
+		if err := validateResolvedConnPool(startupPool); err != nil {
+			cancel()
+			return nil, err
+		}
+	}
+
 	p := &grpcPeer{
 		Peer:         abstractpeer.NewPeer(abstractpeer.PeerIdentifier(address), t),
 		t:            t,
@@ -128,27 +141,22 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		stoppedC:     make(chan struct{}),
 		grpcDialOpts: dialOptions,
 		metrics:      newPeerPoolReporter(t.metrics),
-		poolCfg: connPoolConfig{
-			dynamicScalingEnabled:  t.options.clientConnPoolDynamicScalingEnabled,
-			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
-			scaleUpThreshold:       t.options.clientConnPoolScaleUpThreshold,
-			scaleDownGap:           t.options.clientConnPoolScaleDownGap,
-			minConnections:         t.options.clientConnPoolMinConnections,
-			maxConnections:         t.options.clientConnPoolMaxConnections,
-			idleTimeout:            t.options.clientConnPoolIdleTimeout,
-			scalingMonitorInterval: t.options.clientConnPoolScalingMonitorInterval,
-		},
+		startupPool:  startupPool,
 	}
+	if options.connectionPerOutbound {
+		p.outboundLiveProvider = options.poolConfigProvider
+	}
+	p.lastValidLivePool.Store(p.startupPool)
 	t.options.logger.Debug("grpc: connection pool config resolved",
 		zap.String("peer", address),
-		zap.Bool("dynamicScalingEnabled", p.poolCfg.dynamicScalingEnabled),
-		zap.Int("minConnections", p.poolCfg.minConnections),
-		zap.Int("maxConnections", p.poolCfg.maxConnections),
-		zap.Int32("maxConcurrentStreams", p.poolCfg.maxConcurrentStreams),
-		zap.Float64("scaleUpThreshold", p.poolCfg.scaleUpThreshold),
-		zap.Float64("scaleDownGap", p.poolCfg.scaleDownGap),
-		zap.Duration("idleTimeout", p.poolCfg.idleTimeout),
-		zap.Duration("scalingMonitorInterval", p.poolCfg.scalingMonitorInterval),
+		zap.Bool("dynamicScalingEnabled", p.startupPool.dynamicScalingEnabled),
+		zap.Int("minConnections", p.startupPool.minConnections),
+		zap.Int("maxConnections", p.startupPool.maxConnections),
+		zap.Int32("maxConcurrentStreams", p.startupPool.maxConcurrentStreams),
+		zap.Float64("scaleUpThreshold", p.startupPool.scaleUpThreshold),
+		zap.Float64("scaleDownGap", p.startupPool.scaleDownGap),
+		zap.Duration("idleTimeout", p.startupPool.idleTimeout),
+		zap.Duration("scalingMonitorInterval", p.startupPool.scalingMonitorInterval),
 	)
 	// Publish an empty slice so loadConns() never returns nil before the first
 	// addConn() call.
@@ -156,8 +164,8 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 
 	// All connections are created via addConn — no special primary connection.
 	initialConnCount := 1
-	if p.poolCfg.dynamicScalingEnabled {
-		initialConnCount = p.poolCfg.minConnections
+	if p.startupPool.dynamicScalingEnabled {
+		initialConnCount = p.startupPool.minConnections
 	}
 	for i := 0; i < initialConnCount; i++ {
 		if err := p.addConn(); err != nil {
@@ -166,7 +174,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		}
 	}
 
-	if p.poolCfg.dynamicScalingEnabled {
+	if p.startupPool.dynamicScalingEnabled {
 		p.connWg.Add(1)
 		go p.runScalingMonitor()
 	}
