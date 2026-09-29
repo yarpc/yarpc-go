@@ -50,6 +50,21 @@ steps:
       - docker-compose#v3.13.0:
           run: yarpc-go-1.23
 
+  - name: ":go: 1.23 race test - %n"
+    parallelism: 6
+    plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make test
+      - docker-compose#v3.13.0:
+          run: yarpc-go-1.23
+
   - name: ":go: 1.23 crossdock"
     plugins:
       - kubernetes:
@@ -89,5 +104,20 @@ steps:
                 command:
                 - |-
                   make examples
+      - docker-compose#v3.13.0:
+          run: yarpc-go-1.23
+
+  - name: ":zap: 1.23 benchmark regression"
+    soft_fail: true
+    plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make benchcompare
       - docker-compose#v3.13.0:
           run: yarpc-go-1.23
