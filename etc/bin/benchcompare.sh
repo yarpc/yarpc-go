@@ -10,12 +10,6 @@ set -uo pipefail
 DIR="$(cd "$(dirname "${0}")/../.." && pwd)"
 cd "${DIR}"
 
-# Avoid an interactive host-key prompt when this container's git has never
-# talked to github.com before (it has SSH credentials via gitEnvFrom, but no
-# pre-populated known_hosts). accept-new still verifies on later connections
-# within the same run; it only skips the first-time interactive confirmation.
-export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null}"
-
 BENCH_COUNT="${BENCH_COUNT:-6}"
 BENCH_TIME="${BENCH_TIME:-1s}"
 BASE_WORKTREE="$(mktemp -d -t benchcompare-base.XXXXXX)"
@@ -51,14 +45,23 @@ if [ -z "${BASE_BRANCH}" ]; then
   skip "BUILDKITE_PULL_REQUEST_BASE_BRANCH is not set, skipping benchmark comparison"
 fi
 
-if ! git fetch --depth=100 origin "${BASE_BRANCH}"; then
-  annotate warning "benchcompare: could not fetch origin/${BASE_BRANCH}, skipping benchmark comparison"
+# Fetch over anonymous HTTPS rather than through the "origin" remote: this
+# runs inside the docker-compose sub-container, which has no SSH credentials
+# or known_hosts of its own (those live on the outer Buildkite agent/pod), and
+# yarpc-go is a public repo, so plain HTTPS needs no auth at all. Derive the
+# HTTPS URL from "origin" so this also works from a fork's SSH-configured
+# remote, falling back to the canonical repo if that fails.
+FETCH_URL="$(git remote get-url origin 2>/dev/null | sed -E 's#^git@github\.com:#https://github.com/#; s#^ssh://git@github\.com/#https://github.com/#')"
+FETCH_URL="${FETCH_URL:-https://github.com/yarpc/yarpc-go.git}"
+
+if ! git fetch --depth=100 "${FETCH_URL}" "${BASE_BRANCH}"; then
+  annotate warning "benchcompare: could not fetch ${BASE_BRANCH} from ${FETCH_URL}, skipping benchmark comparison"
   exit 0
 fi
 
-BASE_SHA="$(git merge-base HEAD "origin/${BASE_BRANCH}")"
+BASE_SHA="$(git merge-base HEAD FETCH_HEAD)"
 if [ -z "${BASE_SHA}" ]; then
-  annotate warning "benchcompare: could not find a merge base with origin/${BASE_BRANCH}, skipping benchmark comparison"
+  annotate warning "benchcompare: could not find a merge base with ${BASE_BRANCH}, skipping benchmark comparison"
   exit 0
 fi
 
