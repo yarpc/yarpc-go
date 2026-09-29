@@ -10,6 +10,12 @@ set -uo pipefail
 DIR="$(cd "$(dirname "${0}")/../.." && pwd)"
 cd "${DIR}"
 
+# Avoid an interactive host-key prompt when this container's git has never
+# talked to github.com before (it has SSH credentials via gitEnvFrom, but no
+# pre-populated known_hosts). accept-new still verifies on later connections
+# within the same run; it only skips the first-time interactive confirmation.
+export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null}"
+
 BENCH_COUNT="${BENCH_COUNT:-6}"
 BENCH_TIME="${BENCH_TIME:-1s}"
 BASE_WORKTREE="$(mktemp -d -t benchcompare-base.XXXXXX)"

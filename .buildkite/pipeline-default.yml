@@ -109,6 +109,7 @@ steps:
 
   - name: ":zap: 1.23 benchmark regression"
     soft_fail: true
+    timeout_in_minutes: 15
     plugins:
       - kubernetes:
           <<: *kubernetes
