@@ -320,9 +320,7 @@ func WithDynamicConnectionScaling(enabled bool) TransportOption {
 // and monitor paths.
 //
 // Install it globally with WithGlobalLiveConnectionPoolProvider, or per
-// isolated outbound with WithOutboundLiveConnectionPoolProvider. YAML
-// outbounds can also receive a per-outbound provider from
-// WithLiveConnectionPoolFactory.
+// isolated outbound with WithOutboundLiveConnectionPoolProvider.
 //
 // Zero-value fields mean "no opinion" and keep the peer's startup config
 // (TransportOptions, YAML, and OutboundConnectionPool). A set
@@ -345,28 +343,6 @@ type LiveConnectionPoolProvider func() ClientConnectionPoolConfig
 func WithGlobalLiveConnectionPoolProvider(p LiveConnectionPoolProvider) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.poolConfigProvider = p
-	}
-}
-
-// LiveConnectionPoolFactory builds a LiveConnectionPoolProvider for one YAML
-// outbound at TransportSpec build time. The returned provider is stored on
-// that outbound's Dialer via WithOutboundLiveConnectionPoolProvider.
-//
-// outbound is Kit.OutboundServiceName() (dest). If Kit also exposes
-// OutboundName (the yarpc.outbounds map key), that name is used instead.
-// yaml is the outbound's clientConnectionPool block, or nil if omitted.
-//
-// Return nil to leave the outbound on WithGlobalLiveConnectionPoolProvider,
-// if any. Programmatic NewDialer does not call the factory; only YAML
-// buildOutbound does. The factory does not change LiveConnectionPoolProvider
-// or the transport-wide global hook.
-type LiveConnectionPoolFactory func(outbound string, yaml *ClientConnectionPoolConfig) LiveConnectionPoolProvider
-
-// WithLiveConnectionPoolFactory installs a factory used when YAML-building
-// gRPC outbounds. Nil factory is today's behavior.
-func WithLiveConnectionPoolFactory(f LiveConnectionPoolFactory) TransportOption {
-	return func(transportOptions *transportOptions) {
-		transportOptions.livePoolFactory = f
 	}
 }
 
@@ -539,7 +515,6 @@ type transportOptions struct {
 	clientConnPoolScalingMonitorInterval time.Duration
 	clientConnPoolDynamicScalingEnabled  bool
 	poolConfigProvider                   LiveConnectionPoolProvider
-	livePoolFactory                      LiveConnectionPoolFactory
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
