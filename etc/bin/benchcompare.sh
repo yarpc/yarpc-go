@@ -7,6 +7,12 @@
 #
 # When the comparison does not run, for any reason, the annotation says so and
 # gives the reason, so a missing result is never silent.
+#
+# If GITHUB_TOKEN is set (and this is a PR build), the same text is also posted
+# as a comment on the pull request. One comment is kept per PR and edited in
+# place on every build. GITHUB_REPO (owner/repo) defaults to yarpc/yarpc-go.
+# Buildkite does not pass secrets to builds from forks, so on those the token
+# is unset and only the annotation is written.
 
 set -uo pipefail
 
@@ -25,6 +31,44 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# post_pr_comment creates or updates the benchcompare comment on the PR. It is
+# best effort: any failure is logged and ignored so it never fails the build.
+post_pr_comment() {
+  local body="${1}"
+  local marker="<!-- benchcompare -->"
+
+  if [ -z "${GITHUB_TOKEN:-}" ]; then
+    echo "benchcompare: GITHUB_TOKEN is not set, not posting a PR comment"
+    return 0
+  fi
+  if [ "${BUILDKITE_PULL_REQUEST:-false}" = "false" ]; then
+    return 0
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "benchcompare: jq not found, not posting a PR comment"
+    return 0
+  fi
+
+  local api="https://api.github.com/repos/${GITHUB_REPO:-yarpc/yarpc-go}/issues"
+  local auth="Authorization: Bearer ${GITHUB_TOKEN}"
+  local payload comment_id
+
+  payload="$(jq -n --arg b "${marker}
+${body}" '{body: $b}')" || return 0
+
+  comment_id="$(curl -fsS -H "${auth}" "${api}/${BUILDKITE_PULL_REQUEST}/comments?per_page=100" \
+    | jq -r --arg m "${marker}" '[.[] | select(.body | contains($m))][0].id // empty')" || comment_id=""
+
+  if [ -n "${comment_id}" ]; then
+    curl -fsS -X PATCH -H "${auth}" -d "${payload}" "${api}/comments/${comment_id}" >/dev/null \
+      || echo "benchcompare: failed to update PR comment ${comment_id}"
+  else
+    curl -fsS -X POST -H "${auth}" -d "${payload}" "${api}/${BUILDKITE_PULL_REQUEST}/comments" >/dev/null \
+      || echo "benchcompare: failed to create PR comment"
+  fi
+  return 0
+}
+
 annotate() {
   local style="${1}"
   local body="${2}"
@@ -32,6 +76,7 @@ annotate() {
       ! echo "${body}" | buildkite-agent annotate --style "${style}" --context benchmark-regression; then
     echo "${body}"
   fi
+  post_pr_comment "${body}"
 }
 
 # not_run annotates that benchmarks did not run, with the reason, then exits

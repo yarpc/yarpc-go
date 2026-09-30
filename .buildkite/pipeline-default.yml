@@ -122,3 +122,8 @@ steps:
                   make benchcompare
       - docker-compose#v3.13.0:
           run: yarpc-go-1.23
+          env:
+            # Used by etc/bin/benchcompare.sh to post the result as a PR
+            # comment, in addition to those provided by the docker-compose.
+            - GITHUB_TOKEN
+            - GITHUB_REPO
