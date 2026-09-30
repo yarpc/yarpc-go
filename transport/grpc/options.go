@@ -319,8 +319,10 @@ func WithDynamicConnectionScaling(enabled bool) TransportOption {
 // after peer creation. It must be safe for concurrent calls from the RPC
 // and monitor paths.
 //
-// Install it globally with WithGlobalLiveConnectionPoolProvider, or per
-// isolated outbound with WithOutboundLiveConnectionPoolProvider.
+// There are two installers:
+//   - WithGlobalLiveConnectionPoolProvider — every peer on the transport
+//   - WithOutboundLiveConnectionPoolProvider — one YAML outbound (replaces
+//     the global hook for that outbound's peers)
 //
 // Zero-value fields mean "no opinion" and keep the peer's startup config
 // (TransportOptions, YAML, and OutboundConnectionPool). A set
@@ -332,10 +334,8 @@ func WithDynamicConnectionScaling(enabled bool) TransportOption {
 type LiveConnectionPoolProvider func() ClientConnectionPoolConfig
 
 // WithGlobalLiveConnectionPoolProvider installs a live provider for the
-// transport-wide pool (every peer unless an outbound live provider is set).
-// Isolated Dialers that need a different live provider can pass
-// WithOutboundLiveConnectionPoolProvider. The scaler reads the provider on every
-// scale-up and monitor tick.
+// transport-wide pool (every peer unless that outbound has its own provider).
+// The scaler reads the provider on every scale-up and monitor tick.
 //
 // scalingMonitorInterval is live: the monitor rereads it after each pass and
 // waits that long (still clamped to 30s). Changing it does not restart the
@@ -343,6 +343,24 @@ type LiveConnectionPoolProvider func() ClientConnectionPoolConfig
 func WithGlobalLiveConnectionPoolProvider(p LiveConnectionPoolProvider) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.poolConfigProvider = p
+	}
+}
+
+// WithOutboundLiveConnectionPoolProvider installs the per-outbound live hook
+// for YAML-built gRPC outbounds. YARPC calls f once when building each
+// outbound. The returned LiveConnectionPoolProvider is stored on that
+// outbound's Dialer and replaces the global hook for those peers. Return nil
+// to keep the global hook for that outbound.
+//
+// outbound is Kit.OutboundServiceName() (dest). After Kit.OutboundKey exists
+// (https://github.com/yarpc/yarpc-go/pull/2573), that map key is used instead.
+// yaml is the outbound's clientConnectionPool block, or nil if omitted.
+//
+// Programmatic NewDialer does not call f. This is the only outbound-specific
+// live-hook API; there is no separate DialOption.
+func WithOutboundLiveConnectionPoolProvider(f func(outbound string, yaml *ClientConnectionPoolConfig) LiveConnectionPoolProvider) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.outboundPoolFactory = f
 	}
 }
 
@@ -476,11 +494,9 @@ func OutboundConnectionPool(cfg ClientConnectionPoolConfig) DialOption {
 	}
 }
 
-// WithOutboundLiveConnectionPoolProvider installs a live provider for peers
-// retained through this Dialer. When set, it replaces
-// WithGlobalLiveConnectionPoolProvider for those peers. Use
-// WithConnectionIsolation so two outbounds do not share a peer.
-func WithOutboundLiveConnectionPoolProvider(p LiveConnectionPoolProvider) DialOption {
+// outboundLiveProvider stores a live provider on a Dialer. YAML buildOutbound
+// is the only caller; WithOutboundLiveConnectionPoolProvider is the public API.
+func outboundLiveProvider(p LiveConnectionPoolProvider) DialOption {
 	return func(dialOptions *dialOptions) {
 		dialOptions.poolConfigProvider = p
 	}
@@ -515,6 +531,7 @@ type transportOptions struct {
 	clientConnPoolScalingMonitorInterval time.Duration
 	clientConnPoolDynamicScalingEnabled  bool
 	poolConfigProvider                   LiveConnectionPoolProvider
+	outboundPoolFactory                  func(outbound string, yaml *ClientConnectionPoolConfig) LiveConnectionPoolProvider
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -606,7 +623,8 @@ type dialOptions struct {
 	connPoolOverride *ClientConnectionPoolConfig
 
 	// poolConfigProvider, when set, is the live provider for peers retained
-	// through this Dialer. See WithOutboundLiveConnectionPoolProvider.
+	// through this Dialer. YAML outbounds get this from
+	// WithOutboundLiveConnectionPoolProvider.
 	poolConfigProvider LiveConnectionPoolProvider
 }
 

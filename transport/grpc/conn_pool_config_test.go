@@ -186,7 +186,27 @@ func TestWithGlobalLiveConnectionPoolProvider(t *testing.T) {
 	assert.Equal(t, 3, opts.poolConfigProvider().MaxConnections)
 }
 
-func TestWithOutboundLiveConnectionPoolProvider_AppliesOnDialer(t *testing.T) {
+func TestWithOutboundLiveConnectionPoolProvider(t *testing.T) {
+	opts := newTransportOptions([]TransportOption{
+		WithOutboundLiveConnectionPoolProvider(func(outbound string, yaml *ClientConnectionPoolConfig) LiveConnectionPoolProvider {
+			return staticPoolProvider(ClientConnectionPoolConfig{MaxConnections: 3})
+		}),
+	})
+	require.NotNil(t, opts.outboundPoolFactory)
+	assert.Equal(t, 3, opts.outboundPoolFactory("x", nil)().MaxConnections)
+}
+
+func TestWithOutboundLiveConnectionPoolProvider_NotCalledOnNewDialer(t *testing.T) {
+	called := false
+	tr := NewTransport(WithOutboundLiveConnectionPoolProvider(func(string, *ClientConnectionPoolConfig) LiveConnectionPoolProvider {
+		called = true
+		return staticPoolProvider(ClientConnectionPoolConfig{MaxConnections: 3})
+	}))
+	_ = tr.NewDialer()
+	assert.False(t, called, "outbound hook is YAML buildOutbound only, not NewDialer")
+}
+
+func TestOutboundLiveProvider_AppliesOnDialer(t *testing.T) {
 	address := startTestServer(t)
 	transport := NewTransport(
 		MaxConnections(5),
@@ -197,7 +217,7 @@ func TestWithOutboundLiveConnectionPoolProvider_AppliesOnDialer(t *testing.T) {
 	defer func() { assert.NoError(t, transport.Stop()) }()
 
 	id := testIdentifier{address}
-	shared := transport.NewDialer(WithOutboundLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
+	shared := transport.NewDialer(outboundLiveProvider(staticPoolProvider(ClientConnectionPoolConfig{
 		MaxConnections: 20,
 	})))
 	sp, err := shared.RetainPeer(id, idSubscriber{1})
@@ -206,7 +226,7 @@ func TestWithOutboundLiveConnectionPoolProvider_AppliesOnDialer(t *testing.T) {
 	require.NotNil(t, sharedPeer.outboundLiveProvider)
 	assert.Equal(t, 20, sharedPeer.livePoolCfg().maxConnections, "dialer live provider replaces the transport hook")
 
-	isolated := transport.NewDialer(WithOutboundLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
+	isolated := transport.NewDialer(outboundLiveProvider(staticPoolProvider(ClientConnectionPoolConfig{
 		MaxConnections: 20,
 	}))).WithConnectionIsolation()
 	ip, err := isolated.RetainPeer(id, idSubscriber{2})

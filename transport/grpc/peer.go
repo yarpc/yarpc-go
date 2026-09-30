@@ -88,7 +88,7 @@ type grpcPeer struct {
 	// startupPool is the snapshot at peer creation (TransportOptions, YAML,
 	// outbound overlay). livePoolCfg() overlays the live provider on top.
 	startupPool          connPoolConfig
-	outboundLiveProvider LiveConnectionPoolProvider // WithOutboundLiveConnectionPoolProvider; nil uses the global hook
+	outboundLiveProvider LiveConnectionPoolProvider // per-outbound hook; nil uses the global hook
 	lastValidLivePool    atomic.Value               // connPoolConfig, last snapshot that passed validation
 	invalidLiveWarned    atomic.Bool                // warn once per invalid live streak; skip later ticks until valid again
 	monitorStarted       atomic.Bool                // runScalingMonitor started once; live enable can start it after create
