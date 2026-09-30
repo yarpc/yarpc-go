@@ -1,24 +1,27 @@
 #!/bin/bash
 
 # benchcompare.sh runs benchstat over the benchmarks of packages changed by a
-# PR, comparing the PR base branch against the PR head, and posts the result
-# as a Buildkite annotation. This is informational only: it never fails the
-# build, on a comparison error or on a detected regression alike.
+# PR, comparing the PR base branch against the PR head, and writes the result
+# as Markdown. This is informational only: it never fails the build, on a
+# comparison error or on a detected regression alike.
 #
-# When the comparison does not run, for any reason, the annotation says so and
+# When the comparison does not run, for any reason, the output says so and
 # gives the reason, so a missing result is never silent.
 #
-# The script runs in a container that has no Buildkite agent credentials, so it
-# cannot annotate the build itself. Instead it writes the annotation text and
-# style to BENCHCOMPARE_OUT_DIR (a directory mounted from the host and uploaded
-# as an artifact). The benchcompare-annotate step then posts the annotation
-# from outside the container, via etc/bin/benchcompare-annotate.sh.
+# Inputs (environment):
+#   PR_NUMBER        pull request number; "false" or unset means not a PR build
+#   BASE_BRANCH      branch the PR targets
+# For Buildkite, BUILDKITE_PULL_REQUEST and BUILDKITE_PULL_REQUEST_BASE_BRANCH
+# are used when the above are unset.
 #
-# If GITHUB_TOKEN is set (and this is a PR build), the same text is also posted
-# as a comment on the pull request. One comment is kept per PR and edited in
-# place on every build. GITHUB_REPO (owner/repo) defaults to yarpc/yarpc-go.
-# Buildkite does not pass secrets to builds from forks, so on those the token
-# is unset and only the annotation is written.
+# Outputs, written to BENCHCOMPARE_OUT_DIR (default .benchcompare):
+#   annotation.md    the Markdown result (also printed to stdout)
+#   style            info, success, warning or error
+#
+# In CI, .github/workflows/benchcompare.yml runs this on pull_request without
+# secrets and uploads the output directory as an artifact.
+# .github/workflows/benchcompare-comment.yml then posts annotation.md as a PR
+# comment from a trusted context, so fork PRs get the comment too.
 
 set -uo pipefail
 
@@ -38,55 +41,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# post_pr_comment creates or updates the benchcompare comment on the PR. It is
-# best effort: any failure is logged and ignored so it never fails the build.
-post_pr_comment() {
-  local body="${1}"
-  local marker="<!-- benchcompare -->"
-
-  if [ -z "${GITHUB_TOKEN:-}" ]; then
-    echo "benchcompare: GITHUB_TOKEN is not set, not posting a PR comment"
-    return 0
-  fi
-  if [ "${BUILDKITE_PULL_REQUEST:-false}" = "false" ]; then
-    return 0
-  fi
-  if ! command -v jq >/dev/null 2>&1; then
-    echo "benchcompare: jq not found, not posting a PR comment"
-    return 0
-  fi
-
-  local api="https://api.github.com/repos/${GITHUB_REPO:-yarpc/yarpc-go}/issues"
-  local auth="Authorization: Bearer ${GITHUB_TOKEN}"
-  local payload comment_id
-
-  payload="$(jq -n --arg b "${marker}
-${body}" '{body: $b}')" || return 0
-
-  comment_id="$(curl -fsS -H "${auth}" "${api}/${BUILDKITE_PULL_REQUEST}/comments?per_page=100" \
-    | jq -r --arg m "${marker}" '[.[] | select(.body | contains($m))][0].id // empty')" || comment_id=""
-
-  if [ -n "${comment_id}" ]; then
-    curl -fsS -X PATCH -H "${auth}" -d "${payload}" "${api}/comments/${comment_id}" >/dev/null \
-      || echo "benchcompare: failed to update PR comment ${comment_id}"
-  else
-    curl -fsS -X POST -H "${auth}" -d "${payload}" "${api}/${BUILDKITE_PULL_REQUEST}/comments" >/dev/null \
-      || echo "benchcompare: failed to create PR comment"
-  fi
-  return 0
-}
-
-# annotate records the result for the benchcompare-annotate step, prints it to
-# the job log, and posts it as a PR comment when possible.
+# annotate records the result in BENCHCOMPARE_OUT_DIR and prints it to the log.
 annotate() {
   local style="${1}"
   local body="${2}"
   mkdir -p "${BENCHCOMPARE_OUT_DIR}" 2>/dev/null \
     && printf '%s\n' "${style}" >"${BENCHCOMPARE_OUT_DIR}/style" \
     && printf '%s\n' "${body}" >"${BENCHCOMPARE_OUT_DIR}/annotation.md" \
-    || echo "benchcompare: could not write ${BENCHCOMPARE_OUT_DIR}, the build annotation will be missing"
+    || echo "benchcompare: could not write ${BENCHCOMPARE_OUT_DIR}, the result will not be posted"
   echo "${body}"
-  post_pr_comment "${body}"
 }
 
 # not_run annotates that benchmarks did not run, with the reason, then exits
@@ -101,13 +64,14 @@ Reason: ${reason}"
   exit 0
 }
 
-if [ "${BUILDKITE_PULL_REQUEST:-false}" = "false" ]; then
+PR_NUMBER="${PR_NUMBER:-${BUILDKITE_PULL_REQUEST:-false}}"
+if [ "${PR_NUMBER}" = "false" ]; then
   not_run info "this is not a pull request build, so there is no base branch to compare against."
 fi
 
-BASE_BRANCH="${BUILDKITE_PULL_REQUEST_BASE_BRANCH:-}"
+BASE_BRANCH="${BASE_BRANCH:-${BUILDKITE_PULL_REQUEST_BASE_BRANCH:-}}"
 if [ -z "${BASE_BRANCH}" ]; then
-  not_run warning "\`BUILDKITE_PULL_REQUEST_BASE_BRANCH\` is not set, so the base branch is unknown."
+  not_run warning "the base branch (\`BASE_BRANCH\`) is not set, so it is unknown."
 fi
 
 # Fetch over anonymous HTTPS rather than through the "origin" remote: this
@@ -156,7 +120,7 @@ if ! (cd "${BASE_WORKTREE}" && go test -run='^$' -bench=. -benchmem -count="${BE
   not_run warning "benchmarks failed to run on \`${BASE_BRANCH}\` at ${BASE_SHA} for:${CHANGED_PKGS}. The benchmarks may be new in this PR. See the job log."
 fi
 
-DIFF="$(benchstat "${BENCH_BASE_TXT}" "${BENCH_HEAD_TXT}")"
+DIFF="$(benchstat "base=${BENCH_BASE_TXT}" "head=${BENCH_HEAD_TXT}")"
 STYLE="info"
 if echo "${DIFF}" | grep -q '[+-][0-9].*%'; then
   STYLE="warning"
