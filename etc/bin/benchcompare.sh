@@ -8,6 +8,12 @@
 # When the comparison does not run, for any reason, the annotation says so and
 # gives the reason, so a missing result is never silent.
 #
+# The script runs in a container that has no Buildkite agent credentials, so it
+# cannot annotate the build itself. Instead it writes the annotation text and
+# style to BENCHCOMPARE_OUT_DIR (a directory mounted from the host and uploaded
+# as an artifact). The benchcompare-annotate step then posts the annotation
+# from outside the container, via etc/bin/benchcompare-annotate.sh.
+#
 # If GITHUB_TOKEN is set (and this is a PR build), the same text is also posted
 # as a comment on the pull request. One comment is kept per PR and edited in
 # place on every build. GITHUB_REPO (owner/repo) defaults to yarpc/yarpc-go.
@@ -19,6 +25,7 @@ set -uo pipefail
 DIR="$(cd "$(dirname "${0}")/../.." && pwd)"
 cd "${DIR}"
 
+BENCHCOMPARE_OUT_DIR="${BENCHCOMPARE_OUT_DIR:-.benchcompare}"
 BENCH_COUNT="${BENCH_COUNT:-6}"
 BENCH_TIME="${BENCH_TIME:-1s}"
 BASE_WORKTREE="$(mktemp -d -t benchcompare-base.XXXXXX)"
@@ -69,13 +76,16 @@ ${body}" '{body: $b}')" || return 0
   return 0
 }
 
+# annotate records the result for the benchcompare-annotate step, prints it to
+# the job log, and posts it as a PR comment when possible.
 annotate() {
   local style="${1}"
   local body="${2}"
-  if ! command -v buildkite-agent >/dev/null 2>&1 || \
-      ! echo "${body}" | buildkite-agent annotate --style "${style}" --context benchmark-regression; then
-    echo "${body}"
-  fi
+  mkdir -p "${BENCHCOMPARE_OUT_DIR}" 2>/dev/null \
+    && printf '%s\n' "${style}" >"${BENCHCOMPARE_OUT_DIR}/style" \
+    && printf '%s\n' "${body}" >"${BENCHCOMPARE_OUT_DIR}/annotation.md" \
+    || echo "benchcompare: could not write ${BENCHCOMPARE_OUT_DIR}, the build annotation will be missing"
+  echo "${body}"
   post_pr_comment "${body}"
 }
 
