@@ -13,8 +13,25 @@ set -uo pipefail
 OUT_DIR=".benchcompare"
 mkdir -p "${OUT_DIR}"
 
-if ! buildkite-agent artifact download "${OUT_DIR}/*" . ; then
-  echo "benchcompare-annotate: could not download artifacts, nothing to annotate"
+# The benchmark step uploads the artifacts just before it finishes, so retry
+# for a short while in case they are not visible yet.
+downloaded=""
+for attempt in 1 2 3 4 5 6; do
+  if buildkite-agent artifact download "${OUT_DIR}/*" . ; then
+    downloaded=1
+    break
+  fi
+  echo "benchcompare-annotate: artifacts not found (attempt ${attempt}/6), retrying"
+  sleep 10
+done
+
+if [ -z "${downloaded}" ]; then
+  echo "benchcompare-annotate: could not download artifacts"
+  buildkite-agent annotate --style warning --context benchmark-regression \
+    "### Benchmarks did not run (informational, does not block merge)
+
+Reason: the benchmark result could not be retrieved (no artifacts found from the benchmark step). See its job log." \
+    || echo "benchcompare-annotate: annotate failed"
   exit 0
 fi
 
