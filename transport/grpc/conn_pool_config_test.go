@@ -186,6 +186,26 @@ func TestWithGlobalLiveConnectionPoolProvider(t *testing.T) {
 	assert.Equal(t, 3, opts.poolConfigProvider().MaxConnections)
 }
 
+func TestWithLiveConnectionPoolFactory(t *testing.T) {
+	opts := newTransportOptions([]TransportOption{
+		WithLiveConnectionPoolFactory(func(outbound string, yaml *ClientConnectionPoolConfig) LiveConnectionPoolProvider {
+			return staticPoolProvider(ClientConnectionPoolConfig{MaxConnections: 3})
+		}),
+	})
+	require.NotNil(t, opts.livePoolFactory)
+	assert.Equal(t, 3, opts.livePoolFactory("x", nil)().MaxConnections)
+}
+
+func TestLiveConnectionPoolFactory_NotCalledOnNewDialer(t *testing.T) {
+	called := false
+	tr := NewTransport(WithLiveConnectionPoolFactory(func(string, *ClientConnectionPoolConfig) LiveConnectionPoolProvider {
+		called = true
+		return staticPoolProvider(ClientConnectionPoolConfig{MaxConnections: 3})
+	}))
+	_ = tr.NewDialer()
+	assert.False(t, called, "factory is YAML buildOutbound only, not NewDialer")
+}
+
 func TestWithOutboundLiveConnectionPoolProvider_AppliesOnDialer(t *testing.T) {
 	address := startTestServer(t)
 	transport := NewTransport(

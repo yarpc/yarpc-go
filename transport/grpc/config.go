@@ -540,6 +540,11 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 	}
 
 	opts := append(dialOpts, t.DialOptions...)
+	if f := trans.options.livePoolFactory; f != nil {
+		if p := f(kitOutboundName(kit), outboundConfig.ClientConnectionPool); p != nil {
+			opts = append(opts, WithOutboundLiveConnectionPoolProvider(p))
+		}
+	}
 	dialer := trans.NewDialer(append(
 		[]DialOption{DialerDestinationServiceName(kit.OutboundServiceName())},
 		opts...,
@@ -580,6 +585,24 @@ func newTransportCastError(tr transport.Transport) error {
 
 func newRequiredFieldMissingError(field string) error {
 	return fmt.Errorf("required field missing: %v", field)
+}
+
+// kitOutboundName is dest today (OutboundServiceName). After Kit.OutboundName
+// exists, that map key is preferred so factory callers can key per outbound
+// when YAML service: differs from the map key.
+func kitOutboundName(kit *yarpcconfig.Kit) string {
+	if kit == nil {
+		return ""
+	}
+	type outboundNamer interface {
+		OutboundName() string
+	}
+	if namer, ok := any(kit).(outboundNamer); ok {
+		if name := namer.OutboundName(); name != "" {
+			return name
+		}
+	}
+	return kit.OutboundServiceName()
 }
 
 func validateClientConnectionPoolConfig(cp ClientConnectionPoolConfig) error {
