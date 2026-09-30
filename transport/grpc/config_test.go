@@ -1168,11 +1168,6 @@ func TestOutboundYAMLClientConnectionPoolMixed(t *testing.T) {
 	assert.NotSame(t, tunedDialer.connectionScope, sharedDialer.connectionScope)
 }
 
-func TestKitOutboundNameFallsBackToDest(t *testing.T) {
-	assert.Equal(t, "", kitOutboundName(nil))
-	assert.Equal(t, _kit.OutboundServiceName(), kitOutboundName(_kit))
-}
-
 func TestWithOutboundLiveConnectionPoolProvider_YAMLOutbounds(t *testing.T) {
 	type attrs map[string]interface{}
 
@@ -1263,6 +1258,34 @@ func TestWithOutboundLiveConnectionPoolProvider_YAMLOutbounds(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, 11, tunedGP.livePoolCfg().maxConnections, "outbound provider replaces global")
 	assert.Equal(t, 7, sharedGP.livePoolCfg().maxConnections, "nil return keeps global")
+}
+
+func TestWithOutboundLiveConnectionPoolProvider_UsesOutboundKey(t *testing.T) {
+	type attrs map[string]interface{}
+
+	var got []string
+	factory := func(outbound string, _ *ClientConnectionPoolConfig) LiveConnectionPoolProvider {
+		got = append(got, outbound)
+		return nil
+	}
+
+	configurator := yarpcconfig.New()
+	require.NoError(t, configurator.RegisterTransport(TransportSpec(
+		WithOutboundLiveConnectionPoolProvider(factory),
+	)))
+	_, err := configurator.LoadConfig("foo", attrs{
+		"outbounds": attrs{
+			"eats-store": attrs{
+				"service":     "real-backend",
+				TransportName: attrs{"address": "localhost:54600"},
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, got)
+	for _, name := range got {
+		assert.Equal(t, "eats-store", name, "factory gets the outbounds map key, not dest")
+	}
 }
 
 func mapResolver(m map[string]string) func(string) (string, bool) {

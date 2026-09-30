@@ -352,9 +352,8 @@ func WithGlobalLiveConnectionPoolProvider(p LiveConnectionPoolProvider) Transpor
 // outbound's Dialer and replaces the global hook for those peers. Return nil
 // to keep the global hook for that outbound.
 //
-// outbound is Kit.OutboundServiceName() (dest). After Kit.OutboundKey exists
-// (https://github.com/yarpc/yarpc-go/pull/2573), that map key is used instead.
-// yaml is the outbound's clientConnectionPool block, or nil if omitted.
+// outbound is Kit.OutboundKey() (the yarpc.outbounds map key). yaml is the
+// outbound's clientConnectionPool block, or nil if omitted.
 //
 // Programmatic NewDialer does not call f. This is the only outbound-specific
 // live-hook API; there is no separate DialOption.
