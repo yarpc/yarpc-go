@@ -148,6 +148,8 @@ func (r *_transportSpecRecorder) BuildStreamOutbound(cfg interface{}, t transpor
 type kitMatcher struct {
 	ServiceName         string
 	OutboundServiceName string
+	// OutboundName is the yarpc.outbounds map key. Empty means same as OutboundServiceName.
+	OutboundName string
 }
 
 func (m kitMatcher) Matches(x interface{}) bool {
@@ -156,9 +158,20 @@ func (m kitMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return k.ServiceName() == m.ServiceName && k.OutboundServiceName() == m.OutboundServiceName
+	wantOutboundName := m.OutboundName
+	if wantOutboundName == "" {
+		wantOutboundName = m.OutboundServiceName
+	}
+
+	return k.ServiceName() == m.ServiceName &&
+		k.OutboundServiceName() == m.OutboundServiceName &&
+		k.OutboundName() == wantOutboundName
 }
 
 func (m kitMatcher) String() string {
-	return fmt.Sprintf("kit{name: %q, outboundName: %q}", m.ServiceName, m.OutboundServiceName)
+	name := m.OutboundName
+	if name == "" {
+		name = m.OutboundServiceName
+	}
+	return fmt.Sprintf("kit{name: %q, outboundName: %q, outboundServiceName: %q}", m.ServiceName, name, m.OutboundServiceName)
 }

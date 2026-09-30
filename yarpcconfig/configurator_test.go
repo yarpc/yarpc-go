@@ -1070,6 +1070,56 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "implicit outbound service override keeps map key on Kit",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type outboundConfig struct{ Address string }
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					outbounds:
+						eats-store:
+							service: real-backend
+							tchannel:
+								address: localhost:4040
+				`)
+
+				tchan := mockTransportSpecBuilder{
+					Name:                "tchannel",
+					TransportConfig:     _typeOfEmptyStruct,
+					UnaryOutboundConfig: reflect.TypeOf(&outboundConfig{}),
+				}.Build(mockCtrl)
+
+				transport := transporttest.NewMockTransport(mockCtrl)
+				outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
+
+				tchan.EXPECT().
+					BuildTransport(struct{}{}, kitMatcher{ServiceName: "foo"}).
+					Return(transport, nil)
+				tchan.EXPECT().
+					BuildUnaryOutbound(
+						&outboundConfig{Address: "localhost:4040"},
+						transport,
+						kitMatcher{
+							ServiceName:         "foo",
+							OutboundName:        "eats-store",
+							OutboundServiceName: "real-backend",
+						}).
+					Return(outbound, nil)
+
+				tt.specs = []TransportSpec{tchan.Spec()}
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Outbounds: yarpc.Outbounds{
+						"eats-store": {
+							ServiceName: "real-backend",
+							Unary:       outbound,
+						},
+					},
+				}
+
+				return
+			},
+		},
+		{
 			desc: "implicit outbound oneway",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type transportConfig struct{ Address string }
@@ -1580,13 +1630,13 @@ func TestConfigurator(t *testing.T) {
 					BuildUnaryOutbound(
 						outboundConfig{URL: "http://localhost:8081/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
+						kitMatcher{ServiceName: "foo", OutboundName: "bar-staging", OutboundServiceName: "bar"}).
 					Return(unaryStaging, nil)
 				http.EXPECT().
 					BuildOnewayOutbound(
 						outboundConfig{URL: "http://localhost:8081/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
+						kitMatcher{ServiceName: "foo", OutboundName: "bar-staging", OutboundServiceName: "bar"}).
 					Return(onewayStaging, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}

@@ -38,9 +38,11 @@ type Kit struct {
 
 	name string
 
-	// outboundName is the name of the outbound. It is set in the Kit used for
-	// building outbound.
+	// outboundName is the destination service for the outbound being built.
 	outboundName string
+	// outboundKey is the yarpc.outbounds map key. Empty when only
+	// withOutboundName was used (tests).
+	outboundKey string
 
 	// Used to resolve interpolated variables.
 	resolver interpolate.VariableResolver
@@ -63,9 +65,26 @@ func (k *Kit) withOutboundName(name string) *Kit {
 	return &newK
 }
 
+// Returns a shallow copy with the outbounds map key and dest service name.
+func (k *Kit) withOutbound(key, service string) *Kit {
+	newK := *k
+	newK.outboundKey = key
+	newK.outboundName = service
+	return &newK
+}
+
 // ServiceName returns the name of the service for which components are being
 // built.
 func (k *Kit) ServiceName() string { return k.name }
+
+// OutboundName returns the yarpc.outbounds map key being built. When only
+// withOutboundName was used, it returns that dest service name.
+func (k *Kit) OutboundName() string {
+	if k.outboundKey != "" {
+		return k.outboundKey
+	}
+	return k.outboundName
+}
 
 // OutboundServiceName returns the name of the service for which outbound is
 // being built.

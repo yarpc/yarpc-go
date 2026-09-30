@@ -42,6 +42,12 @@ func TestKitWithTransportSpec(t *testing.T) {
 
 	childOutbound := root.withOutboundName("test-outbound")
 	assert.Equal(t, "test-outbound", childOutbound.OutboundServiceName())
+	assert.Equal(t, "test-outbound", childOutbound.OutboundName())
 	assert.Equal(t, "foo", childOutbound.ServiceName())
 	assert.Empty(t, root.outboundName, "outbound name must be empty")
+
+	keyed := root.withOutbound("alias", "real-backend")
+	assert.Equal(t, "alias", keyed.OutboundName())
+	assert.Equal(t, "real-backend", keyed.OutboundServiceName())
+	assert.Empty(t, root.outboundKey)
 }
