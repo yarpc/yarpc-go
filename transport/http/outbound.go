@@ -468,6 +468,16 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 		return nil, err
 	}
 
+	// net/http only infers Content-Length for *bytes.Buffer, *bytes.Reader and
+	// *strings.Reader bodies. Encodings that hand over any other reader (for
+	// example the Thrift no-wire client's pooled-buffer ReadCloser) would
+	// otherwise be sent with chunked transfer encoding on HTTP/1.1 and without a
+	// content-length on HTTP/2, which some proxies cannot relay. Use the size
+	// the encoding already recorded on the request when it is known.
+	if hreq.ContentLength == 0 && treq.BodySize > 0 {
+		hreq.ContentLength = int64(treq.BodySize)
+	}
+
 	// Patch net/http.Request.GetBody through bodyHelper
 	if helper != nil {
 		err := helper.EnsureGetBody(hreq)
