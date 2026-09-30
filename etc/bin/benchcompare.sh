@@ -4,6 +4,9 @@
 # PR, comparing the PR base branch against the PR head, and posts the result
 # as a Buildkite annotation. This is informational only: it never fails the
 # build, on a comparison error or on a detected regression alike.
+#
+# When the comparison does not run, for any reason, the annotation says so and
+# gives the reason, so a missing result is never silent.
 
 set -uo pipefail
 
@@ -31,18 +34,25 @@ annotate() {
   fi
 }
 
-skip() {
-  echo "benchcompare: ${1}"
+# not_run annotates that benchmarks did not run, with the reason, then exits
+# successfully. The first argument is the annotation style: "info" for an
+# expected skip, "warning" for a failure to run the comparison.
+not_run() {
+  local style="${1}"
+  local reason="${2}"
+  annotate "${style}" "### Benchmarks did not run (informational, does not block merge)
+
+Reason: ${reason}"
   exit 0
 }
 
 if [ "${BUILDKITE_PULL_REQUEST:-false}" = "false" ]; then
-  skip "not a pull request build, skipping benchmark comparison"
+  not_run info "this is not a pull request build, so there is no base branch to compare against."
 fi
 
 BASE_BRANCH="${BUILDKITE_PULL_REQUEST_BASE_BRANCH:-}"
 if [ -z "${BASE_BRANCH}" ]; then
-  skip "BUILDKITE_PULL_REQUEST_BASE_BRANCH is not set, skipping benchmark comparison"
+  not_run warning "\`BUILDKITE_PULL_REQUEST_BASE_BRANCH\` is not set, so the base branch is unknown."
 fi
 
 # Fetch over anonymous HTTPS rather than through the "origin" remote: this
@@ -55,14 +65,12 @@ FETCH_URL="$(git remote get-url origin 2>/dev/null | sed -E 's#^git@github\.com:
 FETCH_URL="${FETCH_URL:-https://github.com/yarpc/yarpc-go.git}"
 
 if ! git fetch --depth=100 "${FETCH_URL}" "${BASE_BRANCH}"; then
-  annotate warning "benchcompare: could not fetch ${BASE_BRANCH} from ${FETCH_URL}, skipping benchmark comparison"
-  exit 0
+  not_run warning "could not fetch \`${BASE_BRANCH}\` from ${FETCH_URL}."
 fi
 
 BASE_SHA="$(git merge-base HEAD FETCH_HEAD)"
 if [ -z "${BASE_SHA}" ]; then
-  annotate warning "benchcompare: could not find a merge base with ${BASE_BRANCH}, skipping benchmark comparison"
-  exit 0
+  not_run warning "could not find a merge base with \`${BASE_BRANCH}\` in the fetched history."
 fi
 
 # Packages with Go file changes relative to the merge base, mapped to
@@ -76,24 +84,21 @@ for d in ${CHANGED_DIRS}; do
 done
 
 if [ -z "${CHANGED_PKGS}" ]; then
-  skip "no changed packages contain benchmarks, skipping benchmark comparison"
+  not_run info "no package changed by this PR contains benchmarks (\`func Benchmark...\` in a \`_test.go\` file), so there is nothing to compare."
 fi
 
 echo "benchcompare: comparing benchmarks for:${CHANGED_PKGS}"
 
 if ! go test -run='^$' -bench=. -benchmem -count="${BENCH_COUNT}" -benchtime="${BENCH_TIME}" ${CHANGED_PKGS} >"${BENCH_HEAD_TXT}"; then
-  annotate warning "benchcompare: benchmarks failed to run on the PR head, skipping benchmark comparison"
-  exit 0
+  not_run warning "benchmarks failed to run on the PR head for:${CHANGED_PKGS}. See the job log."
 fi
 
 if ! git worktree add --detach "${BASE_WORKTREE}" "${BASE_SHA}" >/dev/null; then
-  annotate warning "benchcompare: could not check out ${BASE_SHA} for comparison, skipping benchmark comparison"
-  exit 0
+  not_run warning "could not check out the merge base ${BASE_SHA} for comparison."
 fi
 
 if ! (cd "${BASE_WORKTREE}" && go test -run='^$' -bench=. -benchmem -count="${BENCH_COUNT}" -benchtime="${BENCH_TIME}" ${CHANGED_PKGS}) >"${BENCH_BASE_TXT}"; then
-  annotate warning "benchcompare: benchmarks failed to run on ${BASE_BRANCH}@${BASE_SHA}, skipping benchmark comparison"
-  exit 0
+  not_run warning "benchmarks failed to run on \`${BASE_BRANCH}\` at ${BASE_SHA} for:${CHANGED_PKGS}. The benchmarks may be new in this PR. See the job log."
 fi
 
 DIFF="$(benchstat "${BENCH_BASE_TXT}" "${BENCH_HEAD_TXT}")"
