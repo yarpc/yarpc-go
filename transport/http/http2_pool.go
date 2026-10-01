@@ -21,19 +21,24 @@
 package http
 
 import (
-	"errors"
+	"sync"
 	"time"
 
 	"go.uber.org/atomic"
+	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 )
 
-var errNoConnsAvailable = errors.New("http2 pool: no connections available")
+var errNoConnsAvailable = yarpcerrors.UnavailableErrorf("http2 pool: no connections available")
 
 // http2PoolConfig controls how an http2Pool scales the number of HTTP/2
 // connections it maintains to a single peer.
 type http2PoolConfig struct {
+	// dynamicScalingEnabled gates all automatic scaling. When false the pool
+	// holds a single connection and never scales up or down, and the
+	// monitor loop is not started.
+	dynamicScalingEnabled  bool
 	minConns               int
 	maxConns               int
 	scaleUpThreshold       float64
@@ -50,6 +55,7 @@ type http2PoolConfig struct {
 
 func defaultHTTP2PoolConfig() http2PoolConfig {
 	return http2PoolConfig{
+		dynamicScalingEnabled:  defaultHTTP2PoolDynamicScalingEnabled,
 		minConns:               defaultHTTP2PoolMinConns,
 		maxConns:               defaultHTTP2PoolMaxConns,
 		scaleUpThreshold:       defaultHTTP2PoolScaleUpThreshold,
@@ -83,6 +89,8 @@ type http2Pool struct {
 
 	scalingUp atomic.Bool
 	stop      chan struct{}
+	monitorWG sync.WaitGroup
+	closeOnce sync.Once
 }
 
 func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg http2PoolConfig, logger *zap.Logger) *http2Pool {
@@ -97,8 +105,31 @@ func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg http2Po
 		stop:         make(chan struct{}),
 	}
 	p.connsPtr.Store(&[]*http2Conn{})
-	go p.monitorLoop()
+
+	// Building a slot does no I/O (the Transport dials lazily on its first
+	// request), so the pool can safely start with its minimum size.
+	initial := 1
+	if cfg.dynamicScalingEnabled {
+		initial = cfg.minConns
+	}
+	for i := 0; i < initial; i++ {
+		p.addConn(p.newConn())
+	}
+
+	if cfg.dynamicScalingEnabled {
+		p.monitorWG.Add(1)
+		go p.monitorLoop()
+	}
 	return p
+}
+
+// maxConnCount is the ceiling on pool size: maxConns when dynamic scaling is
+// enabled, otherwise the single fixed connection.
+func (p *http2Pool) maxConnCount() int {
+	if !p.cfg.dynamicScalingEnabled {
+		return 1
+	}
+	return p.cfg.maxConns
 }
 
 // newConn creates a new pool slot. Unlike dialing a raw *http2.ClientConn,
@@ -171,13 +202,11 @@ func (p *http2Pool) growPool() (*http2Conn, error) {
 		return c, nil
 	}
 
-	conns := *p.connsPtr.Load()
-	if len(conns) >= p.cfg.maxConns {
-		return leastLoaded(conns)
-	}
-
 	c := p.newConn()
-	p.addConn(c)
+	if !p.addConnBelowMax(c) {
+		// Another caller filled the pool first, or it was already full.
+		return leastLoaded(*p.connsPtr.Load())
+	}
 	return c, nil
 }
 
@@ -225,7 +254,7 @@ func leastLoaded(conns []*http2Conn) (*http2Conn, error) {
 // scale-up, growing the pool all the way to maxConns instead of by one.
 func (p *http2Pool) maybeScaleUp(least *http2Conn) {
 	max := p.cfg.maxConcurrentStreams
-	if max <= 0 {
+	if !p.cfg.dynamicScalingEnabled || max <= 0 {
 		return
 	}
 	if float64(least.streamsActive()) < float64(max)*p.cfg.scaleUpThreshold {
@@ -245,16 +274,14 @@ func (p *http2Pool) maybeScaleUp(least *http2Conn) {
 	if p.unparkConn() != nil {
 		return
 	}
-	if len(conns) >= p.cfg.maxConns {
-		return
-	}
-	p.addConn(p.newConn())
+	p.addConnBelowMax(p.newConn())
 }
 
 // monitorLoop periodically scales the pool down when load no longer
 // justifies the current connection count, and releases the sockets of
 // connections that have stayed parked and idle.
 func (p *http2Pool) monitorLoop() {
+	defer p.monitorWG.Done()
 	ticker := time.NewTicker(p.cfg.scalingMonitorInterval)
 	defer ticker.Stop()
 	for {
@@ -277,6 +304,9 @@ func (p *http2Pool) monitorLoop() {
 // maybeScaleUp would immediately re-activate the connection just parked.
 // That gap is what keeps the pool from flapping between sizes.
 func (p *http2Pool) maybeScaleDown() {
+	if !p.cfg.dynamicScalingEnabled {
+		return
+	}
 	conns := activeConns(*p.connsPtr.Load())
 	if len(conns) <= p.cfg.minConns || len(conns) < 2 {
 		return
@@ -345,6 +375,25 @@ func (p *http2Pool) addConn(c *http2Conn) {
 	}
 }
 
+// addConnBelowMax appends c via copy-on-write only if doing so keeps the pool
+// within maxConnCount, and reports whether it was added. The size check and
+// the swap happen against the same snapshot, so concurrent growers cannot
+// overshoot the limit the way a separate check-then-addConn would.
+func (p *http2Pool) addConnBelowMax(c *http2Conn) bool {
+	for {
+		old := p.connsPtr.Load()
+		if len(*old) >= p.maxConnCount() {
+			return false
+		}
+		next := make([]*http2Conn, 0, len(*old)+1)
+		next = append(next, *old...)
+		next = append(next, c)
+		if p.connsPtr.CompareAndSwap(old, &next) {
+			return true
+		}
+	}
+}
+
 // removeConn removes c from the pool via copy-on-write. It is a no-op if c
 // is not present (e.g. concurrently removed already).
 func (p *http2Pool) removeConn(c *http2Conn) {
@@ -369,15 +418,18 @@ func (p *http2Pool) removeConn(c *http2Conn) {
 	}
 }
 
-// Close stops the pool's monitor loop and closes every connection it
-// holds.
+// Close stops the pool's monitor loop, waits for it to exit, and closes
+// every connection the pool holds. It is safe to call more than once.
 func (p *http2Pool) Close() {
-	close(p.stop)
-	for _, c := range *p.connsPtr.Load() {
-		if err := c.close(); err != nil {
-			p.logger.Warn("http2 pool: failed to close connection",
-				zap.String("peer", p.addr),
-				zap.Error(err))
+	p.closeOnce.Do(func() {
+		close(p.stop)
+		p.monitorWG.Wait()
+		for _, c := range *p.connsPtr.Load() {
+			if err := c.close(); err != nil {
+				p.logger.Warn("http2 pool: failed to close connection",
+					zap.String("peer", p.addr),
+					zap.Error(err))
+			}
 		}
-	}
+	})
 }
