@@ -145,7 +145,7 @@ func (p *http2Pool) pickConn() (*http2Conn, error) {
 	}
 
 	if best == nil {
-		// Cold start, every connection is draining, or every connection is
+		// Cold start, every connection is parked, or every connection is
 		// already at capacity: grow the pool so the caller has something to
 		// use now.
 		conn, err := p.growPool()
@@ -161,11 +161,16 @@ func (p *http2Pool) pickConn() (*http2Conn, error) {
 	return best, nil
 }
 
-// growPool adds one more connection to the pool, unless the pool is already
-// at its configured maximum, in which case it falls back to the least-bad
-// existing connection (mirroring the way a single shared http2.Transport
-// would queue an excess request rather than fail it).
+// growPool makes one more connection available: it re-activates a parked
+// connection if there is one, otherwise adds a new one, unless the pool is
+// already at its configured maximum, in which case it falls back to the
+// least-bad existing connection (mirroring the way a single shared
+// http2.Transport would queue an excess request rather than fail it).
 func (p *http2Pool) growPool() (*http2Conn, error) {
+	if c := p.unparkConn(); c != nil {
+		return c, nil
+	}
+
 	conns := *p.connsPtr.Load()
 	if len(conns) >= p.cfg.maxConns {
 		return leastLoaded(conns)
@@ -174,6 +179,18 @@ func (p *http2Pool) growPool() (*http2Conn, error) {
 	c := p.newConn()
 	p.addConn(c)
 	return c, nil
+}
+
+// unparkConn re-activates the most recently parked connection and returns it,
+// or returns nil if no connection is parked.
+func (p *http2Pool) unparkConn() *http2Conn {
+	conns := *p.connsPtr.Load()
+	for i := len(conns) - 1; i >= 0; i-- {
+		if conns[i].parked() && conns[i].unpark() {
+			return conns[i]
+		}
+	}
+	return nil
 }
 
 // leastLoaded returns the conn with the fewest active streams, regardless
@@ -191,9 +208,10 @@ func leastLoaded(conns []*http2Conn) (*http2Conn, error) {
 	return best, nil
 }
 
-// maybeScaleUp adds an additional connection, at most once concurrently,
-// when least is already busy enough that new requests risk queuing behind
-// it. Unlike dialing a raw *http2.ClientConn, growing the pool here is pure
+// maybeScaleUp makes an additional connection available, at most once
+// concurrently, when least is already busy enough that new requests risk
+// queuing behind it. A parked connection is re-activated in preference to
+// building a new one. Unlike dialing a raw *http2.ClientConn, growing the pool here is pure
 // in-memory work with no I/O, so this runs synchronously on the caller's
 // goroutine rather than kicking off a background dial.
 //
@@ -213,29 +231,29 @@ func (p *http2Pool) maybeScaleUp(least *http2Conn) {
 	if float64(least.streamsActive()) < float64(max)*p.cfg.scaleUpThreshold {
 		return
 	}
-	if len(*p.connsPtr.Load()) >= p.cfg.maxConns {
-		return
-	}
 	if !p.scalingUp.CompareAndSwap(false, true) {
 		return // a scale-up is already in flight
 	}
 	defer p.scalingUp.Store(false)
 
 	conns := *p.connsPtr.Load()
-	if len(conns) >= p.cfg.maxConns {
-		return
-	}
-	if fresh, err := leastLoaded(conns); err == nil &&
+	if fresh, err := leastLoaded(activeConns(conns)); err == nil &&
 		float64(fresh.streamsActive()) < float64(max)*p.cfg.scaleUpThreshold {
 		return
 	}
 
+	if p.unparkConn() != nil {
+		return
+	}
+	if len(conns) >= p.cfg.maxConns {
+		return
+	}
 	p.addConn(p.newConn())
 }
 
 // monitorLoop periodically scales the pool down when load no longer
-// justifies the current connection count, and reaps drained/idle
-// connections.
+// justifies the current connection count, and releases the sockets of
+// connections that have stayed parked and idle.
 func (p *http2Pool) monitorLoop() {
 	ticker := time.NewTicker(p.cfg.scalingMonitorInterval)
 	defer ticker.Stop()
@@ -250,13 +268,17 @@ func (p *http2Pool) monitorLoop() {
 	}
 }
 
-// maybeScaleDown marks the most-loaded connection as draining if the
-// remaining connections can absorb the current total load, with a
-// scaleDownGap safety margin, and the pool is above its configured
-// minimum.
+// maybeScaleDown parks the last active connection if the remaining active
+// connections can absorb the current total load while staying below the
+// scale-down threshold, and the pool is above its configured minimum.
+//
+// The scale-down threshold is scaleUpThreshold - scaleDownGap, so the load
+// the surviving connections inherit is strictly below the level at which
+// maybeScaleUp would immediately re-activate the connection just parked.
+// That gap is what keeps the pool from flapping between sizes.
 func (p *http2Pool) maybeScaleDown() {
 	conns := activeConns(*p.connsPtr.Load())
-	if len(conns) <= p.cfg.minConns {
+	if len(conns) <= p.cfg.minConns || len(conns) < 2 {
 		return
 	}
 
@@ -266,44 +288,36 @@ func (p *http2Pool) maybeScaleDown() {
 	}
 
 	var totalActive int
-	var mostLoaded *http2Conn
 	for _, c := range conns {
 		totalActive += c.streamsActive()
-		if mostLoaded == nil || c.streamsActive() > mostLoaded.streamsActive() {
-			mostLoaded = c
-		}
-	}
-	if mostLoaded == nil {
-		return
 	}
 
-	totalCapacity := maxPerConn * len(conns)
-	remainingCapacity := totalCapacity - maxPerConn
-	if remainingCapacity <= 0 {
+	remainingCapacity := float64(maxPerConn * (len(conns) - 1))
+	scaleDownThreshold := p.cfg.scaleUpThreshold - p.cfg.scaleDownGap
+	if scaleDownThreshold <= 0 {
 		return
 	}
-	if float64(totalActive) < float64(remainingCapacity)*(1-p.cfg.scaleDownGap) {
-		mostLoaded.markDraining()
+	if float64(totalActive) < remainingCapacity*scaleDownThreshold {
+		conns[len(conns)-1].park()
 	}
 }
 
-// cleanupConns closes and removes draining connections that have gone
-// idle, and marks connections that have been idle past idleTimeout as
-// draining so a future tick can close them.
+// cleanupConns closes the idle sockets of parked connections that have been
+// idle past idleTimeout. The connection stays in the pool, so re-activating
+// it later simply redials lazily on the next request.
 func (p *http2Pool) cleanupConns() {
-	conns := *p.connsPtr.Load()
-	for _, c := range conns {
-		if c.draining() && c.streamsActive() == 0 {
-			if err := c.close(); err != nil {
-				p.logger.Warn("http2 pool: failed to close drained connection",
-					zap.String("peer", p.addr),
-					zap.Error(err))
-			}
-			p.removeConn(c)
+	for _, c := range *p.connsPtr.Load() {
+		if !c.parked() || c.streamsActive() != 0 {
 			continue
 		}
-		if idleSince := c.idleSince(); !idleSince.IsZero() && time.Since(idleSince) > p.cfg.idleTimeout {
-			c.markDraining()
+		idleSince := c.idleSince()
+		if idleSince.IsZero() || time.Since(idleSince) <= p.cfg.idleTimeout {
+			continue
+		}
+		if err := c.close(); err != nil {
+			p.logger.Warn("http2 pool: failed to close parked connection",
+				zap.String("peer", p.addr),
+				zap.Error(err))
 		}
 	}
 }
@@ -311,7 +325,7 @@ func (p *http2Pool) cleanupConns() {
 func activeConns(conns []*http2Conn) []*http2Conn {
 	out := make([]*http2Conn, 0, len(conns))
 	for _, c := range conns {
-		if !c.draining() {
+		if !c.parked() {
 			out = append(out, c)
 		}
 	}

@@ -35,9 +35,11 @@ const (
 	// http2ConnActive connections are eligible to be picked for new
 	// requests.
 	http2ConnActive http2ConnState = iota
-	// http2ConnDraining connections are being scaled down: they are no
-	// longer picked for new requests, and are closed once idle.
-	http2ConnDraining
+	// http2ConnParked connections have been scaled down: they are no longer
+	// picked for new requests, but stay in the pool and are re-activated when
+	// the pool needs to scale back up. Requests already in flight on a parked
+	// connection are left to finish.
+	http2ConnParked
 )
 
 // http2Conn wraps a single *http2.Transport pooled by an http2Pool. A
@@ -108,16 +110,22 @@ func (c *http2Conn) idleSince() time.Time {
 	return time.Unix(0, ns)
 }
 
-// markDraining marks the connection so it is no longer picked for new
-// requests. It does not close the connection or wait for existing streams
-// to finish; the pool's monitor loop is responsible for closing it once
-// idle.
-func (c *http2Conn) markDraining() {
-	c.state.Store(int32(http2ConnDraining))
+// park moves an active connection to the parked state so it is no longer
+// picked for new requests. It reports whether this call made the transition.
+// It does not close the connection or wait for existing streams to finish.
+func (c *http2Conn) park() bool {
+	return c.state.CompareAndSwap(int32(http2ConnActive), int32(http2ConnParked))
 }
 
-func (c *http2Conn) draining() bool {
-	return http2ConnState(c.state.Load()) == http2ConnDraining
+// unpark moves a parked connection back to the active state. It reports
+// whether this call made the transition, so concurrent callers never
+// re-activate the same connection twice.
+func (c *http2Conn) unpark() bool {
+	return c.state.CompareAndSwap(int32(http2ConnParked), int32(http2ConnActive))
+}
+
+func (c *http2Conn) parked() bool {
+	return http2ConnState(c.state.Load()) == http2ConnParked
 }
 
 // close releases any connection this Transport currently holds. A

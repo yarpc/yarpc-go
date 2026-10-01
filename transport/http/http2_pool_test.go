@@ -157,14 +157,13 @@ func TestHTTP2PoolMaybeScaleUpSingleFlight(t *testing.T) {
 	assert.Len(t, *pool.connsPtr.Load(), 2, "concurrent scale-up attempts should add exactly one connection")
 }
 
-func TestHTTP2PoolScaleDownHysteresis(t *testing.T) {
+func TestHTTP2PoolScaleDownParksLastConn(t *testing.T) {
 	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
 
 	cfg := defaultHTTP2PoolConfig()
 	cfg.minConns = 1
-	cfg.scaleDownGap = 0.3
 	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
@@ -173,38 +172,112 @@ func TestHTTP2PoolScaleDownHysteresis(t *testing.T) {
 	pool.addConn(c1)
 	pool.addConn(c2)
 
-	// No load at all: draining one of two idle connections should be safe
-	// (remaining capacity is far above zero load with plenty of headroom).
 	pool.maybeScaleDown()
+	assert.False(t, c1.parked())
+	assert.True(t, c2.parked(), "the last connection should be parked when load is zero")
+	assert.Len(t, *pool.connsPtr.Load(), 2, "parking must not remove the connection from the pool")
 
-	draining := c1.draining() || c2.draining()
-	assert.True(t, draining, "an idle connection should be marked draining when load is zero")
+	// A parked connection is never picked.
+	for i := 0; i < 5; i++ {
+		picked, err := pool.pickConn()
+		require.NoError(t, err)
+		assert.Same(t, c1, picked)
+	}
 
-	// Calling it again should not flap the non-draining connection back and
-	// forth: it should stay marked draining once already draining, and the
-	// pool must not go below minConns of *active* (non-draining) conns.
-	active := activeConns(*pool.connsPtr.Load())
-	assert.GreaterOrEqual(t, len(active), cfg.minConns)
+	// Already at minConns active: nothing more to park.
+	pool.maybeScaleDown()
+	assert.False(t, c1.parked())
 }
 
-func TestHTTP2PoolCleanupConnsClosesDrainedIdleConn(t *testing.T) {
+func TestHTTP2PoolScaleDownAvoidsFlapping(t *testing.T) {
 	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
 
-	pool := newHTTP2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
+	cfg := defaultHTTP2PoolConfig()
+	cfg.minConns = 1
+	cfg.maxConcurrentStreams = 100
+	cfg.scaleUpThreshold = 0.8
+	cfg.scaleDownGap = 0.1
+	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
-	c := pool.newConn()
-	pool.addConn(c)
-	c.markDraining()
+	c1 := pool.newConn()
+	c2 := pool.newConn()
+	pool.addConn(c1)
+	pool.addConn(c2)
 
-	pool.cleanupConns()
+	// 75 total requests would leave the survivor at 75/100: below the 0.8
+	// scale-up trigger, but above the 0.7 scale-down threshold. Parking here
+	// would put the pool right at the edge of scaling back up.
+	for i := 0; i < 40; i++ {
+		c1.incInflight()
+	}
+	for i := 0; i < 35; i++ {
+		c2.incInflight()
+	}
+	pool.maybeScaleDown()
+	assert.False(t, c1.parked() || c2.parked(), "must not scale down when the survivor would sit near the scale-up threshold")
 
-	assert.Empty(t, *pool.connsPtr.Load(), "a draining connection with zero in-flight requests should be removed")
+	// 60 total leaves the survivor comfortably under 0.7.
+	for i := 0; i < 15; i++ {
+		c1.decInflight()
+	}
+	pool.maybeScaleDown()
+	assert.True(t, c2.parked())
+	assert.False(t, c1.parked())
+
+	// And the survivor, at 60/100, does not trigger an immediate scale-up.
+	pool.maybeScaleUp(c1)
+	assert.True(t, c2.parked(), "scale-up must not fire right after a scale-down")
+	assert.Len(t, *pool.connsPtr.Load(), 2)
 }
 
-func TestHTTP2PoolCleanupConnsMarksLongIdleConnDraining(t *testing.T) {
+func TestHTTP2PoolScaleUpUnparksBeforeDialing(t *testing.T) {
+	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.maxConns = 2
+	cfg.maxConcurrentStreams = 2
+	cfg.scaleUpThreshold = 0.5
+	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	defer pool.Close()
+
+	c1 := pool.newConn()
+	c2 := pool.newConn()
+	pool.addConn(c1)
+	pool.addConn(c2)
+	require.True(t, c2.park())
+
+	// Pool is at maxConns, but a parked connection is available.
+	c1.incInflight()
+	pool.maybeScaleUp(c1)
+	assert.False(t, c2.parked(), "scale-up should re-activate the parked connection")
+	assert.Len(t, *pool.connsPtr.Load(), 2, "no new connection should be built")
+
+	// pickConn's grow path re-activates too, when every active conn is full.
+	c1.incInflight() // c1 at capacity
+	require.True(t, c2.park())
+	picked, err := pool.pickConn()
+	require.NoError(t, err)
+	assert.Same(t, c2, picked)
+	assert.False(t, c2.parked())
+}
+
+func TestHTTP2ConnParkUnparkOnce(t *testing.T) {
+	c := newHTTP2Conn(nil)
+	assert.False(t, c.unpark(), "an active connection cannot be unparked")
+	assert.True(t, c.park())
+	assert.False(t, c.park(), "park only transitions once")
+	assert.False(t, c.usable())
+	assert.True(t, c.unpark())
+	assert.False(t, c.unpark(), "unpark only transitions once")
+	assert.True(t, c.usable())
+}
+
+func TestHTTP2PoolCleanupConnsClosesLongParkedIdleConn(t *testing.T) {
 	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
@@ -216,17 +289,18 @@ func TestHTTP2PoolCleanupConnsMarksLongIdleConnDraining(t *testing.T) {
 
 	c := pool.newConn()
 	pool.addConn(c)
-	// newHTTP2Conn starts with idleAtNano unset (never active), so simulate
-	// a connection that has actually gone idle after serving a request.
+	// Simulate a connection that served a request and went idle.
 	c.incInflight()
 	c.decInflight()
+	require.True(t, c.park())
 
 	waitForCondition(t, time.Second, func() bool {
 		return time.Since(c.idleSince()) > cfg.idleTimeout
 	})
 
 	pool.cleanupConns()
-	assert.True(t, c.draining(), "a connection idle past idleTimeout should be marked draining")
+	assert.Len(t, *pool.connsPtr.Load(), 1, "a parked connection stays in the pool so it can be re-activated")
+	assert.True(t, c.parked())
 }
 
 func TestHTTP2PoolAddRemoveConnRace(t *testing.T) {
