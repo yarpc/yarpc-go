@@ -471,6 +471,11 @@ func (a *Transport) stopPeerH2Pools() {
 	pools := make([]*connpool.Pool[*http2.ClientConn], 0, len(peers))
 	for _, p := range peers {
 		if pool := p.loadH2Pool(); pool != nil {
+			a.logger.Info("http2: stopping connection pool for peer",
+				zap.String("peer", p.addr),
+				zap.Int64("peerDebugID", p.debugID),
+				zap.Int64("dialCount", p.h2DialCount.Load()),
+			)
 			pools = append(pools, pool)
 		}
 	}
@@ -517,11 +522,21 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
 	mapKey := pid.Identifier()
 	if p, ok := a.peers[mapKey]; ok {
+		a.logger.Info("http2: reusing existing peer",
+			zap.String("peerIdentifier", mapKey),
+			zap.Int64("peerDebugID", p.debugID),
+		)
 		return p
 	}
 	realAddr := peeraddr.Address(pid.Identifier())
 	p := newPeer(realAddr, a)
 	a.peers[mapKey] = p
+	a.logger.Info("http2: registered new peer",
+		zap.String("peerIdentifier", mapKey),
+		zap.String("peer", realAddr),
+		zap.Int64("peerDebugID", p.debugID),
+		zap.Int("totalPeers", len(a.peers)),
+	)
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
