@@ -285,6 +285,19 @@ func EnableHTTP2ConnPool() TransportOption {
 	}
 }
 
+// HTTP2DynamicScalingEnabled controls whether the pool automatically scales
+// the number of connections to a peer up and down with load, once
+// EnableHTTP2ConnPool is set. When disabled, the pool holds a single
+// connection per peer and HTTP2MinConns, HTTP2MaxConns and the scaling
+// thresholds are ignored.
+//
+// Defaults to true.
+func HTTP2DynamicScalingEnabled(enabled bool) TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolCfg.dynamicScalingEnabled = enabled
+	}
+}
+
 // HTTP2MinConns sets the minimum number of HTTP/2 connections the transport
 // keeps open to a peer once EnableHTTP2ConnPool is set.
 //
@@ -298,7 +311,7 @@ func HTTP2MinConns(n int) TransportOption {
 // HTTP2MaxConns sets the maximum number of HTTP/2 connections the transport
 // will open to a single peer once EnableHTTP2ConnPool is set.
 //
-// Defaults to 5.
+// Defaults to 50.
 func HTTP2MaxConns(n int) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.maxConns = n
@@ -323,7 +336,7 @@ func HTTP2MaxConcurrentStreams(n int32) TransportOption {
 // must be in use on a connection before the pool opens an additional
 // connection to the same peer.
 //
-// Defaults to 0.8.
+// Defaults to 0.7.
 func HTTP2ScaleUpThreshold(f float64) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.scaleUpThreshold = f
@@ -348,7 +361,7 @@ func HTTP2ScaleDownGap(f float64) TransportOption {
 // without any active streams before its idle sockets are closed. The
 // connection stays in the pool and redials if it is re-activated.
 //
-// Defaults to 15 minutes.
+// Defaults to 5 minutes.
 func HTTP2ConnIdleTimeout(d time.Duration) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.idleTimeout = d
