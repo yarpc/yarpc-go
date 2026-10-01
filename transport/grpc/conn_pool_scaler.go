@@ -38,44 +38,174 @@ const _defaultScalingMonitorInterval = 30 * time.Second
 func (p *grpcPeer) runScalingMonitor() {
 	defer p.connWg.Done()
 
-	interval := p.poolCfg.scalingMonitorInterval
-	switch {
-	case interval <= 0:
-		interval = _defaultScalingMonitorInterval
-	case interval < _defaultScalingMonitorInterval:
-		p.t.options.logger.Warn("grpc: scalingMonitorInterval is below the minimum; clamping to avoid pool thrashing",
-			zap.Duration("configured", interval),
-			zap.Duration("effective", _defaultScalingMonitorInterval),
-			zap.String("peer", p.HostPort()))
-		interval = _defaultScalingMonitorInterval
+	// Apply live minConnections / idle cleanup without waiting for the first tick.
+	if p.t != nil {
+		p.evaluateScaling()
 	}
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+
+	timer := time.NewTimer(p.scalingMonitorInterval())
+	defer timer.Stop()
 	for {
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 			p.evaluateScaling()
+			timer.Reset(p.scalingMonitorInterval())
 		case <-p.ctx.Done():
 			return
 		}
 	}
 }
 
+// scalingMonitorInterval returns the wait until the next monitor pass.
+// Live ScalingMonitorInterval overlays are picked up here; values under 30s
+// are still clamped so a live flap cannot thrash the pool.
+func (p *grpcPeer) scalingMonitorInterval() time.Duration {
+	interval := p.livePoolCfg().scalingMonitorInterval
+	switch {
+	case interval <= 0:
+		return _defaultScalingMonitorInterval
+	case interval < _defaultScalingMonitorInterval:
+		if p.t != nil && p.t.options != nil && p.intervalClampWarned.CompareAndSwap(false, true) {
+			p.t.options.logger.Warn("grpc: scalingMonitorInterval is below the minimum; clamping to avoid pool thrashing",
+				zap.Duration("configured", interval),
+				zap.Duration("effective", _defaultScalingMonitorInterval),
+				zap.String("peer", p.HostPort()))
+		}
+		return _defaultScalingMonitorInterval
+	default:
+		p.intervalClampWarned.Store(false)
+		return interval
+	}
+}
+
 func (p *grpcPeer) evaluateScaling() {
+	cfg := p.livePoolCfg()
+	if cfg.dynamicScalingEnabled {
+		p.ensureMinConnections()
+	}
 	p.cleanupIdleConns()
 	p.maybeScaleDown()
 }
 
+// startScalingMonitor starts the background scale-down/idle/min-fill loop once.
+func (p *grpcPeer) startScalingMonitor() {
+	if p.ctx.Err() != nil {
+		return
+	}
+	if !p.monitorStarted.CompareAndSwap(false, true) {
+		return
+	}
+	p.connWg.Add(1)
+	go p.runScalingMonitor()
+}
+
+// minConnectionTarget is the live fill floor for active connections, capped by
+// maxConnections. It is 0 when scaling is off so fill/scale-up do not grow
+// the pool.
+func minConnectionTarget(cfg connPoolConfig) int {
+	if !cfg.dynamicScalingEnabled || cfg.minConnections < 1 {
+		return 0
+	}
+	if cfg.maxConnections > 0 && cfg.minConnections > cfg.maxConnections {
+		return cfg.maxConnections
+	}
+	return cfg.minConnections
+}
+
+// scaleDownFloor is how many active connections maybeScaleDown will keep.
+// Scaling on uses minConnectionTarget (min capped by max). Scaling off, or a
+// zero min, keeps a single connection so extras still wind down.
+func scaleDownFloor(cfg connPoolConfig) int {
+	if n := minConnectionTarget(cfg); n > 0 {
+		return n
+	}
+	return 1
+}
+
+func (p *grpcPeer) activeConnCount() int {
+	n := 0
+	for _, c := range p.loadConns() {
+		if c.isActive() {
+			n++
+		}
+	}
+	return n
+}
+
+// ensureMinConnections reactivates idle/draining connections, then dials,
+// until the pool meets live minConnections.
+func (p *grpcPeer) ensureMinConnections() {
+	if p.activeConnCount() >= minConnectionTarget(p.livePoolCfg()) {
+		return
+	}
+	if !atomic.CompareAndSwapInt32(&p.isScaling, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&p.isScaling, 0)
+	if p.shutdownStarted.Load() || p.ctx.Err() != nil {
+		return
+	}
+	p.fillToMinConnections()
+}
+
+// fillToMinConnections grows active connections to the live minConnections floor.
+// Idle and draining connections are reused before dialing. Caller must hold
+// isScaling (or be the only scale-up worker).
+func (p *grpcPeer) fillToMinConnections() {
+	reactivated := 0
+	dialed := 0
+	for {
+		if p.ctx.Err() != nil {
+			return
+		}
+		cfg := p.livePoolCfg()
+		target := minConnectionTarget(cfg)
+		if target < 1 || p.activeConnCount() >= target {
+			break
+		}
+		if p.reactivateIdleConn() {
+			reactivated++
+			p.metrics.incIdleReactivation()
+			continue
+		}
+		if cfg.maxConnections > 0 && int(p.connCount.Load()) >= cfg.maxConnections {
+			break
+		}
+		if err := p.addConn(); err != nil {
+			p.t.options.logger.Warn("grpc: failed to fill connection pool to minConnections",
+				zap.String("peer", p.HostPort()),
+				zap.Int("minConnections", target),
+				zap.Error(err))
+			return
+		}
+		dialed++
+		p.metrics.incScaleUp()
+	}
+	if reactivated > 0 || dialed > 0 {
+		cfg := p.livePoolCfg()
+		p.t.options.logger.Info("grpc: scaling up connection pool; filling minConnections",
+			zap.String("peer", p.HostPort()),
+			zap.Int("reactivated", reactivated),
+			zap.Int("dialed", dialed),
+			zap.Int("minConnections", minConnectionTarget(cfg)),
+			zap.Int("active_connections", p.activeConnCount()),
+			zap.Int32("total_connections", p.connCount.Load()))
+		p.refreshPoolMetrics()
+	}
+}
+
 // maybeScaleDown checks whether the pool can be reduced by one connection.
-// A connection is marked for draining when the remaining active connections
-// can absorb the current aggregate stream load without triggering another
-// scale-up.  The scale-down threshold applies a hysteresis gap below
-// scaleUpThreshold to prevent oscillation when stream count hovers near
-// the scale-up boundary.
+// When scaling is on, a connection is marked draining only if the remaining
+// active connections can absorb current load without crossing the hysteresis
+// band, and never below scaleDownFloor (min capped by max). When scaling is
+// off, extras drain toward 1 regardless of load; in-flight RPCs finish on the
+// draining connection, then idle timeout closes it.
 // Lock-free read path: loads an immutable snapshot via atomic.Pointer.Load().
 // The state mutation uses transitionState so that concurrent reactivation by
 // tryScaleUp is mutually exclusive with the draining transition.
 func (p *grpcPeer) maybeScaleDown() {
+	cfg := p.livePoolCfg()
+
 	conns := p.loadConns()
 	active := make([]*grpcClientConnWrapper, 0, len(conns))
 	for _, c := range conns {
@@ -84,44 +214,51 @@ func (p *grpcPeer) maybeScaleDown() {
 		}
 	}
 
-	// Never drain below minConnections.
-	if len(active) <= p.poolCfg.minConnections {
+	floor := scaleDownFloor(cfg)
+	if len(active) <= floor {
 		return
 	}
-
-	// scaleDownThreshold introduces a hysteresis band below scaleUpThreshold.
-	// Scale down only when load would fit within the lower threshold on the
-	// reduced pool, preventing oscillation near the scale-up boundary.
-	scaleDownThreshold := int32(float64(p.poolCfg.maxConcurrentStreams) * (p.poolCfg.scaleUpThreshold - p.poolCfg.scaleDownGap))
 
 	var totalStreams int32
 	for _, c := range active {
 		totalStreams += c.getStreamCount()
 	}
 
-	// Only drain if the remaining (n-1) connections can absorb current load
-	// without crossing the scale-down threshold.
-	capacityAfterDrain := scaleDownThreshold * int32(len(active)-1)
-	if totalStreams >= capacityAfterDrain {
-		return
-	}
-
-	// Drain the most-loaded active connection: this maximises residual
-	// stream capacity in the surviving connections, improving burst absorption.
-	var mostLoaded *grpcClientConnWrapper
-	for _, c := range active {
-		if mostLoaded == nil || c.getStreamCount() > mostLoaded.getStreamCount() {
-			mostLoaded = c
+	// When scaling is on, only drain if the remaining connections can absorb
+	// current load without crossing the hysteresis band (prevents oscillation
+	// near the scale-up boundary). When scaling is off, skip that guard so
+	// extras still drain toward 1; in-flight RPCs finish on the draining conn.
+	scaleDownThreshold := int32(float64(cfg.maxConcurrentStreams) * (cfg.scaleUpThreshold - cfg.scaleDownGap))
+	if cfg.dynamicScalingEnabled {
+		capacityAfterDrain := scaleDownThreshold * int32(len(active)-1)
+		if totalStreams >= capacityAfterDrain {
+			return
 		}
 	}
 
-	if mostLoaded == nil {
+	// Scaling on: drain the most-loaded conn so survivors keep burst capacity.
+	// Scaling off: drain the least-loaded extra so traffic stays on the busy one.
+	var target *grpcClientConnWrapper
+	for _, c := range active {
+		if target == nil {
+			target = c
+			continue
+		}
+		if cfg.dynamicScalingEnabled {
+			if c.getStreamCount() > target.getStreamCount() {
+				target = c
+			}
+		} else if c.getStreamCount() < target.getStreamCount() {
+			target = c
+		}
+	}
+	if target == nil {
 		return
 	}
 
 	// Use CAS so that a concurrent reactivation by tryScaleUp cannot race
 	// with this draining transition on the same connection.
-	if !mostLoaded.transitionState(connStateActive, connStateDraining) {
+	if !target.transitionState(connStateActive, connStateDraining) {
 		return
 	}
 
@@ -134,7 +271,7 @@ func (p *grpcPeer) maybeScaleDown() {
 		zap.Int("active_connections_before", len(active)),
 		zap.Int("active_connections_after", len(active)-1),
 		zap.Int32("total_streams", totalStreams),
-		zap.Int32("drained_conn_stream_count", mostLoaded.getStreamCount()),
+		zap.Int32("drained_conn_stream_count", target.getStreamCount()),
 		zap.Int32("scale_down_threshold", scaleDownThreshold))
 	p.metrics.incScaleDown()
 	p.refreshPoolMetrics()
@@ -160,6 +297,7 @@ func (p *grpcPeer) cleanupIdleConns() {
 	}
 
 	now := time.Now()
+	idleTimeout := p.livePoolCfg().idleTimeout
 
 	conns := p.loadConns()
 	var drained []*grpcClientConnWrapper
@@ -168,7 +306,7 @@ func (p *grpcPeer) cleanupIdleConns() {
 		if c.getState() == connStateDraining && c.getStreamCount() == 0 {
 			drained = append(drained, c)
 		} else if c.getState() == connStateIdle && !c.idleSince().IsZero() &&
-			now.Sub(c.idleSince()) >= p.poolCfg.idleTimeout {
+			now.Sub(c.idleSince()) >= idleTimeout {
 			toClose = append(toClose, c)
 		}
 	}
@@ -217,12 +355,16 @@ func (p *grpcPeer) cleanupIdleConns() {
 // scale-up goroutine runs at a time, and it signals cleanupIdleConns to hold
 // off closing idle connections while a reactivation may be in progress.
 func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
-	if !p.poolCfg.dynamicScalingEnabled {
+	cfg := p.livePoolCfg()
+	if !cfg.dynamicScalingEnabled {
 		return
 	}
+	p.startScalingMonitor()
 
-	threshold := int32(float64(p.poolCfg.maxConcurrentStreams) * p.poolCfg.scaleUpThreshold)
-	if leastLoadedConn.getStreamCount() < threshold {
+	threshold := int32(float64(cfg.maxConcurrentStreams) * cfg.scaleUpThreshold)
+	needMin := p.activeConnCount() < minConnectionTarget(cfg)
+	needLoad := leastLoadedConn != nil && leastLoadedConn.getStreamCount() >= threshold
+	if !needMin && !needLoad {
 		return
 	}
 
@@ -247,6 +389,22 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 			return
 		}
 
+		p.fillToMinConnections()
+		cfg := p.livePoolCfg()
+		if !cfg.dynamicScalingEnabled {
+			return
+		}
+		// Min-fill may have reactivated or dialed; re-read the least-loaded
+		// active conn so we do not dial again from a stale snapshot.
+		leastLoadedConn := p.pickConn()
+		if leastLoadedConn == nil {
+			return
+		}
+		threshold := int32(float64(cfg.maxConcurrentStreams) * cfg.scaleUpThreshold)
+		if leastLoadedConn.getStreamCount() < threshold {
+			return
+		}
+
 		// Prefer reactivating an idle connection over dialing a new one.
 		if p.reactivateIdleConn() {
 			// Logged at Info so pool scaling is debuggable from logs (metrics
@@ -263,12 +421,12 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 
 		// No idle connection available; dial a new one if below the cap.
 		// connCount is maintained atomically — no mutex needed for this check.
-		if int(p.connCount.Load()) >= p.poolCfg.maxConnections {
+		if int(p.connCount.Load()) >= cfg.maxConnections {
 			if p.atMaxConnectionsLogged.CompareAndSwap(false, true) {
 				p.t.options.logger.Info("grpc: cannot scale up connection pool; at max connections",
 					zap.String("peer", p.HostPort()),
 					zap.Int32("total_connections", p.connCount.Load()),
-					zap.Int("max_connections", p.poolCfg.maxConnections))
+					zap.Int("max_connections", cfg.maxConnections))
 			}
 			return
 		}
@@ -343,7 +501,7 @@ func (p *grpcPeer) refreshPoolMetrics() {
 		}
 	}
 	p.metrics.setCounts(active, draining, idle)
-	if int(p.connCount.Load()) < p.poolCfg.maxConnections {
+	if int(p.connCount.Load()) < p.livePoolCfg().maxConnections {
 		p.atMaxConnectionsLogged.Store(false)
 	}
 }

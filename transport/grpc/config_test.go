@@ -129,6 +129,8 @@ func TestTransportSpec(t *testing.T) {
 		WantCustomContextDialer bool
 		Keepalive               *keepalive.ClientParameters
 		TLSConfig               bool
+		PoolMaxConnections      int
+		PoolDynamicScaling      *bool
 	}
 
 	type test struct {
@@ -598,7 +600,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "minConnections exceeds default maxConnections",
 			transportCfg: attrs{
 				"clientConnectionPool": attrs{
-					"minConnections": "10",
+					"minConnections": "60",
 				},
 			},
 			outboundCfg: attrs{
@@ -606,7 +608,7 @@ func TestTransportSpec(t *testing.T) {
 					TransportName: attrs{"address": "localhost:54583"},
 				},
 			},
-			wantErrors: []string{"clientConnectionPool.maxConnections (5) must be >= minConnections (10)"},
+			wantErrors: []string{"clientConnectionPool.maxConnections (50) must be >= minConnections (60)"},
 		},
 		{
 			desc: "scaleUpThreshold out of range",
@@ -720,9 +722,8 @@ func TestTransportSpec(t *testing.T) {
 			},
 		},
 		{
-			desc: "YAML dynamicScalingEnabled:true is ignored (OC controls enabling)",
-			// YAML true alone must not enable dynamic scaling — only OC can.
-			// The transport should build successfully; enabling is via programmatic option.
+			desc: "YAML dynamicScalingEnabled:true overrides a programmatic false",
+			opts: []Option{WithDynamicConnectionScaling(false)},
 			transportCfg: attrs{
 				"clientConnectionPool": attrs{
 					"dynamicScalingEnabled": true,
@@ -735,12 +736,11 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 			wantOutbounds: map[string]wantOutbound{
-				"myservice": {Address: "localhost:54591"},
+				"myservice": {Address: "localhost:54591", PoolDynamicScaling: boolPtr(true)},
 			},
 		},
 		{
-			desc: "YAML dynamicScalingEnabled:false overrides a programmatic true (explicit opt-out)",
-			// opts sets dynamic scaling true (simulating OC); YAML false must override it.
+			desc: "YAML dynamicScalingEnabled:false overrides a programmatic true",
 			opts: []Option{WithDynamicConnectionScaling(true)},
 			transportCfg: attrs{
 				"clientConnectionPool": attrs{
@@ -753,22 +753,161 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 			wantOutbounds: map[string]wantOutbound{
-				"myservice": {Address: "localhost:54592"},
+				"myservice": {Address: "localhost:54592", PoolDynamicScaling: boolPtr(false)},
 			},
 		},
 		{
-			desc: "YAML dynamicScalingEnabled unset does not override a programmatic true",
-			// opts sets dynamic scaling true (simulating OC); YAML omits the field.
-			// The programmatic true must survive.
-			opts: []Option{WithDynamicConnectionScaling(true)},
+			desc: "YAML dynamicScalingEnabled unset leaves a programmatic false",
+			opts: []Option{WithDynamicConnectionScaling(false)},
 			outboundCfg: attrs{
 				"myservice": attrs{
 					TransportName: attrs{"address": "localhost:54593"},
 				},
 			},
 			wantOutbounds: map[string]wantOutbound{
-				"myservice": {Address: "localhost:54593"},
+				"myservice": {Address: "localhost:54593", PoolDynamicScaling: boolPtr(false)},
 			},
+		},
+		{
+			desc: "outbound clientConnectionPool overrides transport-wide maxConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "5",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54594",
+						"clientConnectionPool": attrs{
+							"maxConnections": "9",
+						},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:            "localhost:54594",
+					PoolMaxConnections: 9,
+				},
+			},
+		},
+		{
+			desc: "outbound clientConnectionPool unset inherits transport-wide pool",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "5",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54595"},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:            "localhost:54595",
+					PoolMaxConnections: 5,
+				},
+			},
+		},
+		{
+			desc: "outbound clientConnectionPool empty object inherits transport",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "5",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address":              "localhost:54596",
+						"clientConnectionPool": attrs{},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:            "localhost:54596",
+					PoolMaxConnections: 5,
+				},
+			},
+		},
+		{
+			desc: "outbound clientConnectionPool negative maxConnections",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54597",
+						"clientConnectionPool": attrs{
+							"maxConnections": "-1",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.maxConnections must be non-negative"},
+		},
+		{
+			desc: "outbound clientConnectionPool scaleUpThreshold out of range",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54598",
+						"clientConnectionPool": attrs{
+							"scaleUpThreshold": "1.5",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.scaleUpThreshold must be in [0, 1]"},
+		},
+		{
+			desc: "outbound clientConnectionPool min greater than max",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54599",
+						"clientConnectionPool": attrs{
+							"minConnections": "8",
+							"maxConnections": "2",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.maxConnections (2) must be >= minConnections (8)"},
+		},
+		{
+			desc: "outbound minConnections above merged transport max",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "10",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54600",
+						"clientConnectionPool": attrs{
+							"minConnections": "40",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.maxConnections (10) must be >= minConnections (40)"},
+		},
+		{
+			desc: "outbound scaleDownGap collapses merged scale-up threshold",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54601",
+						"clientConnectionPool": attrs{
+							"scaleDownGap": "0.8",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"scaleUpThreshold (0.70) minus scaleDownGap (0.80)"},
 		},
 	}
 
@@ -889,6 +1028,17 @@ func TestTransportSpec(t *testing.T) {
 					} else {
 						require.Nil(t, dialer.options.keepaliveParams, "unexpected keepalive paramters")
 					}
+					require.NotNil(t, dialer.connectionScope, "YAML outbounds get an isolated Dialer")
+					if wantOutbound.PoolMaxConnections > 0 {
+						gp, ok := peer.(*grpcPeer)
+						require.True(t, ok, "expected *grpcPeer, got %T", peer)
+						assert.Equal(t, wantOutbound.PoolMaxConnections, gp.startupPool.maxConnections)
+					}
+					if wantOutbound.PoolDynamicScaling != nil {
+						gp, ok := peer.(*grpcPeer)
+						require.True(t, ok, "expected *grpcPeer, got %T", peer)
+						assert.Equal(t, *wantOutbound.PoolDynamicScaling, gp.startupPool.dynamicScalingEnabled)
+					}
 				}
 			}
 		})
@@ -946,6 +1096,78 @@ func TestContextDialerOptionUsage(t *testing.T) {
 	require.Equal(t, 1, dialContextInvoked, "counter should increment by one from dialer invocation")
 }
 
+// TestOutboundYAMLClientConnectionPoolMixed verifies that two gRPC outbounds
+// to the same address each get an isolated Dialer. The one with
+// clientConnectionPool overrides the transport; the other inherits it.
+func TestOutboundYAMLClientConnectionPoolMixed(t *testing.T) {
+	type attrs map[string]interface{}
+
+	configurator := yarpcconfig.New()
+	require.NoError(t, configurator.RegisterTransport(TransportSpec()))
+	cfg, err := configurator.LoadConfig("foo", attrs{
+		"transports": attrs{
+			TransportName: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "5",
+				},
+			},
+		},
+		"outbounds": attrs{
+			"tuned": attrs{
+				TransportName: attrs{
+					"address": "localhost:54600",
+					"clientConnectionPool": attrs{
+						"maxConnections": "9",
+					},
+				},
+			},
+			"shared": attrs{
+				TransportName: attrs{"address": "localhost:54600"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	tuned, ok := cfg.Outbounds["tuned"].Unary.(*Outbound)
+	require.True(t, ok)
+	shared, ok := cfg.Outbounds["shared"].Unary.(*Outbound)
+	require.True(t, ok)
+
+	tunedSingle, ok := tuned.peerChooser.(*peer.Single)
+	require.True(t, ok)
+	sharedSingle, ok := shared.peerChooser.(*peer.Single)
+	require.True(t, ok)
+	require.NoError(t, tunedSingle.Start())
+	defer tunedSingle.Stop()
+	require.NoError(t, sharedSingle.Start())
+	defer sharedSingle.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	tunedPeer, _, err := tunedSingle.Choose(ctx, &transport.Request{})
+	require.NoError(t, err)
+	sharedPeer, _, err := sharedSingle.Choose(ctx, &transport.Request{})
+	require.NoError(t, err)
+
+	assert.NotSame(t, tunedPeer, sharedPeer)
+
+	tunedGP, ok := tunedPeer.(*grpcPeer)
+	require.True(t, ok)
+	sharedGP, ok := sharedPeer.(*grpcPeer)
+	require.True(t, ok)
+	assert.Equal(t, 9, tunedGP.startupPool.maxConnections)
+	assert.Equal(t, 5, sharedGP.startupPool.maxConnections)
+
+	tunedDialer, ok := tunedSingle.Transport().(*Dialer)
+	require.True(t, ok)
+	sharedDialer, ok := sharedSingle.Transport().(*Dialer)
+	require.True(t, ok)
+	require.NotNil(t, tunedDialer.connectionScope)
+	require.NotNil(t, sharedDialer.connectionScope)
+	assert.NotSame(t, tunedDialer.connectionScope, sharedDialer.connectionScope)
+}
+
 func mapResolver(m map[string]string) func(string) (string, bool) {
 	return func(k string) (v string, ok bool) {
 		if m != nil {
@@ -964,3 +1186,5 @@ type testTransport struct{}
 func (testTransport) Start() error    { return nil }
 func (testTransport) Stop() error     { return nil }
 func (testTransport) IsRunning() bool { return false }
+
+func boolPtr(v bool) *bool { return &v }
