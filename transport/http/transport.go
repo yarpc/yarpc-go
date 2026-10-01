@@ -298,7 +298,7 @@ func HTTP2MinConns(n int) TransportOption {
 // HTTP2MaxConns sets the maximum number of HTTP/2 connections the transport
 // will open to a single peer once EnableHTTP2ConnPool is set.
 //
-// Defaults to 8.
+// Defaults to 5.
 func HTTP2MaxConns(n int) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.maxConns = n
@@ -331,21 +331,24 @@ func HTTP2ScaleUpThreshold(f float64) TransportOption {
 }
 
 // HTTP2ScaleDownGap sets the hysteresis margin used when deciding whether to
-// drain a connection: the pool only scales down when the remaining
-// connections can absorb current load with at least this fractional amount
-// of spare capacity.
+// park a connection: the pool only scales down when the remaining
+// connections can absorb current load while staying below
+// HTTP2ScaleUpThreshold minus this gap, so a connection that was just parked
+// is not immediately re-activated. A parked connection is no longer picked
+// for new requests and is re-activated before any new connection is opened.
 //
-// Defaults to 0.3.
+// Defaults to 0.1.
 func HTTP2ScaleDownGap(f float64) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.scaleDownGap = f
 	}
 }
 
-// HTTP2ConnIdleTimeout sets how long a pooled HTTP/2 connection may sit
-// without any active streams before it is marked for draining.
+// HTTP2ConnIdleTimeout sets how long a parked HTTP/2 connection may sit
+// without any active streams before its idle sockets are closed. The
+// connection stays in the pool and redials if it is re-activated.
 //
-// Defaults to 5 minutes.
+// Defaults to 15 minutes.
 func HTTP2ConnIdleTimeout(d time.Duration) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.idleTimeout = d
