@@ -51,6 +51,18 @@
 // Note that stopping an HTTP transport does NOT immediately terminate ongoing
 // requests. Connections will remain open until all clients have disconnected.
 //
+// By default, peers retained through the same Transport are shared across
+// outbounds that resolve to the same address. To give a logical outbound its
+// own peers, and therefore its own connections, isolated from any other
+// outbound retaining the same address, build its chooser with an isolated
+// Dialer:
+//
+//	myChooser := peer.NewSingle(
+//		hostport.Identify("127.0.0.1:8080"),
+//		httpTransport.NewDialer().WithConnectionIsolation(),
+//	)
+//	myserviceOutbound := httpTransport.NewOutbound(myChooser)
+//
 // # Configuration
 //
 // An HTTP Transport may be configured using YARPC's configuration system. See
