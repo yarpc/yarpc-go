@@ -57,11 +57,12 @@ var (
 		IdleTimeout:    defaultIdleConnTimeout,
 	}
 
+	defaultHTTP2PoolDynamicScalingEnabled  = true
 	defaultHTTP2PoolMinConns               = 1
-	defaultHTTP2PoolMaxConns               = 5
-	defaultHTTP2PoolScaleUpThreshold       = 0.8
+	defaultHTTP2PoolMaxConns               = 50
+	defaultHTTP2PoolScaleUpThreshold       = 0.7
 	defaultHTTP2PoolScaleDownGap           = 0.1
-	defaultHTTP2PoolConnIdleTimeout        = 15 * time.Minute
+	defaultHTTP2PoolConnIdleTimeout        = 5 * time.Minute
 	defaultHTTP2PoolScalingMonitorInterval = 30 * time.Second
 
 	// defaultHTTP2PoolMaxConcurrentStreams is the assumed
