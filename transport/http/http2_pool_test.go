@@ -30,6 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 )
@@ -58,6 +59,15 @@ func newTestH2Pool(t *testing.T, handler http.HandlerFunc) (addr string, newTran
 	return u.Host, func() *http2.Transport { return buildH2Transport(&transportOpts) }
 }
 
+// newEmptyH2Pool builds a pool and discards the connections it pre-creates, so
+// tests can add exactly the connections they want. The discarded slots never
+// dialed, so there is nothing to close.
+func newEmptyH2Pool(addr string, newTransport func() *http2.Transport, cfg http2PoolConfig, logger *zap.Logger) *http2Pool {
+	p := newHTTP2Pool(addr, newTransport, cfg, logger)
+	p.connsPtr.Store(&[]*http2Conn{})
+	return p
+}
+
 func waitForCondition(t *testing.T, timeout time.Duration, cond func() bool) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
@@ -77,7 +87,7 @@ func TestHTTP2PoolPickConnGrowsWhenEmpty(t *testing.T) {
 		w.Write([]byte("ok"))
 	})
 
-	pool := newHTTP2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
+	pool := newEmptyH2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
 	defer pool.Close()
 
 	conn, err := pool.pickConn()
@@ -91,7 +101,7 @@ func TestHTTP2PoolPickConnPicksLeastLoaded(t *testing.T) {
 		w.Write([]byte("ok"))
 	})
 
-	pool := newHTTP2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
+	pool := newEmptyH2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
 	defer pool.Close()
 
 	busy := pool.newConn()
@@ -121,7 +131,7 @@ func TestHTTP2PoolMaybeScaleUpSingleFlight(t *testing.T) {
 	cfg.maxConns = 5
 	cfg.scaleUpThreshold = 0.5
 	cfg.maxConcurrentStreams = 2
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c := pool.newConn()
@@ -164,7 +174,7 @@ func TestHTTP2PoolScaleDownParksLastConn(t *testing.T) {
 
 	cfg := defaultHTTP2PoolConfig()
 	cfg.minConns = 1
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c1 := pool.newConn()
@@ -199,7 +209,7 @@ func TestHTTP2PoolScaleDownAvoidsFlapping(t *testing.T) {
 	cfg.maxConcurrentStreams = 100
 	cfg.scaleUpThreshold = 0.8
 	cfg.scaleDownGap = 0.1
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c1 := pool.newConn()
@@ -242,7 +252,7 @@ func TestHTTP2PoolScaleUpUnparksBeforeDialing(t *testing.T) {
 	cfg.maxConns = 2
 	cfg.maxConcurrentStreams = 2
 	cfg.scaleUpThreshold = 0.5
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c1 := pool.newConn()
@@ -284,7 +294,7 @@ func TestHTTP2PoolCleanupConnsClosesLongParkedIdleConn(t *testing.T) {
 
 	cfg := defaultHTTP2PoolConfig()
 	cfg.idleTimeout = time.Millisecond
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c := pool.newConn()
@@ -303,12 +313,236 @@ func TestHTTP2PoolCleanupConnsClosesLongParkedIdleConn(t *testing.T) {
 	assert.True(t, c.parked())
 }
 
+func TestHTTP2PoolPrecreatesMinConns(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.minConns = 3
+	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	defer pool.Close()
+	assert.Len(t, *pool.connsPtr.Load(), 3)
+}
+
+func TestHTTP2PoolDynamicScalingDisabled(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.dynamicScalingEnabled = false
+	cfg.minConns = 3
+	cfg.maxConcurrentStreams = 2
+	cfg.scaleUpThreshold = 0.5
+	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	defer pool.Close()
+
+	conns := *pool.connsPtr.Load()
+	require.Len(t, conns, 1, "a fixed pool holds a single connection regardless of minConns")
+	c := conns[0]
+
+	// Saturate the only connection: neither maybeScaleUp nor pickConn's grow
+	// path may add another.
+	c.incInflight()
+	c.incInflight()
+	pool.maybeScaleUp(c)
+	picked, err := pool.pickConn()
+	require.NoError(t, err)
+	assert.Same(t, c, picked, "with scaling disabled an over-capacity request falls back to the only connection")
+	assert.Len(t, *pool.connsPtr.Load(), 1)
+
+	// And scale-down never parks.
+	other := pool.newConn()
+	pool.addConn(other)
+	pool.maybeScaleDown()
+	assert.False(t, other.parked())
+}
+
+func TestHTTP2PoolPickConnExcludesSaturatedConn(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.maxConcurrentStreams = 2
+	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	defer pool.Close()
+
+	full := pool.newConn()
+	spare := pool.newConn()
+	pool.addConn(full)
+	pool.addConn(spare)
+	full.incInflight()
+	full.incInflight() // at the ceiling
+	for i := 0; i < 5; i++ {
+		spare.incInflight()
+		spare.decInflight()
+	}
+
+	// full has fewer total requests ever, but is saturated: it must never be
+	// picked while spare has room.
+	picked, err := pool.pickConn()
+	require.NoError(t, err)
+	assert.Same(t, spare, picked)
+	assert.Equal(t, 2, full.streamsActive())
+}
+
+func TestHTTP2PoolPickConnGrowsWhenAllSaturated(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.maxConcurrentStreams = 1
+	cfg.maxConns = 2
+	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	defer pool.Close()
+
+	c := pool.newConn()
+	pool.addConn(c)
+	c.incInflight()
+
+	picked, err := pool.pickConn()
+	require.NoError(t, err)
+	assert.NotSame(t, c, picked, "a saturated pool below maxConns should grow")
+	assert.Len(t, *pool.connsPtr.Load(), 2)
+}
+
+func TestHTTP2PoolPickConnFallsBackAtMaxConns(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.maxConcurrentStreams = 1
+	cfg.maxConns = 2
+	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	defer pool.Close()
+
+	c1 := pool.newConn()
+	c2 := pool.newConn()
+	pool.addConn(c1)
+	pool.addConn(c2)
+	c1.incInflight()
+	c1.incInflight()
+	c2.incInflight()
+
+	// Every connection is saturated and the pool is at maxConns: the request
+	// goes to the least-loaded connection rather than failing.
+	picked, err := pool.pickConn()
+	require.NoError(t, err)
+	assert.Same(t, c2, picked)
+	assert.Len(t, *pool.connsPtr.Load(), 2)
+}
+
+func TestHTTP2PoolPickConnEmptyPoolIsUnavailable(t *testing.T) {
+	_, err := leastLoaded(nil)
+	require.Error(t, err)
+	assert.True(t, yarpcerrors.IsUnavailable(err), "got %v", err)
+}
+
+func TestHTTP2PoolIdleSingleConnIsKept(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.minConns = 1
+	cfg.idleTimeout = time.Millisecond
+	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	defer pool.Close()
+
+	c := (*pool.connsPtr.Load())[0]
+	c.incInflight()
+	c.decInflight()
+	waitForCondition(t, time.Second, func() bool {
+		return time.Since(c.idleSince()) > cfg.idleTimeout
+	})
+
+	pool.maybeScaleDown()
+	pool.cleanupConns()
+	assert.False(t, c.parked(), "the last active connection must never be parked")
+	assert.Len(t, *pool.connsPtr.Load(), 1)
+}
+
+func TestHTTP2PoolCloseIsIdempotentAndWaitsForMonitor(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.scalingMonitorInterval = time.Millisecond
+	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+
+	pool.Close()
+	pool.Close() // must not panic on a second close
+
+	done := make(chan struct{})
+	go func() {
+		pool.monitorWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("monitor goroutine still running after Close")
+	}
+}
+
+func TestHTTP2PoolConcurrentPickScaleRace(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.minConns = 1
+	cfg.maxConns = 4
+	cfg.maxConcurrentStreams = 4
+	cfg.scalingMonitorInterval = time.Millisecond
+	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	defer pool.Close()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 32; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 200; j++ {
+				c, err := pool.pickConn()
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				c.decInflight()
+			}
+		}()
+	}
+	// Race scale-down and cleanup against the pickers.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for j := 0; j < 200; j++ {
+			pool.maybeScaleDown()
+			pool.cleanupConns()
+		}
+	}()
+	wg.Wait()
+
+	conns := *pool.connsPtr.Load()
+	assert.LessOrEqual(t, len(conns), cfg.maxConns)
+	assert.NotEmpty(t, activeConns(conns), "at least one connection must stay active")
+	for _, c := range conns {
+		assert.Zero(t, c.streamsActive(), "every reserved slot must be released")
+	}
+}
+
 func TestHTTP2PoolAddRemoveConnRace(t *testing.T) {
 	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
 
-	pool := newHTTP2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
+	pool := newEmptyH2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
 	defer pool.Close()
 
 	const n = 16
