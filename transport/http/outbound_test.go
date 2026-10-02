@@ -1021,11 +1021,7 @@ func TestCallWithHTTP2ConnPool(t *testing.T) {
 		MaxConcurrentStreams: maxConcurrentStreams,
 		IdleTimeout:          defaultIdleConnTimeout,
 	}
-	h1s := httptest.NewUnstartedServer(handler)
-	h1s.Config.Protocols = new(http.Protocols)
-	h1s.Config.Protocols.SetHTTP1(true)
-	h1s.Config.Protocols.SetUnencryptedHTTP2(true)
-	http2.ConfigureServer(h1s.Config, h2s)
+	h1s := httptest.NewUnstartedServer(h2c.NewHandler(handler, h2s))
 	h1s.Start()
 	t.Cleanup(h1s.Close)
 
