@@ -66,6 +66,8 @@ type transportOptions struct {
 	meter                     *metrics.Scope
 	serviceName               string
 	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+	http2PoolEnabled          bool
+	http2PoolCfg              http2PoolConfig
 }
 
 var defaultTransportOptions = transportOptions{
@@ -77,6 +79,7 @@ var defaultTransportOptions = transportOptions{
 	innocenceWindow:     defaultInnocenceWindow,
 	idleConnTimeout:     defaultIdleConnTimeout,
 	jitter:              rand.Int63n,
+	http2PoolCfg:        defaultHTTP2PoolConfig(),
 }
 
 func newTransportOptions() transportOptions {
@@ -269,6 +272,112 @@ func buildClient(f func(*transportOptions) *http.Client) TransportOption {
 	}
 }
 
+// EnableHTTP2ConnPool opts the transport into maintaining a per-peer pool of
+// HTTP/2 connections for outbounds using UseHTTP2(), scaling the number of
+// connections to a peer up and down based on observed stream concurrency,
+// instead of sharing one connection per peer.
+//
+// This is default-off; existing UseHTTP2() behavior is unchanged unless this
+// option is set.
+func EnableHTTP2ConnPool() TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolEnabled = true
+	}
+}
+
+// HTTP2DynamicScalingEnabled controls whether the pool automatically scales
+// the number of connections to a peer up and down with load, once
+// EnableHTTP2ConnPool is set. When disabled, the pool holds a single
+// connection per peer and HTTP2MinConns, HTTP2MaxConns and the scaling
+// thresholds are ignored.
+//
+// Defaults to true.
+func HTTP2DynamicScalingEnabled(enabled bool) TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolCfg.dynamicScalingEnabled = enabled
+	}
+}
+
+// HTTP2MinConns sets the minimum number of HTTP/2 connections the transport
+// keeps open to a peer once EnableHTTP2ConnPool is set.
+//
+// Defaults to 1.
+func HTTP2MinConns(n int) TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolCfg.minConns = n
+	}
+}
+
+// HTTP2MaxConns sets the maximum number of HTTP/2 connections the transport
+// will open to a single peer once EnableHTTP2ConnPool is set.
+//
+// Defaults to 50.
+func HTTP2MaxConns(n int) TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolCfg.maxConns = n
+	}
+}
+
+// HTTP2MaxConcurrentStreams sets the assumed HTTP/2
+// SETTINGS_MAX_CONCURRENT_STREAMS ceiling per pooled connection, once
+// EnableHTTP2ConnPool is set. Each pooled connection is a *http2.Transport,
+// which -- unlike a *http2.ClientConn -- doesn't expose the peer's real
+// negotiated value, so the pool assumes this fixed value instead of reading
+// it off the wire.
+//
+// Defaults to 100.
+func HTTP2MaxConcurrentStreams(n int32) TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolCfg.maxConcurrentStreams = n
+	}
+}
+
+// HTTP2ScaleUpThreshold sets the fraction of HTTP2MaxConcurrentStreams that
+// must be in use on a connection before the pool opens an additional
+// connection to the same peer.
+//
+// Defaults to 0.7.
+func HTTP2ScaleUpThreshold(f float64) TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolCfg.scaleUpThreshold = f
+	}
+}
+
+// HTTP2ScaleDownGap sets the hysteresis margin used when deciding whether to
+// park a connection: the pool only scales down when the remaining
+// connections can absorb current load while staying below
+// HTTP2ScaleUpThreshold minus this gap, so a connection that was just parked
+// is not immediately re-activated. A parked connection is no longer picked
+// for new requests and is re-activated before any new connection is opened.
+//
+// Defaults to 0.1.
+func HTTP2ScaleDownGap(f float64) TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolCfg.scaleDownGap = f
+	}
+}
+
+// HTTP2ConnIdleTimeout sets how long a parked HTTP/2 connection may sit
+// without any active streams before its idle sockets are closed. The
+// connection stays in the pool and redials if it is re-activated.
+//
+// Defaults to 5 minutes.
+func HTTP2ConnIdleTimeout(d time.Duration) TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolCfg.idleTimeout = d
+	}
+}
+
+// HTTP2ScalingMonitorInterval sets how often the pool re-evaluates whether
+// to scale down or reap idle connections.
+//
+// Defaults to 10 seconds.
+func HTTP2ScalingMonitorInterval(d time.Duration) TransportOption {
+	return func(options *transportOptions) {
+		options.http2PoolCfg.scalingMonitorInterval = d
+	}
+}
+
 // NewTransport creates a new HTTP transport for managing peers and sending requests
 func NewTransport(opts ...TransportOption) *Transport {
 	options := newTransportOptions()
@@ -320,6 +429,9 @@ func (o *transportOptions) newTransport() *Transport {
 		onewayOutboundInterceptor: onewayOutbounds,
 		h1Transport:               buildH1Transport(o),
 		h2Transport:               buildH2Transport(o),
+		newH2Transport:            func() *http2.Transport { return buildH2Transport(o) },
+		http2PoolEnabled:          o.http2PoolEnabled,
+		http2PoolCfg:              o.http2PoolCfg,
 	}
 }
 
@@ -401,6 +513,15 @@ type Transport struct {
 
 	h1Transport *http.Transport
 	h2Transport *http2.Transport
+
+	// newH2Transport builds a fresh *http2.Transport configured the same
+	// way as h2Transport. Each http2Pool dedicates one of these per pooled
+	// connection slot rather than sharing h2Transport across the whole
+	// pool, so a GOAWAY on one slot's connection can't affect another's.
+	newH2Transport func() *http2.Transport
+
+	http2PoolEnabled bool
+	http2PoolCfg     http2PoolConfig
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -417,6 +538,15 @@ func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
 		a.h1Transport.CloseIdleConnections()
 		a.h2Transport.CloseIdleConnections()
+
+		a.lock.Lock()
+		for _, p := range a.peers {
+			if p.pool != nil {
+				p.pool.Close()
+			}
+		}
+		a.lock.Unlock()
+
 		a.connectorsGroup.Wait()
 		return nil
 	})
@@ -432,24 +562,30 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	p := a.getOrCreatePeer(pid)
+	p, err := a.getOrCreatePeer(pid)
+	if err != nil {
+		return nil, err
+	}
 	p.Subscribe(sub)
 	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
+func (a *Transport) getOrCreatePeer(pid peer.Identifier) (*httpPeer, error) {
 	mapKey := pid.Identifier()
 	if p, ok := a.peers[mapKey]; ok {
-		return p
+		return p, nil
 	}
 	realAddr := peeraddr.Address(pid.Identifier())
-	p := newPeer(realAddr, a)
+	p, err := newPeer(realAddr, a)
+	if err != nil {
+		return nil, err
+	}
 	a.peers[mapKey] = p
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
-	return p
+	return p, nil
 }
 
 // ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it
