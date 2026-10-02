@@ -21,6 +21,7 @@
 package http
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -51,6 +52,38 @@ type http2PoolConfig struct {
 	// the peer's real negotiated value (unlike *http2.ClientConn.State()), so
 	// scaling decisions are made against this fixed assumption instead.
 	maxConcurrentStreams int32
+}
+
+// validate rejects configurations the pool cannot run with, mirroring the gRPC
+// pool's validateResolvedConnPool, plus the monitor interval that
+// time.NewTicker would otherwise panic on.
+func (c http2PoolConfig) validate() error {
+	if c.minConns < 0 {
+		return fmt.Errorf("http2 pool: minConns must be non-negative, got %d", c.minConns)
+	}
+	if c.maxConns < c.minConns {
+		return fmt.Errorf("http2 pool: maxConns (%d) must be >= minConns (%d)", c.maxConns, c.minConns)
+	}
+	if c.maxConns < 1 {
+		return fmt.Errorf("http2 pool: maxConns must be at least 1, got %d", c.maxConns)
+	}
+	if c.maxConcurrentStreams < 1 {
+		return fmt.Errorf("http2 pool: maxConcurrentStreams must be at least 1, got %d", c.maxConcurrentStreams)
+	}
+	if c.scaleUpThreshold <= 0 || c.scaleUpThreshold > 1 {
+		return fmt.Errorf("http2 pool: scaleUpThreshold must be in (0, 1], got %v", c.scaleUpThreshold)
+	}
+	if c.scaleUpThreshold-c.scaleDownGap <= 0 {
+		return fmt.Errorf("http2 pool: scaleUpThreshold (%.2f) minus scaleDownGap (%.2f) must be > 0",
+			c.scaleUpThreshold, c.scaleDownGap)
+	}
+	if c.idleTimeout < 0 {
+		return fmt.Errorf("http2 pool: idleTimeout must be non-negative, got %v", c.idleTimeout)
+	}
+	if c.scalingMonitorInterval <= 0 {
+		return fmt.Errorf("http2 pool: scalingMonitorInterval must be positive, got %v", c.scalingMonitorInterval)
+	}
+	return nil
 }
 
 func defaultHTTP2PoolConfig() http2PoolConfig {
@@ -93,7 +126,11 @@ type http2Pool struct {
 	closeOnce sync.Once
 }
 
-func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg http2PoolConfig, logger *zap.Logger) *http2Pool {
+// newHTTP2Pool builds a pool for addr, or returns an error if cfg is invalid.
+func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg http2PoolConfig, logger *zap.Logger) (*http2Pool, error) {
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -120,7 +157,7 @@ func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg http2Po
 		p.monitorWG.Add(1)
 		go p.monitorLoop()
 	}
-	return p
+	return p, nil
 }
 
 // maxConnCount is the ceiling on pool size: maxConns when dynamic scaling is
