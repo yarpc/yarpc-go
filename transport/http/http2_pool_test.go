@@ -21,6 +21,10 @@
 package http
 
 import (
+	"context"
+	"crypto/tls"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -611,7 +615,7 @@ func TestHTTP2PoolConcurrentPickScaleRace(t *testing.T) {
 	}
 }
 
-func TestHTTP2PoolAddRemoveConnRace(t *testing.T) {
+func TestHTTP2PoolAddConnRace(t *testing.T) {
 	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
@@ -620,29 +624,157 @@ func TestHTTP2PoolAddRemoveConnRace(t *testing.T) {
 	defer pool.Close()
 
 	const n = 16
-	conns := make([]*http2Conn, n)
-	for i := range conns {
-		conns[i] = newHTTP2Conn(nil) // not usable, but fine for CAS bookkeeping
-	}
-
 	var wg sync.WaitGroup
-	for _, c := range conns {
+	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go func(c *http2Conn) {
+		go func() {
 			defer wg.Done()
-			pool.addConn(c)
-		}(c)
+			pool.addConn(pool.newConn())
+		}()
 	}
 	wg.Wait()
-	assert.Len(t, *pool.connsPtr.Load(), n)
+	assert.Len(t, *pool.connsPtr.Load(), n, "copy-on-write adds must not lose a connection")
+}
 
-	for _, c := range conns {
-		wg.Add(1)
-		go func(c *http2Conn) {
-			defer wg.Done()
-			pool.removeConn(c)
-		}(c)
+// closeSignalConn reports on closed once, the first time it is closed.
+type closeSignalConn struct {
+	net.Conn
+	once   sync.Once
+	closed chan<- struct{}
+}
+
+func (c *closeSignalConn) Close() error {
+	c.once.Do(func() { c.closed <- struct{}{} })
+	return c.Conn.Close()
+}
+
+// withCloseSignal wraps a Transport factory so every socket it dials signals
+// on the returned channel when it is closed.
+func withCloseSignal(newTransport func() *http2.Transport) (func() *http2.Transport, <-chan struct{}) {
+	closed := make(chan struct{}, 16)
+	return func() *http2.Transport {
+		tr := newTransport()
+		dial := tr.DialTLSContext
+		tr.DialTLSContext = func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
+			conn, err := dial(ctx, network, addr, cfg)
+			if err != nil {
+				return nil, err
+			}
+			return &closeSignalConn{Conn: conn, closed: closed}, nil
+		}
+		return tr
+	}, closed
+}
+
+// doRequest sends one GET through c's Transport and drains the response.
+func doRequest(t *testing.T, c *http2Conn, addr string) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, "http://"+addr+"/", nil)
+	require.NoError(t, err)
+	resp, err := c.transport.RoundTrip(req)
+	require.NoError(t, err)
+	_, err = io.Copy(io.Discard, resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+}
+
+func TestHTTP2PoolClosedPoolRefusesWork(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.maxConcurrentStreams = 1
+	cfg.scaleUpThreshold = 0.5
+	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	require.NoError(t, err)
+
+	before := len(*pool.connsPtr.Load())
+	pool.Close()
+
+	_, err = pool.pickConn()
+	require.Error(t, err)
+	assert.True(t, yarpcerrors.IsUnavailable(err), "got %v", err)
+
+	_, err = pool.growPool()
+	require.Error(t, err)
+	assert.True(t, yarpcerrors.IsUnavailable(err), "got %v", err)
+
+	// Even an overloaded connection must not grow a closed pool.
+	c := (*pool.connsPtr.Load())[0]
+	c.incInflight()
+	pool.maybeScaleUp(c)
+	assert.Len(t, *pool.connsPtr.Load(), before, "a closed pool must not open connections")
+}
+
+func TestHTTP2PoolCloseReleasesIdleSockets(t *testing.T) {
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+	newTransport, closed := withCloseSignal(newTransport)
+
+	pool, err := newHTTP2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
+	require.NoError(t, err)
+
+	c, err := pool.pickConn()
+	require.NoError(t, err)
+	doRequest(t, c, addr)
+	c.decInflight()
+
+	select {
+	case <-closed:
+		t.Fatal("socket closed before the pool was")
+	default:
 	}
-	wg.Wait()
-	assert.Empty(t, *pool.connsPtr.Load())
+
+	pool.Close()
+	select {
+	case <-closed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("idle socket was not closed by Close")
+	}
+}
+
+func TestHTTP2PoolCloseReleasesBusySocketWhenRequestFinishes(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
+		once.Do(func() { close(started) })
+		<-release
+		w.Write([]byte("ok"))
+	})
+	newTransport, closed := withCloseSignal(newTransport)
+
+	pool, err := newHTTP2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
+	require.NoError(t, err)
+
+	c, err := pool.pickConn()
+	require.NoError(t, err)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		doRequest(t, c, addr)
+	}()
+	<-started
+
+	// Close while the request is in flight: the socket is busy, so it must stay
+	// open for now.
+	pool.Close()
+	select {
+	case <-closed:
+		t.Fatal("a socket with an in-flight request must not be closed")
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	// Once the last in-flight request completes, the socket is released
+	// instead of lingering until IdleConnTimeout.
+	close(release)
+	<-done
+	c.decInflight()
+	select {
+	case <-closed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("busy socket was not closed after its last request finished")
+	}
 }
