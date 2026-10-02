@@ -472,6 +472,41 @@ func TestHTTP2PoolPickConnFallsBackAtMaxConns(t *testing.T) {
 	assert.Len(t, *pool.connsPtr.Load(), 2)
 }
 
+func TestLeastLoadedPrefersActiveOverParked(t *testing.T) {
+	busyActive := newHTTP2Conn(nil)
+	idleParked := newHTTP2Conn(nil)
+	for i := 0; i < 10; i++ {
+		busyActive.incInflight()
+	}
+	require.True(t, idleParked.park())
+
+	// The parked conn has fewer streams, but an active conn must win.
+	got, err := leastLoaded([]*http2Conn{idleParked, busyActive})
+	require.NoError(t, err)
+	assert.Same(t, busyActive, got)
+
+	// Among active conns, the least loaded wins.
+	lighter := newHTTP2Conn(nil)
+	lighter.incInflight()
+	got, err = leastLoaded([]*http2Conn{busyActive, idleParked, lighter})
+	require.NoError(t, err)
+	assert.Same(t, lighter, got)
+}
+
+func TestLeastLoadedFallsBackToParkedOnlyWhenNoneActive(t *testing.T) {
+	a := newHTTP2Conn(nil)
+	b := newHTTP2Conn(nil)
+	a.incInflight()
+	a.incInflight()
+	b.incInflight()
+	require.True(t, a.park())
+	require.True(t, b.park())
+
+	got, err := leastLoaded([]*http2Conn{a, b})
+	require.NoError(t, err)
+	assert.Same(t, b, got, "with nothing active, the least-loaded parked conn is the last resort")
+}
+
 func TestHTTP2PoolPickConnEmptyPoolIsUnavailable(t *testing.T) {
 	_, err := leastLoaded(nil)
 	require.Error(t, err)
