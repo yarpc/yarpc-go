@@ -59,6 +59,11 @@ func TestUnspecifiedCodes(t *testing.T) {
 			want: yarpcerrors.CodeInvalidArgument,
 		},
 		{
+			name: "code request timeout",
+			give: 408,
+			want: yarpcerrors.CodeDeadlineExceeded,
+		},
+		{
 			name: "code unprocessable context",
 			give: 422,
 			want: yarpcerrors.CodeInvalidArgument,
@@ -67,6 +72,11 @@ func TestUnspecifiedCodes(t *testing.T) {
 			name: "code invalid argument",
 			give: 450, // test for an x in range: [400, 500)
 			want: yarpcerrors.CodeInvalidArgument,
+		},
+		{
+			name: "code bad gateway",
+			give: 502,
+			want: yarpcerrors.CodeUnavailable,
 		},
 		{
 			name: "code unkown",

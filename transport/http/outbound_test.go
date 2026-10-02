@@ -1758,3 +1758,34 @@ func TestIsolatedSchemaChange(t *testing.T) {
 	assert.Equal(t, "http", plainOutbound.urlTemplate.Scheme)
 	assert.Equal(t, "https", tlsOutbound.urlTemplate.Scheme)
 }
+
+// A proxy or load balancer in the request path can answer with a plain HTTP
+// error that carries no Rpc-Status header. The outbound must then derive the
+// YARPC code from the HTTP status alone.
+func TestGetYARPCErrorFromResponseWithoutRPCHeaders(t *testing.T) {
+	tests := []struct {
+		statusCode int
+		wantCode   yarpcerrors.Code
+	}{
+		{statusCode: http.StatusRequestTimeout, wantCode: yarpcerrors.CodeDeadlineExceeded},
+		{statusCode: http.StatusBadGateway, wantCode: yarpcerrors.CodeUnavailable},
+		{statusCode: http.StatusServiceUnavailable, wantCode: yarpcerrors.CodeUnavailable},
+		{statusCode: http.StatusGatewayTimeout, wantCode: yarpcerrors.CodeDeadlineExceeded},
+	}
+
+	for _, tt := range tests {
+		t.Run(strconv.Itoa(tt.statusCode), func(t *testing.T) {
+			const body = "body"
+			response := &http.Response{
+				StatusCode: tt.statusCode,
+				Header:     http.Header{},
+				Body:       io.NopCloser(strings.NewReader(body)),
+			}
+
+			_, err := getYARPCErrorFromResponse(&transport.Response{}, response, false)
+			require.Error(t, err)
+			assert.Equal(t, tt.wantCode, yarpcerrors.FromError(err).Code())
+			assert.Equal(t, body, yarpcerrors.FromError(err).Message())
+		})
+	}
+}
