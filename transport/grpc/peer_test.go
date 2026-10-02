@@ -207,7 +207,7 @@ func peerForPool(t *testing.T) *grpcPeer {
 		grpcDialOpts: []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		},
-		poolCfg: connPoolConfig{
+		startupPool: connPoolConfig{
 			dynamicScalingEnabled: true,
 			maxConcurrentStreams:  100,
 			scaleUpThreshold:      0.8, // threshold = 80
@@ -525,7 +525,7 @@ func TestMonitorConnWrapperMetrics(t *testing.T) {
 
 	// Reflect the initial active connection in the gauges.
 	p.refreshPoolMetrics()
-	g := gaugesFromSnapshot(root.Snapshot())
+	g := gaugesFromPool(p)
 	assert.Equal(t, int64(1), g["conn_pool_active_connections"])
 
 	go p.monitorConnWrapper(w)
@@ -538,7 +538,7 @@ func TestMonitorConnWrapperMetrics(t *testing.T) {
 	}
 
 	// After removal the gauge must drop to zero.
-	g = gaugesFromSnapshot(root.Snapshot())
+	g = gaugesFromPool(p)
 	assert.Equal(t, int64(0), g["conn_pool_active_connections"])
 	assertConnPoolMetricTags(t, root.Snapshot(), testConnPoolServiceName)
 }
