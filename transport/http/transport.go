@@ -655,24 +655,30 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	p := a.getOrCreatePeer(pid)
+	p, err := a.getOrCreatePeer(pid)
+	if err != nil {
+		return nil, err
+	}
 	p.Subscribe(sub)
 	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
+func (a *Transport) getOrCreatePeer(pid peer.Identifier) (*httpPeer, error) {
 	mapKey := pid.Identifier()
 	if p, ok := a.peers[mapKey]; ok {
-		return p
+		return p, nil
 	}
 	realAddr := peeraddr.Address(pid.Identifier())
-	p := newPeer(realAddr, a)
+	p, err := newPeer(realAddr, a)
+	if err != nil {
+		return nil, err
+	}
 	a.peers[mapKey] = p
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
-	return p
+	return p, nil
 }
 
 // ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it
