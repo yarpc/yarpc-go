@@ -121,6 +121,10 @@ type http2Pool struct {
 	connsPtr atomic.Pointer[[]*http2Conn]
 
 	scalingUp atomic.Bool
+	// closed is set when Close begins. A closed pool hands out no connections
+	// and opens no new ones, so no socket can be created after Close that
+	// nothing is left to release.
+	closed    atomic.Bool
 	stop      chan struct{}
 	monitorWG sync.WaitGroup
 	closeOnce sync.Once
@@ -196,6 +200,9 @@ func (p *http2Pool) newConn() *http2Conn {
 // it eligible closes most of the gap a concurrent burst of callers could
 // otherwise race through between "checked eligible" and "recorded as used".
 func (p *http2Pool) pickConn() (*http2Conn, error) {
+	if p.closed.Load() {
+		return nil, errNoConnsAvailable
+	}
 	conns := *p.connsPtr.Load()
 	maxPerConn := int(p.cfg.maxConcurrentStreams)
 
@@ -235,6 +242,9 @@ func (p *http2Pool) pickConn() (*http2Conn, error) {
 // least-bad existing connection (mirroring the way a single shared
 // http2.Transport would queue an excess request rather than fail it).
 func (p *http2Pool) growPool() (*http2Conn, error) {
+	if p.closed.Load() {
+		return nil, errNoConnsAvailable
+	}
 	if c := p.unparkConn(); c != nil {
 		return c, nil
 	}
@@ -244,6 +254,14 @@ func (p *http2Pool) growPool() (*http2Conn, error) {
 		// Another caller filled the pool first, or it was already full.
 		return leastLoaded(*p.connsPtr.Load())
 	}
+	if p.closed.Load() {
+		// Close ran while this connection was being added, possibly after it
+		// already walked the pool, so nothing else will release it.
+		c.shutdown()
+		return nil, errNoConnsAvailable
+	}
+	p.logger.Debug("http2 pool: added connection",
+		zap.String("peer", p.addr), zap.Int("conns", len(*p.connsPtr.Load())))
 	return c, nil
 }
 
@@ -304,7 +322,7 @@ func leastLoaded(conns []*http2Conn) (*http2Conn, error) {
 // scale-up, growing the pool all the way to maxConns instead of by one.
 func (p *http2Pool) maybeScaleUp(least *http2Conn) {
 	max := p.cfg.maxConcurrentStreams
-	if !p.cfg.dynamicScalingEnabled || max <= 0 {
+	if p.closed.Load() || !p.cfg.dynamicScalingEnabled || max <= 0 {
 		return
 	}
 	if float64(least.streamsActive()) < float64(max)*p.cfg.scaleUpThreshold {
@@ -321,10 +339,20 @@ func (p *http2Pool) maybeScaleUp(least *http2Conn) {
 		return
 	}
 
-	if p.unparkConn() != nil {
+	if c := p.unparkConn(); c != nil {
+		p.logger.Debug("http2 pool: re-activated parked connection", zap.String("peer", p.addr))
 		return
 	}
-	p.addConnBelowMax(p.newConn())
+	c := p.newConn()
+	if !p.addConnBelowMax(c) {
+		return
+	}
+	if p.closed.Load() {
+		c.shutdown() // see growPool
+		return
+	}
+	p.logger.Debug("http2 pool: added connection",
+		zap.String("peer", p.addr), zap.Int("conns", len(*p.connsPtr.Load())))
 }
 
 // monitorLoop periodically scales the pool down when load no longer
@@ -377,8 +405,9 @@ func (p *http2Pool) maybeScaleDown() {
 	if scaleDownThreshold <= 0 {
 		return
 	}
-	if float64(totalActive) < remainingCapacity*scaleDownThreshold {
-		conns[len(conns)-1].park()
+	if float64(totalActive) < remainingCapacity*scaleDownThreshold && conns[len(conns)-1].park() {
+		p.logger.Debug("http2 pool: parked connection",
+			zap.String("peer", p.addr), zap.Int("active", len(conns)-1), zap.Int("inflight", totalActive))
 	}
 }
 
@@ -394,11 +423,7 @@ func (p *http2Pool) cleanupConns() {
 		if idleSince.IsZero() || time.Since(idleSince) <= p.cfg.idleTimeout {
 			continue
 		}
-		if err := c.close(); err != nil {
-			p.logger.Warn("http2 pool: failed to close parked connection",
-				zap.String("peer", p.addr),
-				zap.Error(err))
-		}
+		c.closeIdle()
 	}
 }
 
@@ -444,42 +469,19 @@ func (p *http2Pool) addConnBelowMax(c *http2Conn) bool {
 	}
 }
 
-// removeConn removes c from the pool via copy-on-write. It is a no-op if c
-// is not present (e.g. concurrently removed already).
-func (p *http2Pool) removeConn(c *http2Conn) {
-	for {
-		old := p.connsPtr.Load()
-		idx := -1
-		for i, cur := range *old {
-			if cur == c {
-				idx = i
-				break
-			}
-		}
-		if idx == -1 {
-			return
-		}
-		next := make([]*http2Conn, 0, len(*old)-1)
-		next = append(next, (*old)[:idx]...)
-		next = append(next, (*old)[idx+1:]...)
-		if p.connsPtr.CompareAndSwap(old, &next) {
-			return
-		}
-	}
-}
-
-// Close stops the pool's monitor loop, waits for it to exit, and closes
-// every connection the pool holds. It is safe to call more than once.
+// Close permanently shuts the pool down. It marks the pool closed (so
+// pickConn, growPool and maybeScaleUp stop handing out or opening
+// connections), stops the monitor loop and waits for it to exit, then shuts
+// down every connection: idle sockets are closed immediately, and busy ones
+// as soon as their last in-flight request completes. A closed pool cannot be
+// reused; callers get errNoConnsAvailable. It is safe to call more than once.
 func (p *http2Pool) Close() {
 	p.closeOnce.Do(func() {
+		p.closed.Store(true)
 		close(p.stop)
 		p.monitorWG.Wait()
 		for _, c := range *p.connsPtr.Load() {
-			if err := c.close(); err != nil {
-				p.logger.Warn("http2 pool: failed to close connection",
-					zap.String("peer", p.addr),
-					zap.Error(err))
-			}
+			c.shutdown()
 		}
 	})
 }
