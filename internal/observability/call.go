@@ -229,7 +229,7 @@ func (c call) endLogs(
 
 	// It would be nice for metricProcedure() to return zap.Skip(), but there
 	// are a bunch of unit tests that fail with the included empty field.
-	metricProcedureField := metricProcedure(c.req.Procedure, string(c.req.Encoding))
+	metricProcedureField := metricProcedure(c.req.Transport, c.req.Procedure, string(c.req.Encoding))
 	if metricProcedureField != "" {
 		fields = append(fields, zap.String("metricProcedure", metricProcedureField))
 	}
@@ -275,8 +275,18 @@ func (c call) endLogs(
 	ce.Write(fields...)
 }
 
+// _grpcTransport matches transport/grpc.TransportName. We compare against it
+// directly rather than importing transport/grpc to avoid an import cycle.
+const _grpcTransport = "grpc"
+
+// metricProcedure returns the value M3 records as the "procedure" tag for the
+// given request, so it can be logged and used to correlate alerts (which query
+// M3) with the relevant logs. The shape of that tag depends on the transport,
+// not the encoding: gRPC uses a short, slash-delimited form with the package
+// path dropped, while every other transport keeps the fully-qualified name.
+//
 // https://docs.google.com/document/d/1B45wjZDQL0olCoENh3XYMyvCPI2A3hw8OeU2IhrtBtA
-func metricProcedure(procedure, encoding string) string {
+func metricProcedure(transport, procedure, encoding string) string {
 	if procedure == "" {
 		return "__no_procedure__"
 	}
@@ -285,34 +295,37 @@ func metricProcedure(procedure, encoding string) string {
 		return ""
 	}
 
-	return encodeMetricProcedure(procedure, encoding == "thrift")
+	return encodeMetricProcedure(procedure, transport == _grpcTransport)
 }
 
-func encodeMetricProcedure(procedure string, thrift bool) string {
+func encodeMetricProcedure(procedure string, grpc bool) string {
 	var (
 		b = []byte(procedure)
 		w = 0
 	)
 
 	for i := 0; i < len(b); i++ {
-		if b[i] == '.' {
-			w = 0
-			continue
-		}
-
-		if b[i] == ':' {
-			if thrift {
-				b[w] = '-'
-				w++
-				b[w] = '-'
-			} else {
-				b[w] = '/'
+		switch {
+		case b[i] == '.':
+			if grpc {
+				// gRPC drops the package path (e.g. "uber.infra.uown.").
+				w = 0
+				continue
 			}
-
-			i++
-		} else if 'A' <= b[i] && b[i] <= 'Z' {
+			// Other transports keep the fully-qualified name.
+			b[w] = '.'
+		case b[i] == ':':
+			if grpc {
+				// "::" -> "/"
+				b[w] = '/'
+				i++ // skip the second ':'
+			} else {
+				// each ':' -> '-', so "::" -> "--"
+				b[w] = '-'
+			}
+		case 'A' <= b[i] && b[i] <= 'Z':
 			b[w] = b[i] + 32
-		} else {
+		default:
 			b[w] = b[i]
 		}
 
