@@ -259,19 +259,32 @@ func (p *http2Pool) unparkConn() *http2Conn {
 	return nil
 }
 
-// leastLoaded returns the conn with the fewest active streams, regardless
-// of usable(), as a last-resort fallback when nothing better is available.
+// leastLoaded returns the usable conn with the fewest active streams. Parked
+// conns are only considered when no conn is usable, as a last resort so a
+// request is not failed while the pool still holds a connection. Saturation
+// is deliberately not considered: callers use this once they have decided to
+// queue an excess request on the least-bad connection.
 func leastLoaded(conns []*http2Conn) (*http2Conn, error) {
-	var best *http2Conn
+	var best, bestParked *http2Conn
 	for _, c := range conns {
-		if best == nil || c.streamsActive() < best.streamsActive() {
-			best = c
+		if c.usable() {
+			if best == nil || c.streamsActive() < best.streamsActive() {
+				best = c
+			}
+			continue
+		}
+		if bestParked == nil || c.streamsActive() < bestParked.streamsActive() {
+			bestParked = c
 		}
 	}
-	if best == nil {
+	switch {
+	case best != nil:
+		return best, nil
+	case bestParked != nil:
+		return bestParked, nil
+	default:
 		return nil, errNoConnsAvailable
 	}
-	return best, nil
 }
 
 // maybeScaleUp makes an additional connection available, at most once
