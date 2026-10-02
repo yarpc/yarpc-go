@@ -59,8 +59,10 @@ func newTestH2Pool(t *testing.T, handler http.HandlerFunc) (addr string, newTran
 // newEmptyH2Pool builds a pool and discards the connections it pre-creates, so
 // tests can add exactly the connections they want. The discarded slots never
 // dialed, so there is nothing to close.
-func newEmptyH2Pool(addr string, newTransport func() *http2.Transport, cfg http2PoolConfig, logger *zap.Logger) *http2Pool {
-	p := newHTTP2Pool(addr, newTransport, cfg, logger)
+func newEmptyH2Pool(t *testing.T, addr string, newTransport func() *http2.Transport, cfg http2PoolConfig, logger *zap.Logger) *http2Pool {
+	t.Helper()
+	p, err := newHTTP2Pool(addr, newTransport, cfg, logger)
+	require.NoError(t, err)
 	p.connsPtr.Store(&[]*http2Conn{})
 	return p
 }
@@ -84,7 +86,7 @@ func TestHTTP2PoolPickConnGrowsWhenEmpty(t *testing.T) {
 		w.Write([]byte("ok"))
 	})
 
-	pool := newEmptyH2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
 	defer pool.Close()
 
 	conn, err := pool.pickConn()
@@ -98,7 +100,7 @@ func TestHTTP2PoolPickConnPicksLeastLoaded(t *testing.T) {
 		w.Write([]byte("ok"))
 	})
 
-	pool := newEmptyH2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
 	defer pool.Close()
 
 	busy := pool.newConn()
@@ -128,7 +130,7 @@ func TestHTTP2PoolMaybeScaleUpSingleFlight(t *testing.T) {
 	cfg.maxConns = 5
 	cfg.scaleUpThreshold = 0.5
 	cfg.maxConcurrentStreams = 2
-	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c := pool.newConn()
@@ -171,7 +173,7 @@ func TestHTTP2PoolScaleDownParksLastConn(t *testing.T) {
 
 	cfg := defaultHTTP2PoolConfig()
 	cfg.minConns = 1
-	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c1 := pool.newConn()
@@ -206,7 +208,7 @@ func TestHTTP2PoolScaleDownAvoidsFlapping(t *testing.T) {
 	cfg.maxConcurrentStreams = 100
 	cfg.scaleUpThreshold = 0.8
 	cfg.scaleDownGap = 0.1
-	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c1 := pool.newConn()
@@ -249,7 +251,7 @@ func TestHTTP2PoolScaleUpUnparksBeforeDialing(t *testing.T) {
 	cfg.maxConns = 2
 	cfg.maxConcurrentStreams = 2
 	cfg.scaleUpThreshold = 0.5
-	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c1 := pool.newConn()
@@ -291,7 +293,7 @@ func TestHTTP2PoolCleanupConnsClosesLongParkedIdleConn(t *testing.T) {
 
 	cfg := defaultHTTP2PoolConfig()
 	cfg.idleTimeout = time.Millisecond
-	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c := pool.newConn()
@@ -310,6 +312,41 @@ func TestHTTP2PoolCleanupConnsClosesLongParkedIdleConn(t *testing.T) {
 	assert.True(t, c.parked())
 }
 
+func TestHTTP2PoolConfigValidation(t *testing.T) {
+	tests := []struct {
+		desc    string
+		mutate  func(*http2PoolConfig)
+		wantErr string
+	}{
+		{"default is valid", func(*http2PoolConfig) {}, ""},
+		{"negative minConns", func(c *http2PoolConfig) { c.minConns = -1 }, "minConns must be non-negative"},
+		{"maxConns below minConns", func(c *http2PoolConfig) { c.minConns = 3; c.maxConns = 2 }, "must be >= minConns"},
+		{"zero maxConns", func(c *http2PoolConfig) { c.minConns = 0; c.maxConns = 0 }, "maxConns must be at least 1"},
+		{"zero maxConcurrentStreams", func(c *http2PoolConfig) { c.maxConcurrentStreams = 0 }, "maxConcurrentStreams must be at least 1"},
+		{"zero scaleUpThreshold", func(c *http2PoolConfig) { c.scaleUpThreshold = 0 }, "scaleUpThreshold must be in (0, 1]"},
+		{"scaleUpThreshold above 1", func(c *http2PoolConfig) { c.scaleUpThreshold = 1.1 }, "scaleUpThreshold must be in (0, 1]"},
+		{"gap eliminates scale-down threshold", func(c *http2PoolConfig) { c.scaleUpThreshold = 0.5; c.scaleDownGap = 0.5 }, "minus scaleDownGap"},
+		{"negative idleTimeout", func(c *http2PoolConfig) { c.idleTimeout = -time.Second }, "idleTimeout must be non-negative"},
+		{"zero scalingMonitorInterval", func(c *http2PoolConfig) { c.scalingMonitorInterval = 0 }, "scalingMonitorInterval must be positive"},
+		{"negative scalingMonitorInterval", func(c *http2PoolConfig) { c.scalingMonitorInterval = -time.Second }, "scalingMonitorInterval must be positive"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			cfg := defaultHTTP2PoolConfig()
+			tt.mutate(&cfg)
+			pool, err := newHTTP2Pool("127.0.0.1:0", func() *http2.Transport { return &http2.Transport{} }, cfg, zap.NewNop())
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				pool.Close()
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+			assert.Nil(t, pool, "a rejected config must not build a pool (or start its monitor goroutine)")
+		})
+	}
+}
+
 func TestHTTP2PoolPrecreatesMinConns(t *testing.T) {
 	addr, newTransport := newTestH2Pool(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
@@ -317,7 +354,8 @@ func TestHTTP2PoolPrecreatesMinConns(t *testing.T) {
 
 	cfg := defaultHTTP2PoolConfig()
 	cfg.minConns = 3
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	require.NoError(t, err)
 	defer pool.Close()
 	assert.Len(t, *pool.connsPtr.Load(), 3)
 }
@@ -332,7 +370,8 @@ func TestHTTP2PoolDynamicScalingDisabled(t *testing.T) {
 	cfg.minConns = 3
 	cfg.maxConcurrentStreams = 2
 	cfg.scaleUpThreshold = 0.5
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	require.NoError(t, err)
 	defer pool.Close()
 
 	conns := *pool.connsPtr.Load()
@@ -363,7 +402,7 @@ func TestHTTP2PoolPickConnExcludesSaturatedConn(t *testing.T) {
 
 	cfg := defaultHTTP2PoolConfig()
 	cfg.maxConcurrentStreams = 2
-	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	full := pool.newConn()
@@ -393,7 +432,7 @@ func TestHTTP2PoolPickConnGrowsWhenAllSaturated(t *testing.T) {
 	cfg := defaultHTTP2PoolConfig()
 	cfg.maxConcurrentStreams = 1
 	cfg.maxConns = 2
-	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c := pool.newConn()
@@ -414,7 +453,7 @@ func TestHTTP2PoolPickConnFallsBackAtMaxConns(t *testing.T) {
 	cfg := defaultHTTP2PoolConfig()
 	cfg.maxConcurrentStreams = 1
 	cfg.maxConns = 2
-	pool := newEmptyH2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.NewNop())
 	defer pool.Close()
 
 	c1 := pool.newConn()
@@ -447,7 +486,8 @@ func TestHTTP2PoolIdleSingleConnIsKept(t *testing.T) {
 	cfg := defaultHTTP2PoolConfig()
 	cfg.minConns = 1
 	cfg.idleTimeout = time.Millisecond
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	require.NoError(t, err)
 	defer pool.Close()
 
 	c := (*pool.connsPtr.Load())[0]
@@ -470,7 +510,8 @@ func TestHTTP2PoolCloseIsIdempotentAndWaitsForMonitor(t *testing.T) {
 
 	cfg := defaultHTTP2PoolConfig()
 	cfg.scalingMonitorInterval = time.Millisecond
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	require.NoError(t, err)
 
 	pool.Close()
 	pool.Close() // must not panic on a second close
@@ -497,7 +538,8 @@ func TestHTTP2PoolConcurrentPickScaleRace(t *testing.T) {
 	cfg.maxConns = 4
 	cfg.maxConcurrentStreams = 4
 	cfg.scalingMonitorInterval = time.Millisecond
-	pool := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	require.NoError(t, err)
 	defer pool.Close()
 
 	var wg sync.WaitGroup
@@ -539,7 +581,7 @@ func TestHTTP2PoolAddRemoveConnRace(t *testing.T) {
 		w.Write([]byte("ok"))
 	})
 
-	pool := newEmptyH2Pool(addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
+	pool := newEmptyH2Pool(t, addr, newTransport, defaultHTTP2PoolConfig(), zap.NewNop())
 	defer pool.Close()
 
 	const n = 16
