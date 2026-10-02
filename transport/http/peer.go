@@ -42,7 +42,9 @@ type httpPeer struct {
 	pool                  *http2Pool
 }
 
-func newPeer(addr string, t *Transport) *httpPeer {
+// newPeer builds a peer for addr. It returns an error if the transport is
+// configured with a HTTP/2 connection pool whose configuration is invalid.
+func newPeer(addr string, t *Transport) (*httpPeer, error) {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -62,9 +64,13 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		innocentUntilUnixNano: atomic.NewInt64(0),
 	}
 	if t.http2PoolEnabled {
-		p.pool = newHTTP2Pool(addr, t.newH2Transport, t.http2PoolCfg, t.logger)
+		pool, err := newHTTP2Pool(addr, t.newH2Transport, t.http2PoolCfg, t.logger)
+		if err != nil {
+			return nil, err
+		}
+		p.pool = pool
 	}
-	return p
+	return p, nil
 }
 
 // The HTTP transport polls for whether a peer is available by attempting to

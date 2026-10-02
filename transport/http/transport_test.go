@@ -379,3 +379,18 @@ func TestRetainDuplicatePeers(t *testing.T) {
 	require.NoError(t, trans.ReleasePeer(hostport.PeerIdentifier(address+"#2"), sub))
 	assert.Empty(t, trans.peers)
 }
+
+func TestRetainPeerRejectsInvalidHTTP2PoolConfig(t *testing.T) {
+	tr := NewTransport(EnableHTTP2ConnPool(), HTTP2ScalingMonitorInterval(0))
+	require.NoError(t, tr.Start())
+	defer func() { assert.NoError(t, tr.Stop()) }()
+
+	p, err := tr.RetainPeer(hostport.Identify("127.0.0.1:1"), nil)
+	require.Error(t, err)
+	assert.Nil(t, p)
+	assert.Contains(t, err.Error(), "scalingMonitorInterval")
+
+	tr.lock.Lock()
+	defer tr.lock.Unlock()
+	assert.Empty(t, tr.peers, "a peer whose pool config is invalid must not be registered")
+}
