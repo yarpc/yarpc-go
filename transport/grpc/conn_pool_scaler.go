@@ -89,7 +89,9 @@ func (p *grpcPeer) evaluateScaling() {
 
 // startScalingMonitor starts the background scale-down/idle/min-fill loop once.
 func (p *grpcPeer) startScalingMonitor() {
-	if p.ctx.Err() != nil {
+	p.addingCount.Add(1)
+	defer p.addingCount.Add(-1)
+	if p.ctx.Err() != nil || p.shutdownStarted.Load() {
 		return
 	}
 	if !p.monitorStarted.CompareAndSwap(false, true) {
@@ -359,7 +361,6 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 	if !cfg.dynamicScalingEnabled {
 		return
 	}
-	p.startScalingMonitor()
 
 	threshold := int32(float64(cfg.maxConcurrentStreams) * cfg.scaleUpThreshold)
 	needMin := p.activeConnCount() < minConnectionTarget(cfg)
@@ -373,6 +374,8 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 	if !atomic.CompareAndSwapInt32(&p.isScaling, 0, 1) {
 		return
 	}
+	p.addingCount.Add(1)
+	defer p.addingCount.Add(-1)
 	if p.shutdownStarted.Load() || p.ctx.Err() != nil {
 		atomic.StoreInt32(&p.isScaling, 0)
 		return

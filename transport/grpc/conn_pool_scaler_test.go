@@ -857,23 +857,46 @@ func TestScalingMonitorInterval_ClampsLiveBelowMinimum(t *testing.T) {
 	assert.Equal(t, _defaultScalingMonitorInterval, p.scalingMonitorInterval())
 }
 
-func TestTryScaleUp_StartsMonitorWhenLiveEnables(t *testing.T) {
+func TestStartScalingMonitor_DoesNotAddAfterShutdown(t *testing.T) {
 	t.Parallel()
 	p := peerForPool(t)
 	p.startupPool.dynamicScalingEnabled = false
-	p.lastValidLivePool.Store(p.startupPool)
-	enabled := true
-	p.t = NewTransport(WithGlobalLiveConnectionPoolProvider(staticPoolProvider(ClientConnectionPoolConfig{
-		DynamicScalingEnabled: &enabled,
-	})))
-	p.storeConns([]*grpcClientConnWrapper{makeConn(connStateActive, 0)})
+	p.shutdownStarted.Store(true)
+
+	p.startScalingMonitor()
 
 	assert.False(t, p.monitorStarted.Load())
-	p.tryScaleUp(makeConn(connStateActive, 10))
-	assert.True(t, p.monitorStarted.Load())
-	require.Eventually(t, func() bool {
-		return atomic.LoadInt32(&p.isScaling) == 0
-	}, 2*time.Second, 10*time.Millisecond)
+	done := make(chan struct{})
+	go func() {
+		p.connWg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("connWg.Wait hung; startScalingMonitor added after shutdown")
+	}
+}
+
+func TestTryScaleUp_DoesNotAddAfterShutdown(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.storeConns([]*grpcClientConnWrapper{makeConn(connStateActive, 100)})
+	p.shutdownStarted.Store(true)
+
+	p.tryScaleUp(makeConn(connStateActive, 100))
+
+	assert.Equal(t, int32(0), atomic.LoadInt32(&p.isScaling))
+	done := make(chan struct{})
+	go func() {
+		p.connWg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("connWg.Wait hung; tryScaleUp added after shutdown")
+	}
 }
 
 func TestStartScalingMonitor_Idempotent(t *testing.T) {

@@ -70,14 +70,14 @@ type grpcPeer struct {
 	// successful CAS.
 	connsPtr atomic.Pointer[[](*grpcClientConnWrapper)]
 
-	// addingCount tracks addConn calls that have passed their entry point but
-	// have not yet called connWg.Add(1) or bailed. The lifecycle goroutine
-	// spins on this counter (after setting shutdownStarted) to guarantee that
-	// connWg.Wait is not called before any racing connWg.Add(1) completes.
+	// addingCount tracks goroutines that have passed their entry point but
+	// have not yet called connWg.Add(1) or bailed (addConn, startScalingMonitor,
+	// tryScaleUp). The lifecycle goroutine spins on this counter after setting
+	// shutdownStarted so connWg.Wait is not called before any racing Add completes.
 	addingCount atomic.Int32
 
 	// shutdownStarted is set to true when the peer begins shutting down.
-	// addConn checks this after incrementing addingCount to avoid calling
+	// Callers check this after incrementing addingCount to avoid calling
 	// connWg.Add(1) after the lifecycle goroutine has passed its spin.
 	shutdownStarted atomic.Bool
 
@@ -91,7 +91,7 @@ type grpcPeer struct {
 	outboundLiveProvider LiveConnectionPoolProvider // per-outbound hook; nil uses the global hook
 	lastValidLivePool    atomic.Value               // connPoolConfig, last snapshot that passed validation
 	invalidLiveWarned    atomic.Bool                // warn once per invalid live streak; skip later ticks until valid again
-	monitorStarted       atomic.Bool                // runScalingMonitor started once; live enable can start it after create
+	monitorStarted       atomic.Bool                // runScalingMonitor started once from newPeer
 	intervalClampWarned  atomic.Bool                // warn once while live/startup interval stays below 30s
 }
 
@@ -178,8 +178,8 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	}
 
 	// Close stoppedC once all pool goroutines have finished. shutdownStarted
-	// gates new connWg.Add(1) calls; addingCount ensures we wait for any addConn
-	// already past its ctx check before calling Wait.
+	// gates new connWg.Add(1) calls; addingCount waits for any in-flight
+	// addConn / startScalingMonitor / tryScaleUp before Wait.
 	go func() {
 		<-p.ctx.Done()
 		p.shutdownStarted.Store(true)
