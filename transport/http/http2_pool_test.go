@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 // newTestH2TransportServer starts a cleartext HTTP/2 test server and returns its
@@ -44,11 +45,7 @@ func newTestH2TransportServer(t *testing.T, handler http.HandlerFunc) (addr stri
 	h2s := &http2.Server{
 		IdleTimeout: defaultIdleConnTimeout,
 	}
-	h1s := httptest.NewUnstartedServer(handler)
-	h1s.Config.Protocols = new(http.Protocols)
-	h1s.Config.Protocols.SetHTTP1(true)
-	h1s.Config.Protocols.SetUnencryptedHTTP2(true)
-	http2.ConfigureServer(h1s.Config, h2s)
+	h1s := httptest.NewUnstartedServer(h2c.NewHandler(handler, h2s))
 	h1s.Start()
 	t.Cleanup(h1s.Close)
 
