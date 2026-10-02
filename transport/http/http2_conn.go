@@ -59,6 +59,12 @@ type http2Conn struct {
 	inflight  atomic.Int32
 	createdAt time.Time
 
+	// closing is set once the owning pool has been closed. It makes the
+	// connection release its sockets as soon as it is idle: decInflight closes
+	// them when the last in-flight request finishes, instead of leaving them
+	// open until the Transport's IdleConnTimeout.
+	closing atomic.Bool
+
 	// idleAtNano is the unix-nano time this connection's inflight count last
 	// dropped to zero, or 0 if it is currently serving at least one request.
 	// It is a best-effort signal, like http2.ClientConnState.LastIdle: a
@@ -90,6 +96,9 @@ func (c *http2Conn) incInflight() {
 func (c *http2Conn) decInflight() {
 	if c.inflight.Dec() == 0 {
 		c.idleAtNano.Store(time.Now().UnixNano())
+		if c.closing.Load() {
+			c.closeIdle()
+		}
 	}
 }
 
@@ -128,11 +137,18 @@ func (c *http2Conn) parked() bool {
 	return http2ConnState(c.state.Load()) == http2ConnParked
 }
 
-// close releases any connection this Transport currently holds. A
-// *http2.Transport has no persistent per-instance resource beyond the
-// connections it pools internally, so closing those is sufficient to free
-// it; there is no Close method on *http2.Transport itself.
-func (c *http2Conn) close() error {
+// closeIdle closes the sockets this Transport currently holds idle. A
+// *http2.Transport has no Close method, so this is how its connections are
+// released. It does not make the http2Conn unusable: the Transport simply
+// redials on its next request.
+func (c *http2Conn) closeIdle() {
 	c.transport.CloseIdleConnections()
-	return nil
+}
+
+// shutdown is called when the owning pool is closed. It closes the sockets
+// that are idle now, and arranges for the ones that are busy to be closed by
+// decInflight as soon as their last request finishes.
+func (c *http2Conn) shutdown() {
+	c.closing.Store(true)
+	c.closeIdle()
 }
