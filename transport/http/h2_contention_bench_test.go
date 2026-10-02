@@ -76,7 +76,7 @@ func benchmarkH2Connections(b *testing.B, conns int) {
 	addr := strings.TrimPrefix(server.URL, "http://")
 	senders := make([]*h2PeerSender, conns)
 	for i := range senders {
-		p := newPeer(addr, tr)
+		p := mustNewPeer(b, addr, tr)
 		defer func() {
 			if pool := p.loadH2Pool(); pool != nil {
 				pool.Stop()

@@ -328,8 +328,8 @@ func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
 	// Build two httpPeer instances for the same address directly: newPeer
 	// itself (unlike getOrCreatePeer's map) never dedupes, so this proves
 	// each httpPeer's dedicated connection pool opens its own connection.
-	p1 := newPeer(addr, tr)
-	p2 := newPeer(addr, tr)
+	p1 := mustNewPeer(t, addr, tr)
+	p2 := mustNewPeer(t, addr, tr)
 	t.Cleanup(func() {
 		if pool := p1.loadH2Pool(); pool != nil {
 			pool.Stop()
@@ -378,7 +378,7 @@ func TestH2PoolMetricsTrackDialAndTeardown(t *testing.T) {
 	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
 
 	addr := strings.TrimPrefix(server.URL, "http://")
-	p := newPeer(addr, tr)
+	p := mustNewPeer(t, addr, tr)
 
 	activeConnGauge := func() int64 {
 		snap := root.Snapshot()
@@ -426,7 +426,7 @@ func TestTransportStopStopsPeerH2Pools(t *testing.T) {
 	require.NoError(t, tr.Start())
 
 	addr := strings.TrimPrefix(server.URL, "http://")
-	p := newPeer(addr, tr)
+	p := mustNewPeer(t, addr, tr)
 	_, err := p.h2Sender()
 	require.NoError(t, err)
 
@@ -505,7 +505,7 @@ func TestH2SenderReusesExistingConnection(t *testing.T) {
 	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
 
 	addr := strings.TrimPrefix(server.URL, "http://")
-	p := newPeer(addr, tr)
+	p := mustNewPeer(t, addr, tr)
 	t.Cleanup(func() {
 		if pool := p.loadH2Pool(); pool != nil {
 			pool.Stop()
@@ -545,7 +545,7 @@ func TestH2SenderConcurrentFirstDial(t *testing.T) {
 	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
 
 	addr := strings.TrimPrefix(server.URL, "http://")
-	p := newPeer(addr, tr)
+	p := mustNewPeer(t, addr, tr)
 	t.Cleanup(func() {
 		if pool := p.loadH2Pool(); pool != nil {
 			pool.Stop()
@@ -600,7 +600,7 @@ func TestWatchH2ConnEvictsUnhealthyConnection(t *testing.T) {
 	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
 
 	addr := strings.TrimPrefix(server.URL, "http://")
-	p := newPeer(addr, tr)
+	p := mustNewPeer(t, addr, tr)
 	t.Cleanup(func() {
 		if pool := p.loadH2Pool(); pool != nil {
 			pool.Stop()
@@ -666,7 +666,7 @@ func TestWatchH2ConnKeepsSaturatedConnection(t *testing.T) {
 	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
 
 	addr := strings.TrimPrefix(server.URL, "http://")
-	p := newPeer(addr, tr)
+	p := mustNewPeer(t, addr, tr)
 	t.Cleanup(func() {
 		if pool := p.loadH2Pool(); pool != nil {
 			pool.Stop()
@@ -774,4 +774,28 @@ func TestRetainDuplicatePeers(t *testing.T) {
 	assert.Len(t, trans.peers, 1)
 	require.NoError(t, trans.ReleasePeer(hostport.PeerIdentifier(address+"#2"), sub))
 	assert.Empty(t, trans.peers)
+}
+
+func TestRetainPeerRejectsInvalidHTTP2PoolConfig(t *testing.T) {
+	tr := NewTransport(EnableHTTP2ConnPool(), HTTP2ScalingMonitorInterval(0))
+	require.NoError(t, tr.Start())
+	defer func() { assert.NoError(t, tr.Stop()) }()
+
+	p, err := tr.RetainPeer(hostport.Identify("127.0.0.1:1"), nil)
+	require.Error(t, err)
+	assert.Nil(t, p)
+	assert.Contains(t, err.Error(), "scalingMonitorInterval")
+
+	tr.lock.Lock()
+	defer tr.lock.Unlock()
+	assert.Empty(t, tr.peers, "a peer whose pool config is invalid must not be registered")
+}
+
+// mustNewPeer builds a peer for addr, failing the test if newPeer rejects the
+// transport's configuration.
+func mustNewPeer(tb testing.TB, addr string, tr *Transport) *httpPeer {
+	tb.Helper()
+	p, err := newPeer(addr, tr)
+	require.NoError(tb, err)
+	return p
 }

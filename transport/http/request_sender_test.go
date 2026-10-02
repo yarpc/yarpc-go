@@ -360,7 +360,7 @@ func TestH2PeerSenderNoConnectionAvailable(t *testing.T) {
 	addr := ln.Addr().String()
 	require.NoError(t, ln.Close())
 
-	p := newPeer(addr, tr)
+	p := mustNewPeer(t, addr, tr)
 	// h2Sender's cold path still creates and starts a pool before its dial
 	// fails (see h2Sender in peer.go) -- this peer was never registered
 	// with the Transport (no RetainPeer/getOrCreatePeer), so nothing else
@@ -546,7 +546,7 @@ func newBackoffTestPeer(t *testing.T, addr string) *httpPeer {
 	require.NoError(t, tr.Start())
 	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
 
-	p := newPeer(addr, tr)
+	p := mustNewPeer(t, addr, tr)
 	t.Cleanup(func() {
 		if pool := p.loadH2Pool(); pool != nil {
 			pool.Stop()
