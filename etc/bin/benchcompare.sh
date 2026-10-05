@@ -1,0 +1,133 @@
+#!/bin/bash
+
+# benchcompare.sh runs benchstat over the benchmarks of packages changed by a
+# PR, comparing the PR base branch against the PR head, and writes the result
+# as Markdown. This is informational only: it never fails the build, on a
+# comparison error or on a detected regression alike.
+#
+# When the comparison does not run, for any reason, the output says so and
+# gives the reason, so a missing result is never silent.
+#
+# Inputs (environment):
+#   PR_NUMBER        pull request number; "false" or unset means not a PR build
+#   BASE_BRANCH      branch the PR targets
+# For Buildkite, BUILDKITE_PULL_REQUEST and BUILDKITE_PULL_REQUEST_BASE_BRANCH
+# are used when the above are unset.
+#
+# Outputs, written to BENCHCOMPARE_OUT_DIR (default .benchcompare):
+#   annotation.md    the Markdown result (also printed to stdout)
+#   style            info, success, warning or error
+#
+# In CI, .github/workflows/benchcompare.yml runs this on pull_request without
+# secrets and uploads the output directory as an artifact.
+# .github/workflows/benchcompare-comment.yml then posts annotation.md as a PR
+# comment from a trusted context, so fork PRs get the comment too.
+
+set -uo pipefail
+
+DIR="$(cd "$(dirname "${0}")/../.." && pwd)"
+cd "${DIR}"
+
+BENCHCOMPARE_OUT_DIR="${BENCHCOMPARE_OUT_DIR:-.benchcompare}"
+BENCH_COUNT="${BENCH_COUNT:-6}"
+BENCH_TIME="${BENCH_TIME:-1s}"
+BASE_WORKTREE="$(mktemp -d -t benchcompare-base.XXXXXX)"
+BENCH_BASE_TXT="$(mktemp -t benchcompare-base-out.XXXXXX)"
+BENCH_HEAD_TXT="$(mktemp -t benchcompare-head-out.XXXXXX)"
+
+cleanup() {
+  git worktree remove --force "${BASE_WORKTREE}" >/dev/null 2>&1
+  rm -f "${BENCH_BASE_TXT}" "${BENCH_HEAD_TXT}"
+}
+trap cleanup EXIT
+
+# annotate records the result in BENCHCOMPARE_OUT_DIR and prints it to the log.
+annotate() {
+  local style="${1}"
+  local body="${2}"
+  mkdir -p "${BENCHCOMPARE_OUT_DIR}" 2>/dev/null \
+    && printf '%s\n' "${style}" >"${BENCHCOMPARE_OUT_DIR}/style" \
+    && printf '%s\n' "${body}" >"${BENCHCOMPARE_OUT_DIR}/annotation.md" \
+    || echo "benchcompare: could not write ${BENCHCOMPARE_OUT_DIR}, the result will not be posted"
+  echo "${body}"
+}
+
+# not_run annotates that benchmarks did not run, with the reason, then exits
+# successfully. The first argument is the annotation style: "info" for an
+# expected skip, "warning" for a failure to run the comparison.
+not_run() {
+  local style="${1}"
+  local reason="${2}"
+  annotate "${style}" "### Benchmarks did not run (informational, does not block merge)
+
+Reason: ${reason}"
+  exit 0
+}
+
+PR_NUMBER="${PR_NUMBER:-${BUILDKITE_PULL_REQUEST:-false}}"
+if [ "${PR_NUMBER}" = "false" ]; then
+  not_run info "this is not a pull request build, so there is no base branch to compare against."
+fi
+
+BASE_BRANCH="${BASE_BRANCH:-${BUILDKITE_PULL_REQUEST_BASE_BRANCH:-}}"
+if [ -z "${BASE_BRANCH}" ]; then
+  not_run warning "the base branch (\`BASE_BRANCH\`) is not set, so it is unknown."
+fi
+
+# Fetch over anonymous HTTPS rather than through the "origin" remote: this
+# runs inside the docker-compose sub-container, which has no SSH credentials
+# or known_hosts of its own (those live on the outer Buildkite agent/pod), and
+# yarpc-go is a public repo, so plain HTTPS needs no auth at all. Derive the
+# HTTPS URL from "origin" so this also works from a fork's SSH-configured
+# remote, falling back to the canonical repo if that fails.
+FETCH_URL="$(git remote get-url origin 2>/dev/null | sed -E 's#^git@github\.com:#https://github.com/#; s#^ssh://git@github\.com/#https://github.com/#')"
+FETCH_URL="${FETCH_URL:-https://github.com/yarpc/yarpc-go.git}"
+
+if ! git fetch --depth=100 "${FETCH_URL}" "${BASE_BRANCH}"; then
+  not_run warning "could not fetch \`${BASE_BRANCH}\` from ${FETCH_URL}."
+fi
+
+BASE_SHA="$(git merge-base HEAD FETCH_HEAD)"
+if [ -z "${BASE_SHA}" ]; then
+  not_run warning "could not find a merge base with \`${BASE_BRANCH}\` in the fetched history."
+fi
+
+# Packages with Go file changes relative to the merge base, mapped to
+# packages that actually contain benchmarks.
+CHANGED_DIRS="$(git diff --name-only "${BASE_SHA}" HEAD -- '*.go' | xargs -r -n1 dirname | sort -u)"
+CHANGED_PKGS=""
+for d in ${CHANGED_DIRS}; do
+  if grep -rl '^func Benchmark' "${d}"/*_test.go >/dev/null 2>&1; then
+    CHANGED_PKGS="${CHANGED_PKGS} ./${d}"
+  fi
+done
+
+if [ -z "${CHANGED_PKGS}" ]; then
+  not_run info "no package changed by this PR contains benchmarks (\`func Benchmark...\` in a \`_test.go\` file), so there is nothing to compare."
+fi
+
+echo "benchcompare: comparing benchmarks for:${CHANGED_PKGS}"
+
+if ! go test -run='^$' -bench=. -benchmem -count="${BENCH_COUNT}" -benchtime="${BENCH_TIME}" ${CHANGED_PKGS} >"${BENCH_HEAD_TXT}"; then
+  not_run warning "benchmarks failed to run on the PR head for:${CHANGED_PKGS}. See the job log."
+fi
+
+if ! git worktree add --detach "${BASE_WORKTREE}" "${BASE_SHA}" >/dev/null; then
+  not_run warning "could not check out the merge base ${BASE_SHA} for comparison."
+fi
+
+if ! (cd "${BASE_WORKTREE}" && go test -run='^$' -bench=. -benchmem -count="${BENCH_COUNT}" -benchtime="${BENCH_TIME}" ${CHANGED_PKGS}) >"${BENCH_BASE_TXT}"; then
+  not_run warning "benchmarks failed to run on \`${BASE_BRANCH}\` at ${BASE_SHA} for:${CHANGED_PKGS}. The benchmarks may be new in this PR. See the job log."
+fi
+
+DIFF="$(benchstat "base=${BENCH_BASE_TXT}" "head=${BENCH_HEAD_TXT}")"
+STYLE="info"
+if echo "${DIFF}" | grep -q '[+-][0-9].*%'; then
+  STYLE="warning"
+fi
+
+annotate "${STYLE}" "### Benchmark comparison vs \`${BASE_BRANCH}\` (informational, does not block merge)
+
+\`\`\`
+${DIFF}
+\`\`\`"
