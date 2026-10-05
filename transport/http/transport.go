@@ -68,6 +68,16 @@ type transportOptions struct {
 	serviceName                string
 	outboundTLSConfigProvider  yarpctls.OutboundTLSConfigProvider
 	isolateOutboundConnections bool
+
+	// connPool is the transport-wide HTTP/2 connection pool config every
+	// peer starts from. See the pool options in conn_pool_config.go.
+	connPool connpool.Config
+	// poolConfigProvider is the global live pool provider. See
+	// WithGlobalLiveConnectionPoolProvider.
+	poolConfigProvider LiveConnectionPoolProvider
+	// outboundPoolFactory builds per-outbound live providers for YAML
+	// outbounds. See WithOutboundLiveConnectionPoolProvider.
+	outboundPoolFactory func(outbound string, yaml *ClientConnectionPoolConfig) LiveConnectionPoolProvider
 }
 
 var defaultTransportOptions = transportOptions{
@@ -79,6 +89,7 @@ var defaultTransportOptions = transportOptions{
 	innocenceWindow:     defaultInnocenceWindow,
 	idleConnTimeout:     defaultIdleConnTimeout,
 	jitter:              rand.Int63n,
+	connPool:            defaultH2PoolConfig,
 }
 
 func newTransportOptions() transportOptions {
@@ -125,6 +136,10 @@ func MaxIdleConnsPerHost(i int) TransportOption {
 // IdleConnTimeout is the maximum amount of time an idle (keep-alive)
 // connection will remain idle before closing itself.
 // Zero means no limit.
+//
+// This applies to HTTP/1 connections only. Connections of an HTTP/2 outbound
+// are closed by its connection pool instead (see ConnIdleTimeout), which never
+// goes below MinConnections.
 //
 // Defaults to 15 minutes.
 func IdleConnTimeout(t time.Duration) TransportOption {
@@ -343,7 +358,9 @@ func (o *transportOptions) newTransport() *Transport {
 		isolateOutboundConnections: o.isolateOutboundConnections,
 		h1Transport:                buildH1Transport(o),
 		h2Transport:                buildH2Transport(o),
-		h2PoolConfig:               defaultH2PoolConfig,
+		h2PoolConfig:               o.connPool,
+		h2PoolProvider:             o.poolConfigProvider,
+		h2OutboundPoolFactory:      o.outboundPoolFactory,
 		h2PoolMetrics: connpool.NewMetrics(connpool.MetricsParams{
 			Meter:       o.meter,
 			Logger:      logger,
@@ -430,9 +447,13 @@ func buildH2Transport(options *transportOptions) *http2.Transport {
 			return dialContext(ctx, network, addr)
 		},
 		DisableCompression: options.disableCompression,
-		IdleConnTimeout:    options.idleConnTimeout,
-		PingTimeout:        defaultHTTP2PingTimeout,
-		ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
+		// IdleConnTimeout is deliberately left zero (never): this transport
+		// only builds the pool's *http2.ClientConns, and the pool owns when
+		// an idle connection is closed (ConnIdleTimeout, and never below
+		// MinConnections). A ClientConn closing itself on its own idle timer
+		// would drop the pool under its floor until the monitor re-dialed.
+		PingTimeout:     defaultHTTP2PingTimeout,
+		ReadIdleTimeout: defaultHTTP2ReadIdleTimeout,
 	}
 }
 
@@ -498,9 +519,23 @@ type Transport struct {
 	// so that duplicate peers pointed at the same address end up with
 	// independent HTTP/2 connections rather than sharing one.
 	h2Transport *http2.Transport
-	// h2PoolConfig is the connpool.Config every peer's HTTP/2 pool is built
-	// with. See defaultH2PoolConfig's doc comment.
+	// h2PoolConfig is the transport-wide connpool.Config every peer's HTTP/2
+	// pool starts from, before a Dialer's OutboundConnectionPool override
+	// and any live provider are applied (see resolveH2PoolConfig and
+	// httpPeer.poolConfig).
 	h2PoolConfig connpool.Config
+	// h2PoolProvider is the global live pool provider, used by every peer
+	// whose Dialer has no provider of its own.
+	h2PoolProvider LiveConnectionPoolProvider
+	// h2OutboundPoolFactory builds the per-outbound live provider for
+	// YAML-built outbounds (see buildOutbound).
+	h2OutboundPoolFactory func(outbound string, yaml *ClientConnectionPoolConfig) LiveConnectionPoolProvider
+	// releasedPoolWg tracks the HTTP/2 pools of peers released via
+	// ReleasePeer. Release only stops a pool (asynchronously), so Stop joins
+	// these to make sure no scaling monitor or connection watcher outlives
+	// the transport. They cannot be waited on inside releasePeer: it runs
+	// under a.lock, which other transport paths take.
+	releasedPoolWg sync.WaitGroup
 	// h2PoolMetrics holds the shared, transport-wide connection-pool metric
 	// handles (active/draining/idle connection gauges, scale-event and
 	// dial-outcome counters). It is created once here and each peer's pool
@@ -533,6 +568,7 @@ func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
 		a.h1Transport.CloseIdleConnections()
 		a.stopPeerH2Pools()
+		a.releasedPoolWg.Wait()
 		a.connectorsGroup.Wait()
 		return nil
 	})
@@ -586,31 +622,62 @@ func (a *Transport) IsRunning() bool {
 
 // RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.Chooser)
 func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
-	return a.retainPeer(pid, nil, sub)
+	return a.retainPeer(pid, emptyDialOpts, nil, sub)
 }
 
-func (a *Transport) retainPeer(pid peer.Identifier, connectionScope *connectionScope, sub peer.Subscriber) (peer.Peer, error) {
+func (a *Transport) retainPeer(pid peer.Identifier, options *dialOptions, connectionScope *connectionScope, sub peer.Subscriber) (peer.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	p := a.getOrCreatePeer(pid, connectionScope)
+	p, err := a.getOrCreatePeer(pid, options, connectionScope)
+	if err != nil {
+		return nil, err
+	}
 	p.Subscribe(sub)
 	return p, nil
 }
 
+// resolveH2PoolConfig returns the startup pool config for a peer retained
+// through a Dialer with the given options: the transport-wide config, overlaid
+// field by field by the Dialer's OutboundConnectionPool override. It fails if
+// the result is not a usable pool config, so that a bad option surfaces when
+// the peer is retained rather than as a misbehaving scaler later.
+func (a *Transport) resolveH2PoolConfig(options *dialOptions) (connpool.Config, error) {
+	cfg := options.resolvedPoolConfig(a.h2PoolConfig)
+	if err := cfg.Validate(); err != nil {
+		return connpool.Config{}, err
+	}
+	return cfg, nil
+}
+
+// h2PoolProviderFor returns the live pool provider for a peer retained
+// through a Dialer with the given options: the Dialer's own (per-outbound)
+// provider when set, else the transport's global one. Nil means no live
+// config.
+func (a *Transport) h2PoolProviderFor(options *dialOptions) LiveConnectionPoolProvider {
+	if options.poolConfigProvider != nil {
+		return options.poolConfigProvider
+	}
+	return a.h2PoolProvider
+}
+
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid peer.Identifier, connectionScope *connectionScope) *httpPeer {
+func (a *Transport) getOrCreatePeer(pid peer.Identifier, options *dialOptions, connectionScope *connectionScope) (*httpPeer, error) {
 	key := peerKey{identifier: pid.Identifier(), connectionScope: connectionScope}
 	if p, ok := a.peers[key]; ok {
-		return p
+		return p, nil
+	}
+	startupPool, err := a.resolveH2PoolConfig(options)
+	if err != nil {
+		return nil, err
 	}
 	realAddr := peeraddr.Address(pid.Identifier())
-	p := newPeer(realAddr, a)
+	p := newPeerWithPool(realAddr, a, startupPool, a.h2PoolProviderFor(options))
 	a.peers[key] = p
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
-	return p
+	return p, nil
 }
 
 // ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it
@@ -638,6 +705,15 @@ func (a *Transport) releasePeer(pid peer.Identifier, connectionScope *connection
 	if p.NumSubscribers() == 0 {
 		delete(a.peers, key)
 		p.Release()
+		// Release only asks the peer's HTTP/2 pool to stop. Track its
+		// teardown so Transport.Stop can wait for it.
+		if pool := p.loadH2Pool(); pool != nil {
+			a.releasedPoolWg.Add(1)
+			go func() {
+				defer a.releasedPoolWg.Done()
+				pool.Wait()
+			}()
+		}
 	}
 
 	return nil

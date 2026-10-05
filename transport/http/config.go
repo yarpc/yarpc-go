@@ -50,6 +50,8 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 			ts.InboundOptions = append(ts.InboundOptions, opt)
 		case OutboundOption:
 			ts.OutboundOptions = append(ts.OutboundOptions, opt)
+		case DialOption:
+			ts.DialOptions = append(ts.DialOptions, opt)
 		default:
 			panic(fmt.Sprintf("unknown option of type %T: %v", o, o))
 		}
@@ -65,6 +67,7 @@ type transportSpec struct {
 	TransportOptions []TransportOption
 	InboundOptions   []InboundOption
 	OutboundOptions  []OutboundOption
+	DialOptions      []DialOption
 }
 
 func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
@@ -94,6 +97,15 @@ func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
 //	      exponential:
 //	        first: 10ms
 //	        max: 30s
+//	    clientConnectionPool:
+//	      dynamicScalingEnabled: true
+//	      maxConcurrentStreams: 100
+//	      scaleUpThreshold: 0.7
+//	      scaleDownGap: 0.1
+//	      minConnections: 1
+//	      maxConnections: 50
+//	      idleTimeout: 5m
+//	      scalingMonitorInterval: 30s
 //
 // All parameters of TransportConfig are optional. This section may be omitted
 // in the transports section.
@@ -109,6 +121,11 @@ type TransportConfig struct {
 	ResponseHeaderTimeout time.Duration       `config:"responseHeaderTimeout"`
 	ConnTimeout           time.Duration       `config:"connTimeout"`
 	ConnBackoff           yarpcconfig.Backoff `config:"connBackoff"`
+	// ClientConnectionPool configures the per-peer HTTP/2 connection pool
+	// of outbounds that use HTTP/2 (see UseHTTP2), which scales the number
+	// of connections to a peer with load instead of multiplexing every
+	// request onto a single connection.
+	ClientConnectionPool ClientConnectionPoolConfig `config:"clientConnectionPool"`
 }
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit) (transport.Transport, error) {
@@ -144,6 +161,21 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 	}
 	if tc.ConnTimeout > 0 {
 		options.connTimeout = tc.ConnTimeout
+	}
+
+	// Connection pool options: only set values are applied, so that
+	// programmatic TransportOption defaults set by the caller are not
+	// silently overridden by the zero value of an omitted YAML field.
+	cp := tc.ClientConnectionPool
+	if err := validateClientConnectionPoolConfig(cp); err != nil {
+		return nil, err
+	}
+	// A set DynamicScalingEnabled overrides WithDynamicConnectionScaling. An
+	// omitted field leaves that option, or the default (enabled), in place.
+	override := cp.override()
+	options.connPool = options.connPool.Apply(&override)
+	if err := options.connPool.Validate(); err != nil {
+		return nil, err
 	}
 
 	strategy, err := tc.ConnBackoff.Strategy()
@@ -353,6 +385,17 @@ type OutboundConfig struct {
 	//      spiffe-ids:
 	//        - destination-id
 	TLS OutboundTLSConfig `config:"tls"`
+	// ClientConnectionPool optionally overrides the transport-wide
+	// clientConnectionPool for this outbound. Zero-value fields inherit the
+	// transport config. An outbound with this override gets its own
+	// isolated peer, so the override applies even when another outbound dials
+	// the same address. It only affects outbounds that use HTTP/2 (see UseHTTP2).
+	//
+	//  http:
+	//    url: "http://localhost:8080/yarpc"
+	//    clientConnectionPool:
+	//      minConnections: 20
+	ClientConnectionPool *ClientConnectionPoolConfig `config:"clientConnectionPool"`
 }
 
 // OutboundTLSConfig configures TLS for the HTTP outbound.
@@ -404,12 +447,45 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 	}
 	opts = append(option, opts...)
 
-	// Special case where the URL implies the single peer.
-	if oc.Empty() {
-		return x.NewSingleOutbound(oc.URL, opts...), nil
+	// Peer options: the outbound's own pool override first, then any
+	// DialOptions given to TransportSpec (so those win), then the live
+	// provider for this outbound.
+	var dialOpts []DialOption
+	if oc.ClientConnectionPool != nil {
+		if err := validateClientConnectionPoolConfig(*oc.ClientConnectionPool); err != nil {
+			return nil, err
+		}
+		dialOpts = append(dialOpts, OutboundConnectionPool(*oc.ClientConnectionPool))
+	}
+	dialOpts = append(dialOpts, ts.DialOptions...)
+	if f := x.h2OutboundPoolFactory; f != nil {
+		if p := f(k.OutboundKey(), oc.ClientConnectionPool); p != nil {
+			dialOpts = append(dialOpts, outboundLiveProvider(p))
+		}
+	}
+	// Connection isolation stays opt-in (IsolateConnectionsPerOutbound). An
+	// outbound with its own pool override or live provider is isolated
+	// regardless, otherwise its settings would land on a peer shared with
+	// other outbounds to the same address.
+	dialer := x.NewDialer(dialOpts...)
+	if x.isolateOutboundConnections || oc.ClientConnectionPool != nil || x.h2OutboundPoolFactory != nil {
+		dialer = dialer.WithConnectionIsolation()
+	}
+	if oc.ClientConnectionPool != nil {
+		// Validate the pool the peer will actually use: outbound fields
+		// overlaid on the transport config, including fields the outbound
+		// left unset.
+		if _, err := x.resolveH2PoolConfig(dialer.options); err != nil {
+			return nil, err
+		}
 	}
 
-	chooser, err := oc.BuildPeerChooser(x.outboundPeerTransport(), hostport.Identify, k)
+	// Special case where the URL implies the single peer.
+	if oc.Empty() {
+		return x.newSingleOutbound(dialer, oc.URL, opts...), nil
+	}
+
+	chooser, err := oc.BuildPeerChooser(dialer, hostport.Identify, k)
 	if err != nil {
 		return nil, fmt.Errorf("cannot configure peer chooser for HTTP outbound: %v", err)
 	}

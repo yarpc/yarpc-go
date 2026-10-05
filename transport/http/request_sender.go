@@ -22,8 +22,10 @@ package http
 
 import (
 	"context"
+	"io"
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"go.uber.org/yarpc/transport/internal/connpool"
@@ -58,14 +60,27 @@ func (t *transportSender) Do(req *http.Request) (*http.Response, error) {
 // for the HTTP/1 path above.
 type h2ConnSender struct {
 	wrapper *connpool.Wrapper[*http2.ClientConn]
+	// pool is the pool wrapper belongs to. When set, each request checks
+	// whether the pool needs to grow (see connpool.Pool.TryScaleUp), the way
+	// the gRPC outbound does after picking a connection. Nil disables that.
+	pool *connpool.Pool[*http2.ClientConn]
 }
 
 func (s *h2ConnSender) Do(req *http.Request) (*http.Response, error) {
+	// The stream is counted as in flight from here until the response body
+	// is finished (see streamCountBody) -- not until RoundTrip returns,
+	// which is only the response headers. The count drives both scale-up and
+	// the scale-down/idle transitions, which close connections once their
+	// count reaches zero, so releasing it while the body is still being read
+	// would let the pool close a connection under an open stream.
 	s.wrapper.IncStreamCount()
-	defer s.wrapper.DecStreamCount()
+	if s.pool != nil {
+		s.pool.TryScaleUp(s.wrapper)
+	}
 
 	resp, err := s.wrapper.Conn.RoundTrip(req)
 	if err != nil {
+		s.wrapper.DecStreamCount()
 		// A request can fail on its own -- a timeout, a cancelled context, a
 		// stream reset -- without the connection being at fault. Tearing the
 		// connection down for that would abort every other request still in
@@ -83,8 +98,34 @@ func (s *h2ConnSender) Do(req *http.Request) (*http.Response, error) {
 			s.wrapper.TransitionState(connpool.StateActive, connpool.StateDraining)
 			s.wrapper.Cancel()
 		}
+		return resp, err
 	}
-	return resp, err
+
+	resp.Body = &streamCountBody{ReadCloser: resp.Body, release: s.wrapper.DecStreamCount}
+	return resp, nil
+}
+
+// streamCountBody holds a response's stream count until the stream is
+// finished: the body reaching EOF or failing, or being closed, whichever
+// comes first. release runs exactly once.
+type streamCountBody struct {
+	io.ReadCloser
+	release func()
+	once    sync.Once
+}
+
+func (b *streamCountBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if err != nil {
+		b.once.Do(b.release)
+	}
+	return n, err
+}
+
+func (b *streamCountBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.once.Do(b.release)
+	return err
 }
 
 // maxH2RetryAttempts bounds replay attempts for a request that failed for a
