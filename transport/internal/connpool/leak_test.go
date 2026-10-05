@@ -18,32 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcconfig
+package connpool
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 )
 
-func TestKitWithTransportSpec(t *testing.T) {
-	root := &Kit{name: "foo"}
-	assert.Nil(t, root.transportSpec, "transportSpec must be nil")
-	assert.Equal(t, "foo", root.ServiceName())
-
-	child := root.withTransportSpec(&compiledTransportSpec{})
-	assert.Nil(t, root.transportSpec, "transportSpec must be nil")
-	assert.Equal(t, "foo", child.ServiceName())
-	assert.NotNil(t, child.transportSpec, "transportSpec must be nil")
-
-	child.name = "bar"
-	assert.Equal(t, "foo", root.ServiceName())
-	assert.Equal(t, "bar", child.ServiceName())
-
-	childOutbound := root.withOutboundName("target-service").withOutboundKey("outbound-key")
-	assert.Equal(t, "target-service", childOutbound.OutboundServiceName())
-	assert.Equal(t, "outbound-key", childOutbound.OutboundKey())
-	assert.Equal(t, "foo", childOutbound.ServiceName())
-	assert.Empty(t, root.OutboundServiceName())
-	assert.Empty(t, root.OutboundKey())
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
 }

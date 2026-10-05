@@ -20,7 +20,11 @@
 
 package http
 
-import "time"
+import (
+	"time"
+
+	"go.uber.org/yarpc/transport/internal/connpool"
+)
 
 const (
 	// TransportName is the name of the transport.
@@ -40,6 +44,18 @@ var (
 	defaultDialerTimeout        = 30 * time.Second
 	defaultHTTP2PingTimeout     = 10 * time.Second
 	defaultHTTP2ReadIdleTimeout = 15 * time.Second
+	// defaultH2ConnHealthPollInterval is how often each peer's HTTP/2
+	// connection pool checks whether its connection(s) can still take new
+	// requests. http2.ClientConn has no blocking wait-for-state-change
+	// primitive (unlike grpc.ClientConn), so health is polled instead.
+	defaultH2ConnHealthPollInterval = 5 * time.Second
+	// defaultH2PoolConfig pins every peer's HTTP/2 connection pool to
+	// exactly one connection.
+	defaultH2PoolConfig = connpool.Config{
+		MinConnections: 1,
+		MaxConnections: 1,
+		IdleTimeout:    defaultIdleConnTimeout,
+	}
 )
 
 // HTTP headers used in requests and responses to send YARPC metadata.
