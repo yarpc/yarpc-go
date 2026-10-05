@@ -132,15 +132,22 @@ func (h Headers) Get(k string) (string, bool) {
 		return v, ok
 	}
 
-	// If the header is missing, fallback to the expensive path.
-	canonical := CanonicalizeHeaderKey(k)
-	// Avoid map lookup if the header turns out to be canonical.
-	if k == canonical {
+	// Stored keys are lowercase ASCII. If k has no A-Z, CanonicalizeHeaderKey
+	// (strings.ToLower) is a no-op and a second map lookup cannot hit.
+	if !headerKeyHasUpperASCII(k) {
 		return "", false
 	}
-	// Passed in header was non-canonical, try again.
-	v, ok := h.items[canonical]
+	v, ok := h.items[CanonicalizeHeaderKey(k)]
 	return v, ok
+}
+
+func headerKeyHasUpperASCII(s string) bool {
+	for i := range len(s) {
+		if uint8(s[i]-'A') <= 25 {
+			return true
+		}
+	}
+	return false
 }
 
 // Len returns the number of headers defined on this object.

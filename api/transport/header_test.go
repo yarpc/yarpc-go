@@ -83,6 +83,22 @@ func TestNewHeaders(t *testing.T) {
 	}
 }
 
+func TestGetMissAlreadyLowercase(t *testing.T) {
+	headers := HeadersFromMap(map[string]string{"rpc-encoding": "proto"})
+
+	v, ok := headers.Get("rpc-procedure")
+	assert.False(t, ok)
+	assert.Equal(t, "", v)
+
+	v, ok = headers.Get("rpc-encoding")
+	assert.True(t, ok)
+	assert.Equal(t, "proto", v)
+
+	v, ok = headers.Get("RPC-ENCODING")
+	assert.True(t, ok)
+	assert.Equal(t, "proto", v)
+}
+
 func TestItemsAndOriginalItems(t *testing.T) {
 	type headers struct {
 		key, val string
