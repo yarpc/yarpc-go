@@ -1048,3 +1048,60 @@ func TestHTTP2PoolAtMaxConnsDoesNotBuildTransports(t *testing.T) {
 		})
 	}
 }
+
+func TestSendHoldsInflightUntilBodyClosed(t *testing.T) {
+	release := make(chan struct{})
+	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("hello"))
+		w.(http.Flusher).Flush() // send headers so RoundTrip returns
+		<-release
+	})
+	pool := newEmptyH2Pool(t, addr, newTransport, baseH2ScalingPoolConfig, zap.NewNop())
+	defer pool.Close()
+	conn := pool.newConn()
+	pool.addConn(conn)
+
+	o := &Outbound{useHTTP2: true}
+	p := &httpPeer{pool: pool}
+	hreq, err := http.NewRequest("GET", "http://"+addr+"/", nil)
+	require.NoError(t, err)
+
+	resp, err := o.send(context.Background(), hreq, p, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, conn.streamsActive(), "slot must be held after RoundTrip returns, while the body is open")
+
+	close(release)
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, 1, conn.streamsActive(), "reading the body to EOF is not enough; Close releases the slot")
+
+	require.NoError(t, resp.Body.Close())
+	assert.Zero(t, conn.streamsActive())
+	require.NoError(t, resp.Body.Close())
+	assert.Zero(t, conn.streamsActive(), "a second Close must not release twice")
+}
+
+func TestSendRoundTripErrorKeepsConnAndReleasesInflight(t *testing.T) {
+	failing := func() *http2.Transport {
+		return &http2.Transport{
+			AllowHTTP: true,
+			DialTLSContext: func(context.Context, string, string, *tls.Config) (net.Conn, error) {
+				return nil, io.ErrClosedPipe
+			},
+		}
+	}
+	pool := newEmptyH2Pool(t, "127.0.0.1:1", failing, baseH2ScalingPoolConfig, zap.NewNop())
+	defer pool.Close()
+	conn := pool.newConn()
+	pool.addConn(conn)
+
+	o := &Outbound{useHTTP2: true}
+	p := &httpPeer{pool: pool}
+	hreq, err := http.NewRequest("GET", "http://127.0.0.1:1/", nil)
+	require.NoError(t, err)
+
+	_, err = o.send(context.Background(), hreq, p, nil)
+	require.Error(t, err)
+	assert.Zero(t, conn.streamsActive(), "a failed request must release its slot")
+	assert.Equal(t, []*http2Conn{conn}, *pool.connsPtr.Load(), "a RoundTrip error must not remove the connection")
+}

@@ -758,6 +758,12 @@ func (o *Outbound) doWithPeer(
 // send issues hreq to p, routing through the peer's per-connection HTTP/2
 // pool when the outbound is using HTTP/2 and pooling is enabled on the
 // transport; otherwise it falls through to today's shared-client behavior.
+//
+// A pooled connection's in-flight slot is held until the response body is
+// closed, since the HTTP/2 stream stays open until then; it is released
+// immediately if no response is handed back. A RoundTrip error leaves the
+// connection in the pool: its *http2.Transport redials on its own, and
+// doWithPeer already reports the error to the peer.
 func (o *Outbound) send(ctx context.Context, hreq *http.Request, p *httpPeer, sender sender) (*http.Response, error) {
 	if !o.useHTTP2 || p.pool == nil {
 		return sender.Do(hreq.WithContext(ctx))
@@ -767,13 +773,18 @@ func (o *Outbound) send(ctx context.Context, hreq *http.Request, p *httpPeer, se
 	if err != nil {
 		return nil, err
 	}
-	defer conn.decInflight()
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			conn.decInflight()
+		}
+	}()
 
 	response, err := conn.transport.RoundTrip(hreq.WithContext(ctx))
 	if err != nil {
-		p.pool.removeConn(conn)
 		return nil, err
 	}
+	handedOff = conn.releaseOnBodyClose(response)
 	return response, nil
 }
 

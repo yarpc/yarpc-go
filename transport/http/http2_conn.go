@@ -21,6 +21,9 @@
 package http
 
 import (
+	"io"
+	"net/http"
+	"sync"
 	"time"
 
 	"go.uber.org/atomic"
@@ -155,4 +158,31 @@ func (c *http2Conn) closeIdle() {
 func (c *http2Conn) shutdown() {
 	c.closing.Store(true)
 	c.closeIdle()
+}
+
+// releaseOnBodyClose arranges for this connection's in-flight slot to be
+// released when resp.Body is closed, rather than when RoundTrip returns: an
+// HTTP/2 stream stays open until its body is finished, so releasing any
+// earlier would undercount the streams the connection is really carrying. It
+// reports whether it took over responsibility for the release; if resp has no
+// body to close, it returns false and the caller must release the slot.
+func (c *http2Conn) releaseOnBodyClose(resp *http.Response) bool {
+	if resp.Body == nil || resp.Body == http.NoBody {
+		return false
+	}
+	resp.Body = &inflightBody{ReadCloser: resp.Body, release: c.decInflight}
+	return true
+}
+
+// inflightBody calls release exactly once, on the first Close.
+type inflightBody struct {
+	io.ReadCloser
+	release func()
+	once    sync.Once
+}
+
+func (b *inflightBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.once.Do(b.release)
+	return err
 }
