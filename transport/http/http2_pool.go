@@ -120,7 +120,12 @@ type http2Pool struct {
 	// on the request hot path (pickConn) never block on a lock.
 	connsPtr atomic.Pointer[[]*http2Conn]
 
+	// scalingUp is the single-flight guard for every path that grows the pool
+	// (growPool and maybeScaleUp).
 	scalingUp atomic.Bool
+	// atMaxLogged limits the "at max connections" log to once, like the gRPC
+	// pool, since the condition is hit on the request path.
+	atMaxLogged atomic.Bool
 	// closed is set when Close begins. A closed pool hands out no connections
 	// and opens no new ones, so no socket can be created after Close that
 	// nothing is left to release.
@@ -138,6 +143,23 @@ func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg http2Po
 	if logger == nil {
 		logger = zap.NewNop()
 	}
+	if cfg.scalingMonitorInterval < minHTTP2PoolScalingMonitorInterval {
+		logger.Warn("http2 pool: scalingMonitorInterval is below the minimum; clamping to avoid pool thrashing",
+			zap.Duration("configured", cfg.scalingMonitorInterval),
+			zap.Duration("effective", minHTTP2PoolScalingMonitorInterval),
+			zap.String("peer", addr))
+		cfg.scalingMonitorInterval = minHTTP2PoolScalingMonitorInterval
+	}
+	logger.Debug("http2 pool: resolved config",
+		zap.String("peer", addr),
+		zap.Bool("dynamicScalingEnabled", cfg.dynamicScalingEnabled),
+		zap.Int("minConns", cfg.minConns),
+		zap.Int("maxConns", cfg.maxConns),
+		zap.Float64("scaleUpThreshold", cfg.scaleUpThreshold),
+		zap.Float64("scaleDownGap", cfg.scaleDownGap),
+		zap.Duration("idleTimeout", cfg.idleTimeout),
+		zap.Duration("scalingMonitorInterval", cfg.scalingMonitorInterval),
+		zap.Int32("maxConcurrentStreams", cfg.maxConcurrentStreams))
 	p := &http2Pool{
 		addr:         addr,
 		newTransport: newTransport,
@@ -211,7 +233,7 @@ func (p *http2Pool) pickConn() (*http2Conn, error) {
 		if !c.usable() {
 			continue
 		}
-		if maxPerConn > 0 && c.streamsActive() >= maxPerConn {
+		if c.streamsActive() >= maxPerConn {
 			continue
 		}
 		if best == nil || c.streamsActive() < best.streamsActive() {
@@ -241,28 +263,59 @@ func (p *http2Pool) pickConn() (*http2Conn, error) {
 // already at its configured maximum, in which case it falls back to the
 // least-bad existing connection (mirroring the way a single shared
 // http2.Transport would queue an excess request rather than fail it).
+//
+// Like maybeScaleUp, it is single-flight on scalingUp, so a burst of callers
+// that all found every connection full grows the pool by one rather than by
+// one each. The caller that wins re-scans first, in case a concurrent grow has
+// already made room; callers that lose, or find the pool at its maximum, queue
+// on the least-loaded connection.
 func (p *http2Pool) growPool() (*http2Conn, error) {
 	if p.closed.Load() {
 		return nil, errNoConnsAvailable
 	}
-	if c := p.unparkConn(); c != nil {
+	if !p.scalingUp.CompareAndSwap(false, true) {
+		return leastLoaded(*p.connsPtr.Load()) // a grow is already in flight
+	}
+	defer p.scalingUp.Store(false)
+
+	max := int(p.cfg.maxConcurrentStreams)
+	if fresh, err := leastLoaded(activeConns(*p.connsPtr.Load())); err == nil && fresh.streamsActive() < max {
+		return fresh, nil
+	}
+	if c := p.growOne(); c != nil {
 		return c, nil
 	}
+	if p.closed.Load() {
+		return nil, errNoConnsAvailable
+	}
+	return leastLoaded(*p.connsPtr.Load())
+}
 
+// growOne makes one more connection active: it re-activates a parked
+// connection if there is one, otherwise adds a new one. It returns nil if the
+// pool is closed or already at its maximum. The caller must hold scalingUp.
+func (p *http2Pool) growOne() *http2Conn {
+	if c := p.unparkConn(); c != nil {
+		p.logger.Debug("http2 pool: re-activated parked connection", zap.String("peer", p.addr))
+		return c
+	}
 	c := p.newConn()
 	if !p.addConnBelowMax(c) {
-		// Another caller filled the pool first, or it was already full.
-		return leastLoaded(*p.connsPtr.Load())
+		if p.atMaxLogged.CompareAndSwap(false, true) {
+			p.logger.Info("http2 pool: cannot scale up; at max connections",
+				zap.String("peer", p.addr), zap.Int("maxConns", p.maxConnCount()))
+		}
+		return nil
 	}
 	if p.closed.Load() {
 		// Close ran while this connection was being added, possibly after it
 		// already walked the pool, so nothing else will release it.
 		c.shutdown()
-		return nil, errNoConnsAvailable
+		return nil
 	}
 	p.logger.Debug("http2 pool: added connection",
 		zap.String("peer", p.addr), zap.Int("conns", len(*p.connsPtr.Load())))
-	return c, nil
+	return c
 }
 
 // unparkConn re-activates the most recently parked connection and returns it,
@@ -322,7 +375,7 @@ func leastLoaded(conns []*http2Conn) (*http2Conn, error) {
 // scale-up, growing the pool all the way to maxConns instead of by one.
 func (p *http2Pool) maybeScaleUp(least *http2Conn) {
 	max := p.cfg.maxConcurrentStreams
-	if p.closed.Load() || !p.cfg.dynamicScalingEnabled || max <= 0 {
+	if p.closed.Load() || !p.cfg.dynamicScalingEnabled {
 		return
 	}
 	if float64(least.streamsActive()) < float64(max)*p.cfg.scaleUpThreshold {
@@ -339,20 +392,7 @@ func (p *http2Pool) maybeScaleUp(least *http2Conn) {
 		return
 	}
 
-	if c := p.unparkConn(); c != nil {
-		p.logger.Debug("http2 pool: re-activated parked connection", zap.String("peer", p.addr))
-		return
-	}
-	c := p.newConn()
-	if !p.addConnBelowMax(c) {
-		return
-	}
-	if p.closed.Load() {
-		c.shutdown() // see growPool
-		return
-	}
-	p.logger.Debug("http2 pool: added connection",
-		zap.String("peer", p.addr), zap.Int("conns", len(*p.connsPtr.Load())))
+	p.growOne()
 }
 
 // monitorLoop periodically scales the pool down when load no longer
@@ -373,7 +413,8 @@ func (p *http2Pool) monitorLoop() {
 	}
 }
 
-// maybeScaleDown parks the last active connection if the remaining active
+// maybeScaleDown parks the last active connection (a deliberately simple
+// choice: no per-connection ranking or swapping is needed) if the remaining active
 // connections can absorb the current total load while staying below the
 // scale-down threshold, and the pool is above its configured minimum.
 //
@@ -391,9 +432,6 @@ func (p *http2Pool) maybeScaleDown() {
 	}
 
 	maxPerConn := int(p.cfg.maxConcurrentStreams)
-	if maxPerConn <= 0 {
-		return
-	}
 
 	var totalActive int
 	for _, c := range conns {
@@ -402,9 +440,6 @@ func (p *http2Pool) maybeScaleDown() {
 
 	remainingCapacity := float64(maxPerConn * (len(conns) - 1))
 	scaleDownThreshold := p.cfg.scaleUpThreshold - p.cfg.scaleDownGap
-	if scaleDownThreshold <= 0 {
-		return
-	}
 	if float64(totalActive) < remainingCapacity*scaleDownThreshold && conns[len(conns)-1].park() {
 		p.logger.Debug("http2 pool: parked connection",
 			zap.String("peer", p.addr), zap.Int("active", len(conns)-1), zap.Int("inflight", totalActive))

@@ -36,6 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
@@ -548,7 +549,6 @@ func TestHTTP2PoolCloseIsIdempotentAndWaitsForMonitor(t *testing.T) {
 	})
 
 	cfg := defaultHTTP2PoolConfig()
-	cfg.scalingMonitorInterval = time.Millisecond
 	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
 	require.NoError(t, err)
 
@@ -576,7 +576,6 @@ func TestHTTP2PoolConcurrentPickScaleRace(t *testing.T) {
 	cfg.minConns = 1
 	cfg.maxConns = 4
 	cfg.maxConcurrentStreams = 4
-	cfg.scalingMonitorInterval = time.Millisecond
 	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
 	require.NoError(t, err)
 	defer pool.Close()
@@ -777,4 +776,78 @@ func TestHTTP2PoolCloseReleasesBusySocketWhenRequestFinishes(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("busy socket was not closed after its last request finished")
 	}
+}
+
+func TestHTTP2PoolGrowPoolBurstGrowsByOne(t *testing.T) {
+	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+
+	cfg := defaultHTTP2PoolConfig()
+	cfg.maxConcurrentStreams = 100
+	cfg.maxConns = 50
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.NewNop())
+	defer pool.Close()
+
+	full := pool.newConn()
+	pool.addConn(full)
+	for i := 0; i < 100; i++ {
+		full.incInflight() // saturated
+	}
+
+	// A burst against a saturated pool needs one more connection, not one per
+	// caller: the new connection has room for all of them.
+	const callers = 20
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			if _, err := pool.pickConn(); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	assert.Len(t, *pool.connsPtr.Load(), 2, "burst must grow the pool by one")
+}
+
+func TestHTTP2PoolClampsScalingMonitorInterval(t *testing.T) {
+	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {})
+
+	core, logs := observer.New(zap.DebugLevel)
+	cfg := defaultHTTP2PoolConfig()
+	cfg.scalingMonitorInterval = time.Millisecond
+	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.New(core))
+	require.NoError(t, err)
+	defer pool.Close()
+
+	assert.Equal(t, minHTTP2PoolScalingMonitorInterval, pool.cfg.scalingMonitorInterval)
+	assert.Equal(t, 1, logs.FilterMessageSnippet("clamping").Len(), "clamp must be logged")
+	assert.Equal(t, 1, logs.FilterMessage("http2 pool: resolved config").Len(), "resolved config must be logged at debug")
+}
+
+func TestHTTP2PoolLogsAtMaxConnectionsOnce(t *testing.T) {
+	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {})
+
+	core, logs := observer.New(zap.DebugLevel)
+	cfg := defaultHTTP2PoolConfig()
+	cfg.maxConcurrentStreams = 1
+	cfg.maxConns = 1
+	pool := newEmptyH2Pool(t, addr, newTransport, cfg, zap.New(core))
+	defer pool.Close()
+
+	c := pool.newConn()
+	pool.addConn(c)
+	c.incInflight()
+
+	for i := 0; i < 5; i++ {
+		_, err := pool.pickConn() // saturated and at max: falls back each time
+		require.NoError(t, err)
+	}
+	assert.Equal(t, 1, logs.FilterMessageSnippet("at max connections").Len())
 }
