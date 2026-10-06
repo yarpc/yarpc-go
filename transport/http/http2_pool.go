@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"go.uber.org/atomic"
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
@@ -33,70 +34,37 @@ import (
 
 var errNoConnsAvailable = yarpcerrors.UnavailableErrorf("http2 pool: no connections available")
 
-// http2PoolConfig controls how an http2Pool scales the number of HTTP/2
-// connections it maintains to a single peer.
-type http2PoolConfig struct {
-	// dynamicScalingEnabled gates all automatic scaling. When false the pool
-	// holds a single connection and never scales up or down, and the
-	// monitor loop is not started.
-	dynamicScalingEnabled  bool
-	minConns               int
-	maxConns               int
-	scaleUpThreshold       float64
-	scaleDownGap           float64
-	idleTimeout            time.Duration
-	scalingMonitorInterval time.Duration
-
-	// maxConcurrentStreams is the assumed HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS
-	// ceiling per pooled connection. A pooled *http2.Transport doesn't expose
-	// the peer's real negotiated value (unlike *http2.ClientConn.State()), so
-	// scaling decisions are made against this fixed assumption instead.
-	maxConcurrentStreams int32
-}
-
-// validate rejects configurations the pool cannot run with, mirroring the gRPC
-// pool's validateResolvedConnPool, plus the monitor interval that
-// time.NewTicker would otherwise panic on.
-func (c http2PoolConfig) validate() error {
-	if c.minConns < 0 {
-		return fmt.Errorf("http2 pool: minConns must be non-negative, got %d", c.minConns)
+// validateHTTP2PoolConfig rejects configurations the pool cannot run with,
+// mirroring the gRPC pool's validateResolvedConnPool, plus the monitor interval
+// that time.NewTicker would otherwise panic on. connpool.Config carries no
+// validation of its own.
+func validateHTTP2PoolConfig(c connpool.Config) error {
+	if c.MinConnections < 0 {
+		return fmt.Errorf("http2 pool: minConns must be non-negative, got %d", c.MinConnections)
 	}
-	if c.maxConns < c.minConns {
-		return fmt.Errorf("http2 pool: maxConns (%d) must be >= minConns (%d)", c.maxConns, c.minConns)
+	if c.MaxConnections < c.MinConnections {
+		return fmt.Errorf("http2 pool: maxConns (%d) must be >= minConns (%d)", c.MaxConnections, c.MinConnections)
 	}
-	if c.maxConns < 1 {
-		return fmt.Errorf("http2 pool: maxConns must be at least 1, got %d", c.maxConns)
+	if c.MaxConnections < 1 {
+		return fmt.Errorf("http2 pool: maxConns must be at least 1, got %d", c.MaxConnections)
 	}
-	if c.maxConcurrentStreams < 1 {
-		return fmt.Errorf("http2 pool: maxConcurrentStreams must be at least 1, got %d", c.maxConcurrentStreams)
+	if c.MaxConcurrentStreams < 1 {
+		return fmt.Errorf("http2 pool: maxConcurrentStreams must be at least 1, got %d", c.MaxConcurrentStreams)
 	}
-	if c.scaleUpThreshold <= 0 || c.scaleUpThreshold > 1 {
-		return fmt.Errorf("http2 pool: scaleUpThreshold must be in (0, 1], got %v", c.scaleUpThreshold)
+	if c.ScaleUpThreshold <= 0 || c.ScaleUpThreshold > 1 {
+		return fmt.Errorf("http2 pool: scaleUpThreshold must be in (0, 1], got %v", c.ScaleUpThreshold)
 	}
-	if c.scaleUpThreshold-c.scaleDownGap <= 0 {
+	if c.ScaleUpThreshold-c.ScaleDownGap <= 0 {
 		return fmt.Errorf("http2 pool: scaleUpThreshold (%.2f) minus scaleDownGap (%.2f) must be > 0",
-			c.scaleUpThreshold, c.scaleDownGap)
+			c.ScaleUpThreshold, c.ScaleDownGap)
 	}
-	if c.idleTimeout < 0 {
-		return fmt.Errorf("http2 pool: idleTimeout must be non-negative, got %v", c.idleTimeout)
+	if c.IdleTimeout < 0 {
+		return fmt.Errorf("http2 pool: idleTimeout must be non-negative, got %v", c.IdleTimeout)
 	}
-	if c.scalingMonitorInterval <= 0 {
-		return fmt.Errorf("http2 pool: scalingMonitorInterval must be positive, got %v", c.scalingMonitorInterval)
+	if c.ScalingMonitorInterval <= 0 {
+		return fmt.Errorf("http2 pool: scalingMonitorInterval must be positive, got %v", c.ScalingMonitorInterval)
 	}
 	return nil
-}
-
-func defaultHTTP2PoolConfig() http2PoolConfig {
-	return http2PoolConfig{
-		dynamicScalingEnabled:  defaultHTTP2PoolDynamicScalingEnabled,
-		minConns:               defaultHTTP2PoolMinConns,
-		maxConns:               defaultHTTP2PoolMaxConns,
-		scaleUpThreshold:       defaultHTTP2PoolScaleUpThreshold,
-		scaleDownGap:           defaultHTTP2PoolScaleDownGap,
-		idleTimeout:            defaultHTTP2PoolConnIdleTimeout,
-		scalingMonitorInterval: defaultHTTP2PoolScalingMonitorInterval,
-		maxConcurrentStreams:   defaultHTTP2PoolMaxConcurrentStreams,
-	}
 }
 
 // http2Pool maintains a set of *http2.Transport instances dedicated to a
@@ -113,7 +81,7 @@ func defaultHTTP2PoolConfig() http2PoolConfig {
 type http2Pool struct {
 	addr         string
 	newTransport func() *http2.Transport
-	cfg          http2PoolConfig
+	cfg          connpool.Config
 	logger       *zap.Logger
 
 	// connsPtr is an immutable slice, replaced via copy-on-write so reads
@@ -136,30 +104,33 @@ type http2Pool struct {
 }
 
 // newHTTP2Pool builds a pool for addr, or returns an error if cfg is invalid.
-func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg http2PoolConfig, logger *zap.Logger) (*http2Pool, error) {
-	if err := cfg.validate(); err != nil {
+// cfg.MaxConcurrentStreams is the assumed per-connection ceiling: a pooled
+// *http2.Transport doesn't expose the peer's real negotiated value (unlike
+// *http2.ClientConn.State()), so scaling decisions are made against it instead.
+func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg connpool.Config, logger *zap.Logger) (*http2Pool, error) {
+	if err := validateHTTP2PoolConfig(cfg); err != nil {
 		return nil, err
 	}
 	if logger == nil {
 		logger = zap.NewNop()
 	}
-	if cfg.scalingMonitorInterval < minHTTP2PoolScalingMonitorInterval {
+	if cfg.ScalingMonitorInterval < minHTTP2PoolScalingMonitorInterval {
 		logger.Warn("http2 pool: scalingMonitorInterval is below the minimum; clamping to avoid pool thrashing",
-			zap.Duration("configured", cfg.scalingMonitorInterval),
+			zap.Duration("configured", cfg.ScalingMonitorInterval),
 			zap.Duration("effective", minHTTP2PoolScalingMonitorInterval),
 			zap.String("peer", addr))
-		cfg.scalingMonitorInterval = minHTTP2PoolScalingMonitorInterval
+		cfg.ScalingMonitorInterval = minHTTP2PoolScalingMonitorInterval
 	}
 	logger.Debug("http2 pool: resolved config",
 		zap.String("peer", addr),
-		zap.Bool("dynamicScalingEnabled", cfg.dynamicScalingEnabled),
-		zap.Int("minConns", cfg.minConns),
-		zap.Int("maxConns", cfg.maxConns),
-		zap.Float64("scaleUpThreshold", cfg.scaleUpThreshold),
-		zap.Float64("scaleDownGap", cfg.scaleDownGap),
-		zap.Duration("idleTimeout", cfg.idleTimeout),
-		zap.Duration("scalingMonitorInterval", cfg.scalingMonitorInterval),
-		zap.Int32("maxConcurrentStreams", cfg.maxConcurrentStreams))
+		zap.Bool("dynamicScalingEnabled", cfg.DynamicScalingEnabled),
+		zap.Int("minConns", cfg.MinConnections),
+		zap.Int("maxConns", cfg.MaxConnections),
+		zap.Float64("scaleUpThreshold", cfg.ScaleUpThreshold),
+		zap.Float64("scaleDownGap", cfg.ScaleDownGap),
+		zap.Duration("idleTimeout", cfg.IdleTimeout),
+		zap.Duration("scalingMonitorInterval", cfg.ScalingMonitorInterval),
+		zap.Int32("maxConcurrentStreams", cfg.MaxConcurrentStreams))
 	p := &http2Pool{
 		addr:         addr,
 		newTransport: newTransport,
@@ -172,14 +143,14 @@ func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg http2Po
 	// Building a slot does no I/O (the Transport dials lazily on its first
 	// request), so the pool can safely start with its minimum size.
 	initial := 1
-	if cfg.dynamicScalingEnabled {
-		initial = cfg.minConns
+	if cfg.DynamicScalingEnabled {
+		initial = cfg.MinConnections
 	}
 	for i := 0; i < initial; i++ {
 		p.addConn(p.newConn())
 	}
 
-	if cfg.dynamicScalingEnabled {
+	if cfg.DynamicScalingEnabled {
 		p.monitorWG.Add(1)
 		go p.monitorLoop()
 	}
@@ -189,10 +160,10 @@ func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg http2Po
 // maxConnCount is the ceiling on pool size: maxConns when dynamic scaling is
 // enabled, otherwise the single fixed connection.
 func (p *http2Pool) maxConnCount() int {
-	if !p.cfg.dynamicScalingEnabled {
+	if !p.cfg.DynamicScalingEnabled {
 		return 1
 	}
-	return p.cfg.maxConns
+	return p.cfg.MaxConnections
 }
 
 // newConn creates a new pool slot. Unlike dialing a raw *http2.ClientConn,
@@ -226,7 +197,7 @@ func (p *http2Pool) pickConn() (*http2Conn, error) {
 		return nil, errNoConnsAvailable
 	}
 	conns := *p.connsPtr.Load()
-	maxPerConn := int(p.cfg.maxConcurrentStreams)
+	maxPerConn := int(p.cfg.MaxConcurrentStreams)
 
 	var best *http2Conn
 	for _, c := range conns {
@@ -278,7 +249,7 @@ func (p *http2Pool) growPool() (*http2Conn, error) {
 	}
 	defer p.scalingUp.Store(false)
 
-	max := int(p.cfg.maxConcurrentStreams)
+	max := int(p.cfg.MaxConcurrentStreams)
 	if fresh, err := leastLoaded(activeConns(*p.connsPtr.Load())); err == nil && fresh.streamsActive() < max {
 		return fresh, nil
 	}
@@ -374,11 +345,11 @@ func leastLoaded(conns []*http2Conn) (*http2Conn, error) {
 // stale check as scalingUp flips back to false between each near-instant
 // scale-up, growing the pool all the way to maxConns instead of by one.
 func (p *http2Pool) maybeScaleUp(least *http2Conn) {
-	max := p.cfg.maxConcurrentStreams
-	if p.closed.Load() || !p.cfg.dynamicScalingEnabled {
+	max := p.cfg.MaxConcurrentStreams
+	if p.closed.Load() || !p.cfg.DynamicScalingEnabled {
 		return
 	}
-	if float64(least.streamsActive()) < float64(max)*p.cfg.scaleUpThreshold {
+	if float64(least.streamsActive()) < float64(max)*p.cfg.ScaleUpThreshold {
 		return
 	}
 	if !p.scalingUp.CompareAndSwap(false, true) {
@@ -388,7 +359,7 @@ func (p *http2Pool) maybeScaleUp(least *http2Conn) {
 
 	conns := *p.connsPtr.Load()
 	if fresh, err := leastLoaded(activeConns(conns)); err == nil &&
-		float64(fresh.streamsActive()) < float64(max)*p.cfg.scaleUpThreshold {
+		float64(fresh.streamsActive()) < float64(max)*p.cfg.ScaleUpThreshold {
 		return
 	}
 
@@ -400,7 +371,7 @@ func (p *http2Pool) maybeScaleUp(least *http2Conn) {
 // connections that have stayed parked and idle.
 func (p *http2Pool) monitorLoop() {
 	defer p.monitorWG.Done()
-	ticker := time.NewTicker(p.cfg.scalingMonitorInterval)
+	ticker := time.NewTicker(p.cfg.ScalingMonitorInterval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -423,15 +394,15 @@ func (p *http2Pool) monitorLoop() {
 // maybeScaleUp would immediately re-activate the connection just parked.
 // That gap is what keeps the pool from flapping between sizes.
 func (p *http2Pool) maybeScaleDown() {
-	if !p.cfg.dynamicScalingEnabled {
+	if !p.cfg.DynamicScalingEnabled {
 		return
 	}
 	conns := activeConns(*p.connsPtr.Load())
-	if len(conns) <= p.cfg.minConns || len(conns) < 2 {
+	if len(conns) <= p.cfg.MinConnections || len(conns) < 2 {
 		return
 	}
 
-	maxPerConn := int(p.cfg.maxConcurrentStreams)
+	maxPerConn := int(p.cfg.MaxConcurrentStreams)
 
 	var totalActive int
 	for _, c := range conns {
@@ -439,7 +410,7 @@ func (p *http2Pool) maybeScaleDown() {
 	}
 
 	remainingCapacity := float64(maxPerConn * (len(conns) - 1))
-	scaleDownThreshold := p.cfg.scaleUpThreshold - p.cfg.scaleDownGap
+	scaleDownThreshold := p.cfg.ScaleUpThreshold - p.cfg.ScaleDownGap
 	if float64(totalActive) < remainingCapacity*scaleDownThreshold && conns[len(conns)-1].park() {
 		p.logger.Debug("http2 pool: parked connection",
 			zap.String("peer", p.addr), zap.Int("active", len(conns)-1), zap.Int("inflight", totalActive))
@@ -455,7 +426,7 @@ func (p *http2Pool) cleanupConns() {
 			continue
 		}
 		idleSince := c.idleSince()
-		if idleSince.IsZero() || time.Since(idleSince) <= p.cfg.idleTimeout {
+		if idleSince.IsZero() || time.Since(idleSince) <= p.cfg.IdleTimeout {
 			continue
 		}
 		c.closeIdle()

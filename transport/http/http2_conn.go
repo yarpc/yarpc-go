@@ -52,7 +52,7 @@ const (
 // by the caller around each request (the same workaround yarpc's grpc
 // transport uses for its own connection pool, since google.golang.org/grpc's
 // ClientConn has the identical blind spot), and the concurrency ceiling is a
-// fixed value from http2PoolConfig rather than one read off the wire.
+// fixed value from the pool's connpool.Config rather than one read off the wire.
 type http2Conn struct {
 	transport *http2.Transport
 	state     atomic.Int32
