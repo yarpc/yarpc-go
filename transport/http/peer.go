@@ -45,11 +45,17 @@ type httpPeer struct {
 	timer                 *time.Timer
 	innocentUntilUnixNano *atomic.Int64
 
+	// poolConfig resolves this peer's HTTP/2 pool tuning at every scaling
+	// decision: the startup snapshot (transport options, YAML, and the
+	// Dialer's OutboundConnectionPool override) overlaid by the live
+	// provider when one is set. It is the pool's Config function.
+	poolConfig *connpool.ConfigResolver
+
 	// h2Pool manages this peer's HTTP/2 connection(s): every httpPeer gets
 	// its own pool (rather than sharing one across peers) so that duplicate
 	// peers pointed at the same address end up with independent HTTP/2
-	// connections. The pool is pinned to exactly one connection today (see
-	// Transport.h2PoolConfig).
+	// connections. The pool scales between the configured min and max
+	// connections (see ClientConnectionPoolConfig).
 	//
 	// It is created lazily, on first use of h2Sender, rather than in
 	// newPeer: Pool.Start spawns a background teardown-watcher goroutine
@@ -72,7 +78,16 @@ type httpPeer struct {
 	h2Counted stdatomic.Bool
 }
 
+// newPeer creates a peer that uses the transport-wide pool config and the
+// transport's global live provider.
 func newPeer(addr string, t *Transport) *httpPeer {
+	return newPeerWithPool(addr, t, t.h2PoolConfig, t.h2PoolProvider)
+}
+
+// newPeerWithPool creates a peer whose HTTP/2 pool starts from startupPool,
+// which the caller has already validated, and is overlaid at runtime by
+// provider (which may be nil).
+func newPeerWithPool(addr string, t *Transport, startupPool connpool.Config, provider LiveConnectionPoolProvider) *httpPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -82,6 +97,18 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		<-timer.C
 	}
 
+	t.logger.Info("http2: connection pool config resolved",
+		zap.String("peer", addr),
+		zap.Bool("dynamicScalingEnabled", startupPool.DynamicScalingEnabled),
+		zap.Int("minConnections", startupPool.MinConnections),
+		zap.Int("maxConnections", startupPool.MaxConnections),
+		zap.Int32("maxConcurrentStreams", startupPool.MaxConcurrentStreams),
+		zap.Float64("scaleUpThreshold", startupPool.ScaleUpThreshold),
+		zap.Float64("scaleDownGap", startupPool.ScaleDownGap),
+		zap.Duration("idleTimeout", startupPool.IdleTimeout),
+		zap.Duration("scalingMonitorInterval", startupPool.ScalingMonitorInterval),
+	)
+
 	return &httpPeer{
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport:             t,
@@ -90,6 +117,7 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		released:              make(chan struct{}),
 		timer:                 timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
+		poolConfig:            connpool.NewConfigResolver(startupPool, provider.toOverrideFunc(), t.logger, "http2", addr),
 	}
 }
 
@@ -105,7 +133,7 @@ func (p *httpPeer) loadH2Pool() *connpool.Pool[*http2.ClientConn] {
 func (p *httpPeer) h2Sender() (sender, error) {
 	if pool := p.loadH2Pool(); pool != nil {
 		if w := pool.PickConn(); w != nil {
-			return &h2ConnSender{wrapper: w}, nil
+			return &h2ConnSender{wrapper: w, pool: pool}, nil
 		}
 	}
 
@@ -116,7 +144,7 @@ func (p *httpPeer) h2Sender() (sender, error) {
 	if pool == nil {
 		pool = connpool.NewPool(
 			context.Background(),
-			func() connpool.Config { return p.transport.h2PoolConfig },
+			p.poolConfig.Get,
 			func(ctx context.Context) (*http2.ClientConn, error) { return p.transport.dialH2Conn(ctx, p.addr) },
 			p.transport.logger,
 			p.addr,
@@ -124,30 +152,52 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		)
 		pool.LogPrefix = "http2"
 		pool.OnConnAdded = p.watchH2Conn
-		// initialConnCount is 0, not 1: unlike gRPC's Dial, a raw HTTP/2
-		// dial can fail synchronously on a genuinely down destination, and
-		// Pool.Start cancels (permanently disables) the pool if any initial
-		// dial fails -- eagerly dialing here would take the peer's HTTP/2
-		// path out permanently instead of retrying on the next request.
-		// startMonitor is false: with dynamic scaling off the monitor would
-		// only add a per-peer background ticker, and watchH2Conn already
-		// evicts broken connections itself. This call cannot itself fail
-		// with count 0.
+		// initialConnCount is 0, not the pool's minimum: unlike gRPC's Dial,
+		// a raw HTTP/2 dial can fail synchronously on a genuinely down
+		// destination, and Pool.Start cancels (permanently disables) the pool
+		// if any initial dial fails -- eagerly dialing here would take the
+		// peer's HTTP/2 path out permanently instead of retrying on the next
+		// request. The first connection is dialed below instead, and the
+		// scaling monitor (started once it exists) fills the pool up to
+		// minConnections. startMonitor is false for the same reason: the
+		// monitor's immediate first pass would otherwise race the first dial
+		// below and could dial a duplicate. This call cannot itself fail with
+		// count 0.
 		_ = pool.Start(0, false)
 		p.h2Pool.Store(pool)
+		// Release may have run before the pool was stored; it would have
+		// found no pool to stop, and nothing else ever would.
+		select {
+		case <-p.released:
+			pool.Stop()
+		default:
+		}
 	}
 
 	// Re-check: another goroutine may have dialed the first connection while
 	// we were waiting for the lock.
 	if w := pool.PickConn(); w != nil {
-		return &h2ConnSender{wrapper: w}, nil
+		return &h2ConnSender{wrapper: w, pool: pool}, nil
 	}
 	w, err := pool.AddConn()
 	if err != nil {
 		return nil, err
 	}
 	p.countH2ActivePeer()
-	return &h2ConnSender{wrapper: w}, nil
+	p.startH2Monitor(pool)
+	return &h2ConnSender{wrapper: w, pool: pool}, nil
+}
+
+// startH2Monitor starts the pool's scaling monitor (scale-down, idle cleanup,
+// and min-fill) once the pool has a connection. The monitor runs when scaling
+// is on at startup, or when a live provider may turn it on later (and, if live
+// config turns scaling off, to wind extra connections down). With neither, it
+// would only add an idle per-peer ticker: watchH2Conn already evicts broken
+// connections itself.
+func (p *httpPeer) startH2Monitor(pool *connpool.Pool[*http2.ClientConn]) {
+	if p.poolConfig.Startup().DynamicScalingEnabled || p.poolConfig.HasProvider() {
+		pool.StartMonitor()
+	}
 }
 
 // countH2ActivePeer counts this peer in the h2ActivePeers gauge once its first

@@ -49,12 +49,18 @@ var (
 	// requests. http2.ClientConn has no blocking wait-for-state-change
 	// primitive (unlike grpc.ClientConn), so health is polled instead.
 	defaultH2ConnHealthPollInterval = 5 * time.Second
-	// defaultH2PoolConfig pins every peer's HTTP/2 connection pool to
-	// exactly one connection.
+	// defaultH2PoolConfig is the connection pool every peer of an HTTP/2
+	// outbound starts from. The values match the gRPC transport's defaults
+	// so both transports scale connections the same way out of the box.
 	defaultH2PoolConfig = connpool.Config{
-		MinConnections: 1,
-		MaxConnections: 1,
-		IdleTimeout:    defaultIdleConnTimeout,
+		DynamicScalingEnabled:  true,
+		MaxConcurrentStreams:   100,
+		ScaleUpThreshold:       0.7,
+		ScaleDownGap:           0.1,
+		MinConnections:         1,
+		MaxConnections:         50,
+		IdleTimeout:            5 * time.Minute,
+		ScalingMonitorInterval: 30 * time.Second,
 	}
 )
 

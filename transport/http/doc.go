@@ -68,6 +68,24 @@
 // transport with IsolateConnectionsPerOutbound(true) to give each of those
 // outbounds its own peers, as above.
 //
+// # HTTP/2 Connection Pool
+//
+// Each peer of an outbound that uses UseHTTP2 owns a pool of HTTP/2
+// connections instead of a single one, because a connection carries at most
+// SETTINGS_MAX_CONCURRENT_STREAMS requests at a time. The pool dials its first
+// connection on the peer's first request, opens another when every connection
+// reaches ScaleUpThreshold of MaxConcurrentStreams, and drains and closes
+// connections again as load falls, between MinConnections and MaxConnections.
+// It is tuned with the MaxConcurrentStreams, ScaleUpThreshold, ScaleDownGap,
+// MinConnections, MaxConnections, ConnIdleTimeout, ScalingMonitorInterval and
+// WithDynamicConnectionScaling options, with the clientConnectionPool section
+// of TransportConfig and OutboundConfig, and at runtime with
+// WithGlobalLiveConnectionPoolProvider. A pool is never shared between peers,
+// so use an isolated Dialer (above) when two outbounds to one address must
+// not share connections; an outbound with its own clientConnectionPool section
+// or live provider is isolated automatically. These behave
+// the same as the options of the same name in the gRPC transport.
+//
 // # Configuration
 //
 // An HTTP Transport may be configured using YARPC's configuration system. See
