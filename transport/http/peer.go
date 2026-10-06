@@ -64,6 +64,12 @@ type httpPeer struct {
 	// pool or dial their own connection, exceeding the pool's pinned
 	// single-connection invariant.
 	h2DialMu sync.Mutex
+
+	// h2Counted records whether this peer is currently counted in the
+	// transport's h2ActivePeers gauge (set after its first successful dial,
+	// cleared by Release), so the gauge is incremented and decremented at
+	// most once per peer.
+	h2Counted stdatomic.Bool
 }
 
 func newPeer(addr string, t *Transport) *httpPeer {
@@ -140,7 +146,32 @@ func (p *httpPeer) h2Sender() (sender, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.countH2ActivePeer()
 	return &h2ConnSender{wrapper: w}, nil
+}
+
+// countH2ActivePeer counts this peer in the h2ActivePeers gauge once its first
+// connection has been dialed successfully, so a peer whose dials keep failing
+// (a pool with no connection) is not reported as holding a dedicated
+// connection. Release removes the count again.
+func (p *httpPeer) countH2ActivePeer() {
+	if !p.h2Counted.CompareAndSwap(false, true) {
+		return
+	}
+	p.transport.h2ActivePeers.Inc()
+	// Release may have run between the dial and the count above; it would
+	// have seen h2Counted unset and skipped the decrement, so undo the count.
+	select {
+	case <-p.released:
+		p.uncountH2ActivePeer()
+	default:
+	}
+}
+
+func (p *httpPeer) uncountH2ActivePeer() {
+	if p.h2Counted.CompareAndSwap(true, false) {
+		p.transport.h2ActivePeers.Dec()
+	}
 }
 
 // watchH2Conn is h2Pool's OnConnAdded callback. http2.ClientConn has no
@@ -274,6 +305,7 @@ func (p *httpPeer) Release() {
 	if pool := p.loadH2Pool(); pool != nil {
 		pool.Stop()
 	}
+	p.uncountH2ActivePeer()
 }
 
 func (p *httpPeer) MaintainConn() {

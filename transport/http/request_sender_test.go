@@ -615,6 +615,23 @@ func TestH2PeerSenderBackoffEndsWithRequestContext(t *testing.T) {
 	assert.Less(t, time.Since(start), 10*time.Second, "must not wait out the backoff")
 }
 
+// TestH2PeerSenderDefaultBackoff covers the production backoff (no injected
+// function): the second retry waits for h2RetryBackoff, which the request's
+// short deadline cuts off.
+func TestH2PeerSenderDefaultBackoff(t *testing.T) {
+	server := newH2CGoAwayServer(t, -1)
+	p := newBackoffTestPeer(t, server.addr())
+	sender := &h2PeerSender{peer: p}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 300*testtime.Millisecond)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+server.addr(), nil)
+	require.NoError(t, err)
+
+	_, err = sender.Do(req)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+}
+
 func TestH2RetryBackoff(t *testing.T) {
 	// 1s, 2s, 4s, ... each with up to 10% jitter.
 	for retry, base := range map[int]time.Duration{1: time.Second, 2: 2 * time.Second, 3: 4 * time.Second, 5: 16 * time.Second} {
