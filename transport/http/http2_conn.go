@@ -39,6 +39,10 @@ const (
 	// picked for new requests, but stay in the pool and are re-activated when
 	// the pool needs to scale back up. Requests already in flight on a parked
 	// connection are left to finish.
+	//
+	// Parked corresponds to gRPC's draining + idle states in the gRPC
+	// connection pool. It is not called draining here because the http2 pool
+	// reserves that word for a peer being removed, when the pool is closed.
 	http2ConnParked
 )
 

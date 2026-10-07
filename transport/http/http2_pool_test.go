@@ -28,12 +28,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"runtime"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -344,6 +348,8 @@ func TestHTTP2PoolConfigValidation(t *testing.T) {
 		{"zero maxConcurrentStreams", func(c *connpool.Config) { c.MaxConcurrentStreams = 0 }, "maxConcurrentStreams must be at least 1"},
 		{"zero scaleUpThreshold", func(c *connpool.Config) { c.ScaleUpThreshold = 0 }, "scaleUpThreshold must be in (0, 1]"},
 		{"scaleUpThreshold above 1", func(c *connpool.Config) { c.ScaleUpThreshold = 1.1 }, "scaleUpThreshold must be in (0, 1]"},
+		{"negative scaleDownGap", func(c *connpool.Config) { c.ScaleDownGap = -0.1 }, "scaleDownGap must be non-negative"},
+		{"zero scaleDownGap is valid", func(c *connpool.Config) { c.ScaleDownGap = 0 }, ""},
 		{"gap eliminates scale-down threshold", func(c *connpool.Config) { c.ScaleUpThreshold = 0.5; c.ScaleDownGap = 0.5 }, "minus scaleDownGap"},
 		{"negative idleTimeout", func(c *connpool.Config) { c.IdleTimeout = -time.Second }, "idleTimeout must be non-negative"},
 		{"zero scalingMonitorInterval", func(c *connpool.Config) { c.ScalingMonitorInterval = 0 }, "scalingMonitorInterval must be positive"},
@@ -579,6 +585,32 @@ func TestHTTP2PoolCloseIsIdempotentAndWaitsForMonitor(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("monitor goroutine still running after Close")
 	}
+}
+
+// monitorLoopRunning reports whether any http2Pool.monitorLoop goroutine is alive.
+func monitorLoopRunning() bool {
+	buf := make([]byte, 1<<20)
+	buf = buf[:runtime.Stack(buf, true)]
+	return strings.Contains(string(buf), "(*http2Pool).monitorLoop")
+}
+
+// Close must not leave its monitor goroutine behind. The pool never dials here,
+// so the monitor is the only goroutine it starts; anything new after Close is
+// a leak.
+func TestHTTP2PoolCloseStopsMonitorLoop(t *testing.T) {
+	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {})
+
+	before := goleak.IgnoreCurrent()
+	pool, err := newHTTP2Pool(addr, newTransport, baseH2ScalingPoolConfig, zap.NewNop())
+	require.NoError(t, err)
+
+	// Control: the check below can see a running monitor, so a pass means the
+	// monitor is gone rather than that the check cannot find it.
+	waitForCondition(t, time.Second, monitorLoopRunning)
+
+	pool.Close()
+	goleak.VerifyNone(t, before)
+	assert.False(t, monitorLoopRunning(), "monitorLoop still running after Close")
 }
 
 func TestHTTP2PoolConcurrentPickScaleRace(t *testing.T) {
@@ -864,4 +896,126 @@ func TestHTTP2PoolLogsAtMaxConnectionsOnce(t *testing.T) {
 		require.NoError(t, err)
 	}
 	assert.Equal(t, 1, logs.FilterMessageSnippet("at max connections").Len())
+}
+
+func TestHTTP2PoolPickConnExcludesParkedConn(t *testing.T) {
+	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {})
+
+	pool := newEmptyH2Pool(t, addr, newTransport, baseH2ScalingPoolConfig, zap.NewNop())
+	defer pool.Close()
+
+	active := pool.newConn()
+	parked := pool.newConn()
+	pool.addConn(active)
+	pool.addConn(parked)
+	active.incInflight()
+	active.incInflight()
+	require.True(t, parked.park())
+
+	// parked has fewer streams, but a parked connection is never picked while
+	// an active one has room, however lightly the active one is loaded.
+	for i := 0; i < 5; i++ {
+		picked, err := pool.pickConn()
+		require.NoError(t, err)
+		assert.Same(t, active, picked)
+		picked.decInflight()
+	}
+	assert.True(t, parked.parked(), "picking must not re-activate a parked connection that is not needed")
+	assert.Zero(t, parked.streamsActive())
+}
+
+// Unlike TestHTTP2PoolConcurrentPickScaleRace, the callers here keep the slot
+// they picked, so connections actually reach saturation and the fallback path
+// runs under contention.
+func TestHTTP2PoolConcurrentPickHoldingSlotsRace(t *testing.T) {
+	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {})
+
+	cfg := baseH2ScalingPoolConfig
+	cfg.MinConnections = 1
+	cfg.MaxConnections = 3
+	cfg.MaxConcurrentStreams = 2
+	pool, err := newHTTP2Pool(addr, newTransport, cfg, zap.NewNop())
+	require.NoError(t, err)
+	defer pool.Close()
+
+	// 24 callers against a pool that holds at most 3*2 streams without queuing.
+	const callers = 24
+	picked := make([]*http2Conn, callers)
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			c, err := pool.pickConn()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			picked[i] = c
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+
+	conns := *pool.connsPtr.Load()
+	assert.LessOrEqual(t, len(conns), cfg.MaxConnections, "the pool must never exceed maxConns")
+	var total int
+	for _, c := range conns {
+		total += c.streamsActive()
+	}
+	assert.Equal(t, callers, total, "every pick must reserve exactly one slot")
+
+	for _, c := range picked {
+		if c != nil {
+			c.decInflight()
+		}
+	}
+	for _, c := range *pool.connsPtr.Load() {
+		assert.Zero(t, c.streamsActive(), "every reserved slot must be released")
+	}
+}
+
+// At maxConns there is nothing to add, so the request path must not build a
+// *http2.Transport it is going to throw away.
+func TestHTTP2PoolAtMaxConnsDoesNotBuildTransports(t *testing.T) {
+	tests := []struct {
+		desc       string
+		maxStreams int32
+		inflight   int
+	}{
+		{"saturated: growPool path", 1, 1},
+		{"above scale-up threshold: maybeScaleUp path", 10, 8},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {})
+
+			var built atomic.Int32
+			counting := func() *http2.Transport {
+				built.Add(1)
+				return newTransport()
+			}
+			cfg := baseH2ScalingPoolConfig
+			cfg.MaxConcurrentStreams = tt.maxStreams
+			cfg.MaxConnections = 1
+			pool := newEmptyH2Pool(t, addr, counting, cfg, zap.NewNop())
+			defer pool.Close()
+
+			c := pool.newConn()
+			pool.addConn(c)
+			for i := 0; i < tt.inflight; i++ {
+				c.incInflight()
+			}
+
+			before := built.Load()
+			for i := 0; i < 20; i++ {
+				_, err := pool.pickConn()
+				require.NoError(t, err)
+			}
+			assert.Equal(t, before, built.Load(), "no Transport may be built once the pool is at maxConns")
+			assert.Len(t, *pool.connsPtr.Load(), 1)
+		})
+	}
 }

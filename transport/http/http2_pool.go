@@ -54,6 +54,12 @@ func validateHTTP2PoolConfig(c connpool.Config) error {
 	if c.ScaleUpThreshold <= 0 || c.ScaleUpThreshold > 1 {
 		return fmt.Errorf("http2 pool: scaleUpThreshold must be in (0, 1], got %v", c.ScaleUpThreshold)
 	}
+	if c.ScaleDownGap < 0 {
+		// A negative gap puts the scale-down threshold above the scale-up one,
+		// so the pool would park a connection and re-activate it on the next
+		// request, every monitor tick.
+		return fmt.Errorf("http2 pool: scaleDownGap must be non-negative, got %v", c.ScaleDownGap)
+	}
 	if c.ScaleUpThreshold-c.ScaleDownGap <= 0 {
 		return fmt.Errorf("http2 pool: scaleUpThreshold (%.2f) minus scaleDownGap (%.2f) must be > 0",
 			c.ScaleUpThreshold, c.ScaleDownGap)
@@ -270,12 +276,17 @@ func (p *http2Pool) growOne() *http2Conn {
 		p.logger.Debug("http2 pool: re-activated parked connection", zap.String("peer", p.addr))
 		return c
 	}
+	// Check for room before building the connection, so a request that finds
+	// the pool at its maximum does not build a Transport just to discard it.
+	// addConnBelowMax stays the authoritative check, since the pool can still
+	// change between this one and the add.
+	if len(*p.connsPtr.Load()) >= p.maxConnCount() {
+		p.logAtMax()
+		return nil
+	}
 	c := p.newConn()
 	if !p.addConnBelowMax(c) {
-		if p.atMaxLogged.CompareAndSwap(false, true) {
-			p.logger.Info("http2 pool: cannot scale up; at max connections",
-				zap.String("peer", p.addr), zap.Int("maxConns", p.maxConnCount()))
-		}
+		p.logAtMax()
 		return nil
 	}
 	if p.closed.Load() {
@@ -287,6 +298,15 @@ func (p *http2Pool) growOne() *http2Conn {
 	p.logger.Debug("http2 pool: added connection",
 		zap.String("peer", p.addr), zap.Int("conns", len(*p.connsPtr.Load())))
 	return c
+}
+
+// logAtMax logs once that the pool cannot grow, like the gRPC pool, since the
+// condition is hit on the request path.
+func (p *http2Pool) logAtMax() {
+	if p.atMaxLogged.CompareAndSwap(false, true) {
+		p.logger.Info("http2 pool: cannot scale up; at max connections",
+			zap.String("peer", p.addr), zap.Int("maxConns", p.maxConnCount()))
+	}
 }
 
 // unparkConn re-activates the most recently parked connection and returns it,
