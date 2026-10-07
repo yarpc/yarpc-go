@@ -57,6 +57,7 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/peer/roundrobin"
 	"go.uber.org/yarpc/pkg/procedure"
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap/zaptest"
@@ -1441,7 +1442,7 @@ func TestPeerChurnGaugesZeroAfterPeerRemoval(t *testing.T) {
 	require.NoError(t, err)
 
 	// Active connections gauge must be non-zero (at least 1 connection up).
-	gauges, _ := poolMetricSnapshot(trans.metrics)
+	gauges, _ := poolMetricSnapshot(t, root)
 	assert.Greater(t, gauges["conn_pool_active_connections"], int64(0),
 		"active connections must be non-zero while peer is retained")
 
@@ -1451,7 +1452,7 @@ func TestPeerChurnGaugesZeroAfterPeerRemoval(t *testing.T) {
 
 	// Wait for the async cleanup goroutine and peer stop to complete.
 	require.Eventually(t, func() bool {
-		gauges, _ := poolMetricSnapshot(trans.metrics)
+		gauges, _ := poolMetricSnapshot(t, root)
 		return gauges["conn_pool_active_connections"] == 0 &&
 			gauges["conn_pool_draining_connections"] == 0 &&
 			gauges["conn_pool_idle_connections"] == 0
@@ -1466,7 +1467,7 @@ func TestPeerChurnGaugesZeroAfterPeerRemoval(t *testing.T) {
 	_, err = client.GetValue(ctx2, &examplepb.GetValueRequest{Key: "k"})
 	require.NoError(t, err)
 
-	gauges, _ = poolMetricSnapshot(trans.metrics)
+	gauges, _ = poolMetricSnapshot(t, root)
 	assert.Greater(t, gauges["conn_pool_active_connections"], int64(0),
 		"active connections must recover after peer is re-added")
 }
@@ -1582,9 +1583,10 @@ func TestYARPCErrorsConverted(t *testing.T) {
 // --- connection pool integration tests ---
 
 // poolMetricSnapshot reads connection-pool gauges and counters with atomic
-// Load so tests can sample them while pool goroutines are still running.
-func poolMetricSnapshot(m *connPoolMetrics) (gauges, counters map[string]int64) {
-	return m.loadedGauges(), m.loadedCounters()
+// loads (via the Prometheus handler) so tests can sample them while pool
+// goroutines are still running; root.Snapshot() would race.
+func poolMetricSnapshot(t testing.TB, root *metrics.Root) (gauges, counters map[string]int64) {
+	return poolMetricValues(t, root)
 }
 
 // TestConnectionPoolMinConnectionsAtStartup verifies the pool is pre-warmed
@@ -1601,7 +1603,7 @@ func TestConnectionPoolMinConnectionsAtStartup(t *testing.T) {
 		},
 	}
 	te.do(t, func(t *testing.T, e *testEnv) {
-		gauges, _ := poolMetricSnapshot(e.Transport.metrics)
+		gauges, _ := poolMetricSnapshot(t, root)
 		assert.Equal(t, int64(2), gauges["conn_pool_active_connections"],
 			"pool should be pre-warmed to minConnections")
 	})
@@ -1626,7 +1628,7 @@ func TestConnectionPoolScaleUpOnLoad(t *testing.T) {
 		require.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
 
 		assert.Eventually(t, func() bool {
-			_, counters := poolMetricSnapshot(e.Transport.metrics)
+			_, counters := poolMetricSnapshot(t, root)
 			return counters["conn_pool_scale_up_total"] >= 1
 		}, 3*time.Second, 10*time.Millisecond,
 			"conn_pool_scale_up_total should increment after load exceeds threshold")
@@ -1655,12 +1657,12 @@ func TestConnectionPoolMaxConnectionsCapRespected(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Eventually(t, func() bool {
-			_, counters := poolMetricSnapshot(e.Transport.metrics)
+			_, counters := poolMetricSnapshot(t, root)
 			return counters["conn_pool_scale_up_total"] == 0
 		}, 2*time.Second, 10*time.Millisecond,
 			"scale-up must not dial when MaxConnections is already reached")
 
-		gauges, _ := poolMetricSnapshot(e.Transport.metrics)
+		gauges, _ := poolMetricSnapshot(t, root)
 		assert.Equal(t, int64(1), gauges["conn_pool_active_connections"])
 	})
 }
@@ -1692,15 +1694,17 @@ func TestConnectionPoolScaleDown(t *testing.T) {
 		p := apiPeer.(*grpcPeer)
 
 		// Grow the pool to 3 connections (minConnections=1 so scale-down is allowed).
-		require.NoError(t, p.addConn())
-		require.NoError(t, p.addConn())
+		_, err = p.pool.AddConn()
+		require.NoError(t, err)
+		_, err = p.pool.AddConn()
+		require.NoError(t, err)
 
 		// With 3 active connections, 0 total streams, and
 		// capacityAfterDrain = threshold*(3-1) = 80*2 = 160 > 0,
 		// maybeScaleDown must drain the most-loaded connection.
-		p.evaluateScaling()
+		p.pool.EvaluateScaling()
 
-		gauges, counters := poolMetricSnapshot(e.Transport.metrics)
+		gauges, counters := poolMetricSnapshot(t, root)
 		assert.Equal(t, int64(1), counters["conn_pool_scale_down_total"],
 			"scale-down counter should increment")
 		assert.Equal(t, int64(2), gauges["conn_pool_active_connections"])
@@ -1733,23 +1737,31 @@ func TestConnectionPoolIdleReactivation(t *testing.T) {
 		p := apiPeer.(*grpcPeer)
 
 		// Mark the initial connection as idle (live context, so reactivation is allowed).
-		p.loadConns()[0].setState(connStateIdle)
+		idleConn := p.pool.LoadConns()[0]
+		require.True(t, idleConn.TransitionState(connpool.StateActive, connpool.StateIdle))
 
 		// tryScaleUp should reactivate the idle conn instead of dialling.
-		overBudget := makeConn(connStateActive, 85)
+		// overBudget is a second, real pool connection whose stream count we
+		// pump up synthetically purely to trigger tryScaleUp's threshold
+		// check -- tryScaleUp only reads its stream count.
+		overBudget, err := p.pool.AddConn()
+		require.NoError(t, err)
+		for i := 0; i < 85; i++ {
+			overBudget.IncStreamCount()
+		}
 		p.tryScaleUp(overBudget)
 
 		require.Eventually(t, func() bool {
-			return atomic.LoadInt32(&p.isScaling) == 0
+			return idleConn.GetState() == connpool.StateActive
 		}, 2*time.Second, 10*time.Millisecond)
 
-		_, counters := poolMetricSnapshot(e.Transport.metrics)
+		_, counters := poolMetricSnapshot(t, root)
 		assert.Equal(t, int64(1), counters["conn_pool_idle_reactivation_total"],
 			"idle reactivation counter should increment")
 		assert.Equal(t, int64(0), counters["conn_pool_scale_up_total"],
 			"no new dial should happen when an idle conn is available")
 
-		assert.Equal(t, connStateActive, p.loadConns()[0].getState(),
+		assert.Equal(t, connpool.StateActive, idleConn.GetState(),
 			"formerly idle conn should be active after reactivation")
 	})
 }
@@ -1787,8 +1799,8 @@ func TestConnectionPoolNoActiveConnectionsReturnsUnavailable(t *testing.T) {
 		// monitorConnWrapper goroutines remain blocked in WaitForStateChange,
 		// so the YARPC peer status stays Available — Choose will still return
 		// this peer, but pickConn() will find no active connections.
-		for _, c := range p.loadConns() {
-			c.setState(connStateDraining)
+		for _, c := range p.pool.LoadConns() {
+			c.TransitionState(connpool.StateActive, connpool.StateDraining)
 		}
 
 		err = e.SetValueYARPC(ctx, "foo", "bar")

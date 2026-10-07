@@ -1032,12 +1032,12 @@ func TestTransportSpec(t *testing.T) {
 					if wantOutbound.PoolMaxConnections > 0 {
 						gp, ok := peer.(*grpcPeer)
 						require.True(t, ok, "expected *grpcPeer, got %T", peer)
-						assert.Equal(t, wantOutbound.PoolMaxConnections, gp.startupPool.maxConnections)
+						assert.Equal(t, wantOutbound.PoolMaxConnections, gp.startupPool.MaxConnections)
 					}
 					if wantOutbound.PoolDynamicScaling != nil {
 						gp, ok := peer.(*grpcPeer)
 						require.True(t, ok, "expected *grpcPeer, got %T", peer)
-						assert.Equal(t, *wantOutbound.PoolDynamicScaling, gp.startupPool.dynamicScalingEnabled)
+						assert.Equal(t, *wantOutbound.PoolDynamicScaling, gp.startupPool.DynamicScalingEnabled)
 					}
 				}
 			}
@@ -1086,13 +1086,13 @@ func TestContextDialerOptionUsage(t *testing.T) {
 	require.True(t, ok, "expected a gRPC peer")
 
 	for {
-		state := grpcPeer.loadConns()[0].clientConn.GetState()
+		state := grpcPeer.pool.LoadConns()[0].Conn.GetState()
 		if state == connectivity.Ready {
 			break
 		}
-		grpcPeer.loadConns()[0].clientConn.WaitForStateChange(ctx, state)
+		grpcPeer.pool.LoadConns()[0].Conn.WaitForStateChange(ctx, state)
 	}
-	require.Equal(t, connectivity.Ready, grpcPeer.loadConns()[0].clientConn.GetState(), "expected gRPC connection in Ready state")
+	require.Equal(t, connectivity.Ready, grpcPeer.pool.LoadConns()[0].Conn.GetState(), "expected gRPC connection in Ready state")
 	require.Equal(t, 1, dialContextInvoked, "counter should increment by one from dialer invocation")
 }
 
@@ -1156,8 +1156,8 @@ func TestOutboundYAMLClientConnectionPoolMixed(t *testing.T) {
 	require.True(t, ok)
 	sharedGP, ok := sharedPeer.(*grpcPeer)
 	require.True(t, ok)
-	assert.Equal(t, 9, tunedGP.startupPool.maxConnections)
-	assert.Equal(t, 5, sharedGP.startupPool.maxConnections)
+	assert.Equal(t, 9, tunedGP.startupPool.MaxConnections)
+	assert.Equal(t, 5, sharedGP.startupPool.MaxConnections)
 
 	tunedDialer, ok := tunedSingle.Transport().(*Dialer)
 	require.True(t, ok)
@@ -1256,8 +1256,8 @@ func TestWithOutboundLiveConnectionPoolProvider_YAMLOutbounds(t *testing.T) {
 	require.True(t, ok)
 	sharedGP, ok := sharedPeer.(*grpcPeer)
 	require.True(t, ok)
-	assert.Equal(t, 11, tunedGP.livePoolCfg().maxConnections, "outbound provider replaces global")
-	assert.Equal(t, 7, sharedGP.livePoolCfg().maxConnections, "nil return keeps global")
+	assert.Equal(t, 11, tunedGP.livePoolCfg().MaxConnections, "outbound provider replaces global")
+	assert.Equal(t, 7, sharedGP.livePoolCfg().MaxConnections, "nil return keeps global")
 }
 
 func TestWithOutboundLiveConnectionPoolProvider_UsesOutboundKey(t *testing.T) {
