@@ -27,6 +27,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
@@ -722,12 +723,9 @@ func httpGet(t *testing.T, url string) (*http.Response, string, error) {
 // HTTP/2 cleartext (h2c) connection, then drops every server-side connection
 // the moment Stop returns, as the process exiting would.
 //
-// BUG: Stop does not wait for h2c connections. h2c.NewHandler hijacks them,
-// and http.Server.Shutdown neither waits for hijacked connections nor for the
-// HTTP/2 shutdown hook that sends GOAWAY, which it runs in a goroutine. Stop
-// therefore returns with the call still in flight, the GOAWAY races the
-// process exit and often loses, and the client sees its connection drop under
-// a request the server never answered.
+// Stop must hold the contract grpc.Server.GracefulStop provides gRPC
+// inbounds: deliver a GOAWAY and let in-flight calls complete before it
+// returns, since nothing still owed to the client survives the exit.
 func TestInboundH2CGracefulShutdown(t *testing.T) {
 	conns := &serverConns{}
 	inbound, h := startBlockingInbound(t, conns.record())
@@ -737,42 +735,54 @@ func TestInboundH2CGracefulShutdown(t *testing.T) {
 	c.OpenStream(t, 1, "/", h2cRequestHeaders("block"), []byte("payload"))
 	h.awaitEntered(t)
 
+	var seq, stopSeq atomic.Int64
 	stopErr := make(chan error, 1)
-	go func() { stopErr <- inbound.Stop() }()
+	go func() {
+		err := inbound.Stop()
+		stopSeq.Store(seq.Inc())
+		stopErr <- err
+	}()
+
+	frames := c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)
+	goAwaySeq := seq.Inc()
+	goAway := frames[len(frames)-1]
+	assert.Equal(t, http2.ErrCodeNo, goAway.ErrCode, "graceful shutdown must use NO_ERROR")
+	assert.GreaterOrEqual(t, goAway.LastStreamID, uint32(1), "GOAWAY must cover in-flight stream 1")
+
+	releaseSeq := seq.Inc()
+	h.releaseAll()
+	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.StreamDone(1))...)
+	res := http2test.ResponseOn(frames, 1)
+	require.False(t, res.Reset, "in-flight stream 1 was reset with %v instead of completing", res.ResetCode)
+	assert.Equal(t, "200", res.Headers[":status"], "unexpected status for in-flight stream 1")
+	assert.Equal(t, "payload", string(res.Body), "unexpected body for in-flight stream 1")
+
+	// The client is done: closing its side lets the server tear down the
+	// connection without waiting out its post-GOAWAY grace period.
+	require.NoError(t, c.Close())
+
 	select {
 	case err := <-stopErr:
-		require.NoError(t, err)
+		require.NoError(t, err, "Stop must succeed once connections have drained")
 	case <-time.After(5 * testtime.Second):
-		require.FailNow(t, "expected Stop to return without waiting for the in-flight h2c call")
+		require.FailNow(t, "Stop did not return after the connection drained")
 	}
 	conns.closeAll()
-
-	frames := c.ReadUntilClosed(t, 5*testtime.Second)
-	assert.False(t, http2test.ResponseOn(frames, 1).Complete,
-		"expected in-flight stream 1 to be lost when the process exits after Stop")
-	goAways := 0
-	for _, f := range frames {
-		if http2test.IsGoAway(f) {
-			goAways++
-		}
-	}
-	// Not asserted: whether the GOAWAY won the race against the exit is
-	// nondeterministic, which is itself part of the bug.
-	t.Logf("GOAWAY frames delivered before the connection dropped: %d", goAways)
+	assert.Less(t, goAwaySeq, stopSeq.Load(),
+		"Stop returned before the client observed a GOAWAY, which exiting the process would lose")
+	assert.Less(t, releaseSeq, stopSeq.Load(),
+		"Stop returned with stream 1 still in flight, which exiting the process would lose")
 
 	_, err := net.Dial("tcp", addr)
 	assert.Error(t, err, "new connections must be refused once Stop returns")
 }
 
 // TestInboundH2CStopWithWedgedHandler stops an inbound whose h2c connection
-// has a call that never completes.
-//
-// BUG: Stop returns immediately instead of waiting up to ShutdownTimeout, and
-// leaves the connection open and served behind it. The GOAWAY does arrive
-// eventually, sent by the shutdown hook that Stop does not wait for: the
-// HTTP/2 shutdown wiring exists, its synchronization with Stop does not.
+// has a call that never completes: Stop must neither give up on it before
+// ShutdownTimeout nor wait past it, and must close the connection rather than
+// leave it behind.
 func TestInboundH2CStopWithWedgedHandler(t *testing.T) {
-	timeout := time.Minute
+	timeout := 200 * testtime.Millisecond
 	inbound, h := startBlockingInbound(t, ShutdownTimeout(timeout))
 
 	c := http2test.DialRawH2C(t, inbound.Addr().String())
@@ -780,17 +790,24 @@ func TestInboundH2CStopWithWedgedHandler(t *testing.T) {
 	h.awaitEntered(t)
 
 	start := time.Now()
-	require.NoError(t, inbound.Stop())
-	assert.Less(t, time.Since(start), timeout,
-		"expected Stop to return without waiting for ShutdownTimeout")
+	stopErr := make(chan error, 1)
+	go func() { stopErr <- inbound.Stop() }()
 
 	frames := c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)
 	goAway := frames[len(frames)-1]
 	assert.Equal(t, http2.ErrCodeNo, goAway.ErrCode, "graceful shutdown must use NO_ERROR")
 	assert.Equal(t, uint32(1), goAway.LastStreamID, "GOAWAY must cover in-flight stream 1")
 
-	c.Ping(t)
-	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.IsPingAck)...)
+	select {
+	case err := <-stopErr:
+		assert.ErrorIs(t, err, context.DeadlineExceeded, "Stop must report that the drain timed out")
+	case <-time.After(timeout + 5*testtime.Second):
+		require.FailNow(t, "Stop hung past ShutdownTimeout")
+	}
+	assert.GreaterOrEqual(t, time.Since(start), timeout,
+		"Stop gave up on the in-flight call before ShutdownTimeout")
+
+	frames = append(frames, c.ReadUntilClosed(t, 5*testtime.Second)...)
 	assert.False(t, http2test.ResponseOn(frames, 1).Complete,
 		"stream 1 completed although its handler never returned")
 }
@@ -883,6 +900,46 @@ func TestInboundHTTP1GracefulShutdown(t *testing.T) {
 				require.FailNow(t, "Stop did not return after the request drained")
 			}
 			assert.Less(t, releaseSeq, stopSeq.Load(), "Stop returned while the request was still in flight")
+		})
+	}
+}
+
+func TestIsH2C(t *testing.T) {
+	newRequest := func(method, target string, header http.Header) *http.Request {
+		r := httptest.NewRequest(method, target, nil)
+		r.Header = header
+		return r
+	}
+	priorKnowledge := newRequest("PRI", "*", http.Header{})
+	priorKnowledge.Proto, priorKnowledge.ProtoMajor, priorKnowledge.ProtoMinor = "HTTP/2.0", 2, 0
+
+	tests := []struct {
+		desc string
+		req  *http.Request
+		want bool
+	}{
+		{desc: "prior knowledge", req: priorKnowledge, want: true},
+		{
+			desc: "upgrade",
+			req: newRequest(http.MethodGet, "/", http.Header{
+				"Upgrade":        {"h2c"},
+				"Connection":     {"Upgrade, HTTP2-Settings"},
+				"Http2-Settings": {""},
+			}),
+			want: true,
+		},
+		{
+			desc: "websocket upgrade",
+			req: newRequest(http.MethodGet, "/", http.Header{
+				"Upgrade":    {"websocket"},
+				"Connection": {"Upgrade"},
+			}),
+		},
+		{desc: "HTTP/1.1", req: newRequest(http.MethodPost, "/", http.Header{"Rpc-Caller": {"caller"}})},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			assert.Equal(t, tt.want, isH2C(tt.req))
 		})
 	}
 }
