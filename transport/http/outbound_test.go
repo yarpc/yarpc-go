@@ -33,6 +33,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"golang.org/x/net/http2"
@@ -1843,6 +1844,144 @@ func TestGetYARPCErrorFromResponseWithoutRPCHeaders(t *testing.T) {
 			require.Error(t, err)
 			assert.Equal(t, tt.wantCode, yarpcerrors.FromError(err).Code())
 			assert.Equal(t, body, yarpcerrors.FromError(err).Message())
+		})
+	}
+}
+
+// closeTrackingBody is a response body that records how often it was closed.
+type closeTrackingBody struct {
+	io.Reader
+	closeErr error
+	closed   int
+}
+
+func (b *closeTrackingBody) Close() error {
+	b.closed++
+	return b.closeErr
+}
+
+// A response body must be closed on every path out of getYARPCErrorFromResponse
+// that has consumed it, including when reading it fails: skipping Close leaks
+// the connection (or, for a pooled HTTP/2 connection, its stream slot).
+func TestGetYARPCErrorFromResponseClosesBody(t *testing.T) {
+	errRead := errors.New("connection reset")
+	errClose := errors.New("close failed")
+	readFails := func() io.Reader {
+		return io.MultiReader(strings.NewReader("part"), iotest.ErrReader(errRead))
+	}
+
+	tests := []struct {
+		name              string
+		bothResponseError bool
+		header            http.Header
+		body              *closeTrackingBody
+
+		wantClosed      int
+		wantCode        yarpcerrors.Code
+		wantMessage     string // substring of the error message
+		wantBodyHandled bool   // whether tres.Body is nil after the call
+	}{
+		{
+			name:        "single error, body read and closed",
+			header:      http.Header{},
+			body:        &closeTrackingBody{Reader: strings.NewReader("boom")},
+			wantClosed:  1,
+			wantCode:    yarpcerrors.CodeUnknown,
+			wantMessage: "boom",
+		},
+		{
+			name:        "single error, read fails",
+			header:      http.Header{},
+			body:        &closeTrackingBody{Reader: readFails()},
+			wantClosed:  1,
+			wantCode:    yarpcerrors.CodeInternal,
+			wantMessage: errRead.Error(),
+		},
+		{
+			name:        "single error, close fails",
+			header:      http.Header{},
+			body:        &closeTrackingBody{Reader: strings.NewReader("boom"), closeErr: errClose},
+			wantClosed:  1,
+			wantCode:    yarpcerrors.CodeInternal,
+			wantMessage: errClose.Error(),
+		},
+		{
+			name:        "single error, read and close fail",
+			header:      http.Header{},
+			body:        &closeTrackingBody{Reader: readFails(), closeErr: errClose},
+			wantClosed:  1,
+			wantCode:    yarpcerrors.CodeInternal,
+			wantMessage: errRead.Error(), // the read error is the root cause
+		},
+		{
+			name:              "both response error with details, body read and closed",
+			bothResponseError: true,
+			header:            http.Header{ErrorDetailsHeader: []string{"x"}},
+			body:              &closeTrackingBody{Reader: strings.NewReader("details")},
+			wantClosed:        1,
+			wantCode:          yarpcerrors.CodeUnknown,
+			wantBodyHandled:   true,
+		},
+		{
+			name:              "both response error with details, read fails",
+			bothResponseError: true,
+			header:            http.Header{ErrorDetailsHeader: []string{"x"}},
+			body:              &closeTrackingBody{Reader: readFails()},
+			wantClosed:        1,
+			wantCode:          yarpcerrors.CodeInternal,
+			wantMessage:       errRead.Error(),
+			wantBodyHandled:   true,
+		},
+		{
+			name:              "both response error with details, close fails",
+			bothResponseError: true,
+			header:            http.Header{ErrorDetailsHeader: []string{"x"}},
+			body:              &closeTrackingBody{Reader: strings.NewReader("details"), closeErr: errClose},
+			wantClosed:        1,
+			wantCode:          yarpcerrors.CodeInternal,
+			wantMessage:       errClose.Error(),
+			wantBodyHandled:   true,
+		},
+		{
+			// With no details header the body is not consumed here: it stays on
+			// tres for the caller, who receives both the response and the error.
+			name:              "both response error without details leaves the body to the caller",
+			bothResponseError: true,
+			header:            http.Header{ErrorMessageHeader: []string{"msg"}},
+			body:              &closeTrackingBody{Reader: strings.NewReader("payload")},
+			wantClosed:        0,
+			wantCode:          yarpcerrors.CodeUnknown,
+			wantMessage:       "msg",
+			wantBodyHandled:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := &http.Response{
+				StatusCode: http.StatusInternalServerError,
+				Header:     tt.header,
+				Body:       tt.body,
+			}
+			tres := &transport.Response{Body: tt.body}
+
+			gotRes, err := getYARPCErrorFromResponse(tres, response, tt.bothResponseError)
+
+			require.Error(t, err)
+			assert.Equal(t, tt.wantClosed, tt.body.closed, "number of times the body was closed")
+			assert.Equal(t, tt.wantCode, yarpcerrors.FromError(err).Code())
+			assert.Contains(t, yarpcerrors.FromError(err).Message(), tt.wantMessage)
+
+			if !tt.bothResponseError {
+				assert.Nil(t, gotRes, "a single error returns no response")
+				return
+			}
+			require.NotNil(t, gotRes)
+			if tt.wantBodyHandled {
+				assert.Nil(t, gotRes.Body, "a consumed body must not be left on the response")
+			} else {
+				assert.NotNil(t, gotRes.Body, "an unconsumed body stays on the response")
+			}
 		})
 	}
 }
