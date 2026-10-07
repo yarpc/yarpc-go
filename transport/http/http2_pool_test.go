@@ -23,6 +23,7 @@ package http
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -33,6 +34,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -1049,7 +1051,7 @@ func TestHTTP2PoolAtMaxConnsDoesNotBuildTransports(t *testing.T) {
 	}
 }
 
-func TestSendHoldsInflightUntilBodyClosed(t *testing.T) {
+func TestSendHoldsInflightUntilBodyFinished(t *testing.T) {
 	release := make(chan struct{})
 	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hello"))
@@ -1073,12 +1075,136 @@ func TestSendHoldsInflightUntilBodyClosed(t *testing.T) {
 	close(release)
 	_, err = io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	assert.Equal(t, 1, conn.streamsActive(), "reading the body to EOF is not enough; Close releases the slot")
+	assert.Zero(t, conn.streamsActive(), "reading the body to EOF finishes the stream and releases the slot")
 
 	require.NoError(t, resp.Body.Close())
 	assert.Zero(t, conn.streamsActive())
 	require.NoError(t, resp.Body.Close())
-	assert.Zero(t, conn.streamsActive(), "a second Close must not release twice")
+	assert.Zero(t, conn.streamsActive(), "Close after EOF, or a second Close, must not release twice")
+}
+
+func TestSendReleasesInflightWhenBodyReadFails(t *testing.T) {
+	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("partial"))
+		w.(http.Flusher).Flush() // send headers so RoundTrip returns
+		panic(http.ErrAbortHandler)
+	})
+	// Track the socket the transport dials: after the stream is reset the
+	// client connection may not be idle yet, so the test retries the idle close
+	// until the socket is really released instead of leaking it.
+	var dialed atomic.Pointer[closeTrackingConn]
+	tracked := func() *http2.Transport {
+		tr := newTransport()
+		dial := tr.DialTLSContext
+		tr.DialTLSContext = func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
+			c, err := dial(ctx, network, addr, cfg)
+			if err != nil {
+				return nil, err
+			}
+			tc := &closeTrackingConn{Conn: c}
+			dialed.Store(tc)
+			return tc, nil
+		}
+		return tr
+	}
+	pool := newEmptyH2Pool(t, addr, tracked, baseH2ScalingPoolConfig, zap.NewNop())
+	defer pool.Close()
+	conn := pool.newConn()
+	pool.addConn(conn)
+
+	o := &Outbound{useHTTP2: true}
+	p := &httpPeer{pool: pool}
+	hreq, err := http.NewRequest("GET", "http://"+addr+"/", nil)
+	require.NoError(t, err)
+
+	resp, err := o.send(context.Background(), hreq, p, nil)
+	require.NoError(t, err)
+
+	// The caller gives up on the body after the read error without closing it.
+	_, err = io.ReadAll(resp.Body)
+	require.Error(t, err)
+	assert.Zero(t, conn.streamsActive(), "a failed body read must release the slot even if Close is never called")
+
+	waitForCondition(t, 5*time.Second, func() bool {
+		conn.closeIdle()
+		tc := dialed.Load()
+		return tc != nil && tc.closed.Load()
+	})
+}
+
+// closeTrackingConn records that its net.Conn was closed.
+type closeTrackingConn struct {
+	net.Conn
+	closed atomic.Bool
+}
+
+func (c *closeTrackingConn) Close() error {
+	c.closed.Store(true)
+	return c.Conn.Close()
+}
+
+func TestHTTP2ConnReleaseWithBody(t *testing.T) {
+	boom := errors.New("boom")
+	tests := []struct {
+		name string
+		body io.ReadCloser
+		do   func(t *testing.T, body io.ReadCloser)
+	}{
+		{
+			name: "EOF without Close",
+			body: io.NopCloser(strings.NewReader("hello")),
+			do: func(t *testing.T, body io.ReadCloser) {
+				_, err := io.ReadAll(body)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "read error without Close",
+			body: io.NopCloser(iotest.ErrReader(boom)),
+			do: func(t *testing.T, body io.ReadCloser) {
+				_, err := io.ReadAll(body)
+				require.ErrorIs(t, err, boom)
+			},
+		},
+		{
+			name: "Close without reading",
+			body: io.NopCloser(strings.NewReader("hello")),
+			do: func(t *testing.T, body io.ReadCloser) {
+				require.NoError(t, body.Close())
+			},
+		},
+		{
+			name: "read error then Close",
+			body: io.NopCloser(iotest.ErrReader(boom)),
+			do: func(t *testing.T, body io.ReadCloser) {
+				_, err := io.ReadAll(body)
+				require.ErrorIs(t, err, boom)
+				require.NoError(t, body.Close())
+				require.NoError(t, body.Close())
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn := newHTTP2Conn(nil)
+			conn.incInflight()
+			resp := &http.Response{Body: tt.body}
+
+			require.True(t, conn.releaseWithBody(resp))
+			assert.Equal(t, 1, conn.streamsActive(), "slot is held until the body is finished")
+
+			tt.do(t, resp.Body)
+			assert.Zero(t, conn.streamsActive(), "released exactly once")
+		})
+	}
+
+	t.Run("no body is left for the caller to release", func(t *testing.T) {
+		conn := newHTTP2Conn(nil)
+		conn.incInflight()
+		assert.False(t, conn.releaseWithBody(&http.Response{Body: http.NoBody}))
+		assert.False(t, conn.releaseWithBody(&http.Response{}))
+		assert.Equal(t, 1, conn.streamsActive())
+	})
 }
 
 func TestSendRoundTripErrorKeepsConnAndReleasesInflight(t *testing.T) {

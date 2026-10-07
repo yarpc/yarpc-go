@@ -760,8 +760,9 @@ func (o *Outbound) doWithPeer(
 // transport; otherwise it falls through to today's shared-client behavior.
 //
 // A pooled connection's in-flight slot is held until the response body is
-// closed, since the HTTP/2 stream stays open until then; it is released
-// immediately if no response is handed back. A RoundTrip error leaves the
+// finished (read to EOF, a read error, or closed), since the HTTP/2 stream
+// stays open until then; it is released immediately if no response is handed
+// back. A RoundTrip error leaves the
 // connection in the pool: its *http2.Transport redials on its own, and
 // doWithPeer already reports the error to the peer.
 func (o *Outbound) send(ctx context.Context, hreq *http.Request, p *httpPeer, sender sender) (*http.Response, error) {
@@ -784,7 +785,7 @@ func (o *Outbound) send(ctx context.Context, hreq *http.Request, p *httpPeer, se
 	if err != nil {
 		return nil, err
 	}
-	handedOff = conn.releaseOnBodyClose(response)
+	handedOff = conn.releaseWithBody(response)
 	return response, nil
 }
 
