@@ -567,6 +567,10 @@ func TestH2SenderConcurrentFirstDial(t *testing.T) {
 	for _, err := range errs {
 		assert.NoError(t, err)
 	}
+	// h2Sender returns once the client has dialed, but the server records the
+	// connection asynchronously, after accepting it.
+	require.Eventually(t, func() bool { return dials.Load() > 0 },
+		testtime.Second, testtime.Millisecond, "the server must see the dialed connection")
 	assert.EqualValues(t, 1, dials.Load(), "only one goroutine should dial the peer's first connection")
 }
 
