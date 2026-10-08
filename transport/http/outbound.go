@@ -703,7 +703,7 @@ func (o *Outbound) doWithPeer(
 ) (*http.Response, error) {
 	hreq.URL.Host = p.HostPort()
 
-	if o.useHTTP2 && p.pool == nil {
+	if o.useHTTP2 && !p.transport.http2PoolEnabled {
 		// Route through the peer's own dedicated HTTP/2 connection pool so
 		// duplicate peers for the same address get independent HTTP/2
 		// connections instead of sharing one. h2PeerSender also replays a
@@ -711,8 +711,8 @@ func (o *Outbound) doWithPeer(
 		// *http2.Transport would itself have retried transparently (see
 		// h2PeerSender's doc comment).
 		//
-		// When EnableHTTP2ConnPool is set the peer has its own http2Pool
-		// (p.pool) instead, and send routes through that.
+		// When EnableHTTP2ConnPool is set the peer uses its own http2Pool
+		// instead (see httpPeer.getHTTP2Pool), and send routes through that.
 		sender = &h2PeerSender{peer: p}
 	}
 
@@ -766,11 +766,20 @@ func (o *Outbound) doWithPeer(
 // connection in the pool: its *http2.Transport redials on its own, and
 // doWithPeer already reports the error to the peer.
 func (o *Outbound) send(ctx context.Context, hreq *http.Request, p *httpPeer, sender sender) (*http.Response, error) {
-	if !o.useHTTP2 || p.pool == nil {
+	if !o.useHTTP2 {
+		return sender.Do(hreq.WithContext(ctx))
+	}
+	// The pool is built on the peer's first HTTP/2 request. It is nil when
+	// the transport doesn't have pooling enabled.
+	pool, err := p.getHTTP2Pool()
+	if err != nil {
+		return nil, err
+	}
+	if pool == nil {
 		return sender.Do(hreq.WithContext(ctx))
 	}
 
-	conn, err := p.pool.pickConn()
+	conn, err := pool.pickConn()
 	if err != nil {
 		return nil, err
 	}

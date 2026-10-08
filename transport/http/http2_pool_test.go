@@ -1064,7 +1064,8 @@ func TestSendHoldsInflightUntilBodyFinished(t *testing.T) {
 	pool.addConn(conn)
 
 	o := &Outbound{useHTTP2: true}
-	p := &httpPeer{pool: pool}
+	p := &httpPeer{}
+	p.scalingPool.Store(pool)
 	hreq, err := http.NewRequest("GET", "http://"+addr+"/", nil)
 	require.NoError(t, err)
 
@@ -1113,7 +1114,8 @@ func TestSendReleasesInflightWhenBodyReadFails(t *testing.T) {
 	pool.addConn(conn)
 
 	o := &Outbound{useHTTP2: true}
-	p := &httpPeer{pool: pool}
+	p := &httpPeer{}
+	p.scalingPool.Store(pool)
 	hreq, err := http.NewRequest("GET", "http://"+addr+"/", nil)
 	require.NoError(t, err)
 
@@ -1222,7 +1224,8 @@ func TestSendRoundTripErrorKeepsConnAndReleasesInflight(t *testing.T) {
 	pool.addConn(conn)
 
 	o := &Outbound{useHTTP2: true}
-	p := &httpPeer{pool: pool}
+	p := &httpPeer{}
+	p.scalingPool.Store(pool)
 	hreq, err := http.NewRequest("GET", "http://127.0.0.1:1/", nil)
 	require.NoError(t, err)
 
@@ -1230,4 +1233,30 @@ func TestSendRoundTripErrorKeepsConnAndReleasesInflight(t *testing.T) {
 	require.Error(t, err)
 	assert.Zero(t, conn.streamsActive(), "a failed request must release its slot")
 	assert.Equal(t, []*http2Conn{conn}, *pool.connsPtr.Load(), "a RoundTrip error must not remove the connection")
+}
+
+type recordingSender struct{ calls int }
+
+func (s *recordingSender) Do(*http.Request) (*http.Response, error) {
+	s.calls++
+	return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+}
+
+// An HTTP/1 outbound must not cause the peer to build an HTTP/2 pool, even
+// when the transport has pooling enabled: the pool is built on the first
+// HTTP/2 request only.
+func TestSendDoesNotBuildHTTP2PoolForHTTP1(t *testing.T) {
+	tr := NewTransport(EnableHTTP2ConnPool())
+	p := mustNewPeer(t, "127.0.0.1:1", tr)
+
+	s := &recordingSender{}
+	o := &Outbound{useHTTP2: false}
+	hreq, err := http.NewRequest("GET", "http://127.0.0.1:1/", nil)
+	require.NoError(t, err)
+
+	resp, err := o.send(context.Background(), hreq, p, s)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, 1, s.calls)
+	assert.Nil(t, p.scalingPool.Load(), "an HTTP/1 request must not build the peer's HTTP/2 pool")
 }
