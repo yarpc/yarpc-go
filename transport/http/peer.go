@@ -127,7 +127,8 @@ func (p *httpPeer) getHTTP2Pool() (*http2Pool, error) {
 	if p.scalingPoolTaken {
 		return nil, errNoConnsAvailable
 	}
-	pool, err := newHTTP2Pool(p.addr, p.transport.newH2Transport, p.transport.http2PoolCfg, p.transport.logger)
+	pool, err := newHTTP2PoolWithReporter(p.addr, p.transport.newH2Transport, p.transport.http2PoolCfg, p.transport.logger,
+		connpool.NewReporter(p.transport.h2PoolMetrics))
 	if err != nil {
 		return nil, err
 	}
