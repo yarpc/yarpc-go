@@ -564,14 +564,11 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 // readAndClose reads body to EOF and closes it. The body is closed even when
 // the read fails: a response body must always be closed, and a read error (for
 // example a connection reset mid-body) is exactly when callers tend to skip it,
-// which leaks the connection. If both the read and the close fail, the read
-// error is returned as the root cause.
+// which leaks the connection. If both the read and the close fail, both errors
+// are returned, joined.
 func readAndClose(body io.ReadCloser) ([]byte, error) {
-	b, err := ioutil.ReadAll(body)
-	if closeErr := body.Close(); err == nil {
-		err = closeErr
-	}
-	if err != nil {
+	b, readErr := ioutil.ReadAll(body)
+	if err := errors.Join(readErr, body.Close()); err != nil {
 		return nil, err
 	}
 	return b, nil

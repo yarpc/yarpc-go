@@ -1911,7 +1911,7 @@ func TestGetYARPCErrorFromResponseClosesBody(t *testing.T) {
 			body:        &closeTrackingBody{Reader: readFails(), closeErr: errClose},
 			wantClosed:  1,
 			wantCode:    yarpcerrors.CodeInternal,
-			wantMessage: errRead.Error(), // the read error is the root cause
+			wantMessage: errRead.Error(), // joined with the close error
 		},
 		{
 			name:              "both response error with details, body read and closed",
