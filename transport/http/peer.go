@@ -285,9 +285,7 @@ func (p *httpPeer) Release() {
 	if pool := p.loadH2Pool(); pool != nil {
 		pool.Stop()
 	}
-	if p.pool != nil {
-		p.pool.Close()
-	}
+	// p.pool is closed by Transport.ReleasePeer, outside the transport lock.
 }
 
 func (p *httpPeer) MaintainConn() {

@@ -389,7 +389,10 @@ func HTTP2ConnIdleTimeout(d time.Duration) TransportOption {
 // HTTP2ScalingMonitorInterval sets how often the pool re-evaluates whether
 // to scale down or reap idle connections.
 //
-// Defaults to 10 seconds.
+// Values below 30 seconds are clamped to 30 seconds so a misconfiguration
+// cannot make the pool thrash.
+//
+// Defaults to 30 seconds.
 func HTTP2ScalingMonitorInterval(d time.Duration) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.ScalingMonitorInterval = d
@@ -590,14 +593,7 @@ func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
 		a.h1Transport.CloseIdleConnections()
 		a.stopPeerH2Pools()
-
-		a.lock.Lock()
-		for _, p := range a.peers {
-			if p.pool != nil {
-				p.pool.Close()
-			}
-		}
-		a.lock.Unlock()
+		a.closePeerHTTP2Pools()
 
 		a.connectorsGroup.Wait()
 		return nil
@@ -626,6 +622,25 @@ func (a *Transport) stopPeerH2Pools() {
 	}
 	for _, pool := range pools {
 		pool.Wait()
+	}
+}
+
+// closePeerHTTP2Pools closes every peer's scaling HTTP/2 pool. The pools are
+// snapshotted under the lock but closed outside it: http2Pool.Close waits for
+// the pool's monitor goroutine, and holding the transport-wide lock meanwhile
+// would block RetainPeer and ReleasePeer.
+func (a *Transport) closePeerHTTP2Pools() {
+	a.lock.Lock()
+	pools := make([]*http2Pool, 0, len(a.peers))
+	for _, p := range a.peers {
+		if p.pool != nil {
+			pools = append(pools, p.pool)
+		}
+	}
+	a.lock.Unlock()
+
+	for _, pool := range pools {
+		pool.Close()
 	}
 }
 
@@ -683,25 +698,39 @@ func (a *Transport) getOrCreatePeer(pid peer.Identifier) (*httpPeer, error) {
 
 // ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it
 func (a *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
+	pool, err := a.releasePeer(pid, sub)
+	// Closed outside the transport lock: http2Pool.Close waits for the pool's
+	// monitor goroutine, which must not block RetainPeer and ReleasePeer.
+	if pool != nil {
+		pool.Close()
+	}
+	return err
+}
+
+// releasePeer unsubscribes sub from the peer and, if that was its last
+// subscriber, removes and releases the peer. It returns the peer's scaling
+// HTTP/2 pool, if any, for the caller to close once the lock is dropped.
+func (a *Transport) releasePeer(pid peer.Identifier, sub peer.Subscriber) (*http2Pool, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	p, ok := a.peers[pid.Identifier()]
 	if !ok {
-		return peer.ErrTransportHasNoReferenceToPeer{
+		return nil, peer.ErrTransportHasNoReferenceToPeer{
 			TransportName:  "http.Transport",
 			PeerIdentifier: pid.Identifier(),
 		}
 	}
 
 	if err := p.Unsubscribe(sub); err != nil {
-		return err
+		return nil, err
 	}
 
 	if p.NumSubscribers() == 0 {
 		delete(a.peers, pid.Identifier())
 		p.Release()
+		return p.pool, nil
 	}
 
-	return nil
+	return nil, nil
 }
