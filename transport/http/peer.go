@@ -44,7 +44,16 @@ type httpPeer struct {
 	released              chan struct{}
 	timer                 *time.Timer
 	innocentUntilUnixNano *atomic.Int64
-	pool                  *http2Pool
+
+	// scalingPool is this peer's scaling HTTP/2 connection pool, used when
+	// the transport has EnableHTTP2ConnPool set. Like h2Pool it is created
+	// lazily, on first use via getHTTP2Pool, so peers that never send HTTP/2
+	// (HTTP/1 outbounds) never pay for one. scalingPoolMu serializes creation
+	// against takeHTTP2Pool, and scalingPoolTaken stops a pool from being
+	// created after the peer's pool has been handed off for closing.
+	scalingPool      atomic.Pointer[http2Pool]
+	scalingPoolMu    sync.Mutex
+	scalingPoolTaken bool
 
 	// h2Pool manages this peer's HTTP/2 connection(s): every httpPeer gets
 	// its own pool (rather than sharing one across peers) so that duplicate
@@ -68,7 +77,9 @@ type httpPeer struct {
 }
 
 // newPeer builds a peer for addr. It returns an error if the transport is
-// configured with a HTTP/2 connection pool whose configuration is invalid.
+// configured with a HTTP/2 connection pool whose configuration is invalid, so
+// that RetainPeer reports a bad configuration up front even though the pool
+// itself is only built on first use (see getHTTP2Pool).
 func newPeer(addr string, t *Transport) (*httpPeer, error) {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
@@ -89,13 +100,49 @@ func newPeer(addr string, t *Transport) (*httpPeer, error) {
 		innocentUntilUnixNano: atomic.NewInt64(0),
 	}
 	if t.http2PoolEnabled {
-		pool, err := newHTTP2Pool(addr, t.newH2Transport, t.http2PoolCfg, t.logger)
-		if err != nil {
+		if err := validateHTTP2PoolConfig(t.http2PoolCfg); err != nil {
 			return nil, err
 		}
-		p.pool = pool
 	}
 	return p, nil
+}
+
+// getHTTP2Pool returns this peer's scaling HTTP/2 pool, building it on first
+// use. It returns (nil, nil) if the transport does not have the scaling pool
+// enabled, and errNoConnsAvailable once the peer's pool has been taken for
+// closing (the peer is released or the transport is stopped).
+func (p *httpPeer) getHTTP2Pool() (*http2Pool, error) {
+	if pool := p.scalingPool.Load(); pool != nil {
+		return pool, nil
+	}
+	if !p.transport.http2PoolEnabled {
+		return nil, nil
+	}
+
+	p.scalingPoolMu.Lock()
+	defer p.scalingPoolMu.Unlock()
+	if pool := p.scalingPool.Load(); pool != nil {
+		return pool, nil
+	}
+	if p.scalingPoolTaken {
+		return nil, errNoConnsAvailable
+	}
+	pool, err := newHTTP2Pool(p.addr, p.transport.newH2Transport, p.transport.http2PoolCfg, p.transport.logger)
+	if err != nil {
+		return nil, err
+	}
+	p.scalingPool.Store(pool)
+	return pool, nil
+}
+
+// takeHTTP2Pool returns the pool getHTTP2Pool built, or nil if it never built
+// one, and prevents any later getHTTP2Pool from building another. The caller
+// closes the returned pool, outside the transport lock.
+func (p *httpPeer) takeHTTP2Pool() *http2Pool {
+	p.scalingPoolMu.Lock()
+	defer p.scalingPoolMu.Unlock()
+	p.scalingPoolTaken = true
+	return p.scalingPool.Load()
 }
 
 // loadH2Pool returns this peer's HTTP/2 connection pool, or nil if h2Sender
@@ -285,7 +332,8 @@ func (p *httpPeer) Release() {
 	if pool := p.loadH2Pool(); pool != nil {
 		pool.Stop()
 	}
-	// p.pool is closed by Transport.ReleasePeer, outside the transport lock.
+	// The scaling pool, if any, is closed by Transport.ReleasePeer (via
+	// takeHTTP2Pool), outside the transport lock.
 }
 
 func (p *httpPeer) MaintainConn() {

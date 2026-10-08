@@ -625,22 +625,22 @@ func (a *Transport) stopPeerH2Pools() {
 	}
 }
 
-// closePeerHTTP2Pools closes every peer's scaling HTTP/2 pool. The pools are
-// snapshotted under the lock but closed outside it: http2Pool.Close waits for
+// closePeerHTTP2Pools closes every peer's scaling HTTP/2 pool. The peers are
+// snapshotted under the lock but their pools closed outside it: http2Pool.Close waits for
 // the pool's monitor goroutine, and holding the transport-wide lock meanwhile
 // would block RetainPeer and ReleasePeer.
 func (a *Transport) closePeerHTTP2Pools() {
 	a.lock.Lock()
-	pools := make([]*http2Pool, 0, len(a.peers))
+	peers := make([]*httpPeer, 0, len(a.peers))
 	for _, p := range a.peers {
-		if p.pool != nil {
-			pools = append(pools, p.pool)
-		}
+		peers = append(peers, p)
 	}
 	a.lock.Unlock()
 
-	for _, pool := range pools {
-		pool.Close()
+	for _, p := range peers {
+		if pool := p.takeHTTP2Pool(); pool != nil {
+			pool.Close()
+		}
 	}
 }
 
@@ -729,7 +729,7 @@ func (a *Transport) releasePeer(pid peer.Identifier, sub peer.Subscriber) (*http
 	if p.NumSubscribers() == 0 {
 		delete(a.peers, pid.Identifier())
 		p.Release()
-		return p.pool, nil
+		return p.takeHTTP2Pool(), nil
 	}
 
 	return nil, nil

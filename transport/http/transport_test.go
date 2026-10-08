@@ -840,12 +840,13 @@ func TestHTTP2PoolClampsShortMonitorInterval(t *testing.T) {
 
 	p, err := tr.RetainPeer(hostport.Identify("127.0.0.1:1"), newAnySubscriber(t))
 	require.NoError(t, err, "an interval below the minimum is clamped, not rejected")
-	pool := p.(*httpPeer).pool
+	pool, err := p.(*httpPeer).getHTTP2Pool()
+	require.NoError(t, err)
 	require.NotNil(t, pool)
 	assert.Equal(t, minHTTP2PoolScalingMonitorInterval, pool.cfg.ScalingMonitorInterval)
 }
 
-func TestHTTP2PoolCreatedOnlyWhenEnabled(t *testing.T) {
+func TestHTTP2PoolCreatedLazilyAndOnlyWhenEnabled(t *testing.T) {
 	for _, enabled := range []bool{false, true} {
 		var opts []TransportOption
 		if enabled {
@@ -856,13 +857,65 @@ func TestHTTP2PoolCreatedOnlyWhenEnabled(t *testing.T) {
 
 		p, err := tr.RetainPeer(hostport.Identify("127.0.0.1:1"), newAnySubscriber(t))
 		require.NoError(t, err)
+		hp := p.(*httpPeer)
+		assert.Nil(t, hp.scalingPool.Load(), "no pool is built until it is first used")
+
+		pool, err := hp.getHTTP2Pool()
+		require.NoError(t, err)
 		if enabled {
-			assert.NotNil(t, p.(*httpPeer).pool, "enabled: peer gets a pool")
+			require.NotNil(t, pool, "enabled: first use builds the pool")
+			again, err := hp.getHTTP2Pool()
+			require.NoError(t, err)
+			assert.Same(t, pool, again, "later uses reuse the same pool")
 		} else {
-			assert.Nil(t, p.(*httpPeer).pool, "disabled: peer must not get a pool")
+			assert.Nil(t, pool, "disabled: peer must not get a pool")
 		}
 		require.NoError(t, tr.Stop())
 	}
+}
+
+func TestHTTP2PoolConcurrentFirstUseBuildsOnePool(t *testing.T) {
+	tr := NewTransport(EnableHTTP2ConnPool())
+	require.NoError(t, tr.Start())
+	defer func() { assert.NoError(t, tr.Stop()) }()
+
+	p, err := tr.RetainPeer(hostport.Identify("127.0.0.1:1"), newAnySubscriber(t))
+	require.NoError(t, err)
+	hp := p.(*httpPeer)
+
+	const n = 20
+	pools := make([]*http2Pool, n)
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			pool, err := hp.getHTTP2Pool()
+			assert.NoError(t, err)
+			pools[i] = pool
+		}(i)
+	}
+	wg.Wait()
+	for _, pool := range pools {
+		assert.Same(t, pools[0], pool)
+	}
+}
+
+func TestHTTP2PoolNotRecreatedAfterRelease(t *testing.T) {
+	tr := NewTransport(EnableHTTP2ConnPool())
+	require.NoError(t, tr.Start())
+	defer func() { assert.NoError(t, tr.Stop()) }()
+
+	id := hostport.Identify("127.0.0.1:1")
+	sub := newAnySubscriber(t)
+	p, err := tr.RetainPeer(id, sub)
+	require.NoError(t, err)
+	hp := p.(*httpPeer)
+
+	require.NoError(t, tr.ReleasePeer(id, sub))
+	pool, err := hp.getHTTP2Pool()
+	assert.Nil(t, pool)
+	assert.ErrorIs(t, err, errNoConnsAvailable, "a released peer must not build a pool nothing would close")
 }
 
 func TestReleasePeerClosesHTTP2Pool(t *testing.T) {
@@ -874,7 +927,8 @@ func TestReleasePeerClosesHTTP2Pool(t *testing.T) {
 	sub := newAnySubscriber(t)
 	p, err := tr.RetainPeer(id, sub)
 	require.NoError(t, err)
-	pool := p.(*httpPeer).pool
+	pool, err := p.(*httpPeer).getHTTP2Pool()
+	require.NoError(t, err)
 	require.NotNil(t, pool)
 	require.False(t, pool.closed.Load())
 
@@ -890,7 +944,9 @@ func TestStopClosesHTTP2PoolsOfRetainedPeers(t *testing.T) {
 	for _, addr := range []string{"127.0.0.1:1", "127.0.0.1:2"} {
 		p, err := tr.RetainPeer(hostport.Identify(addr), newAnySubscriber(t))
 		require.NoError(t, err)
-		pools = append(pools, p.(*httpPeer).pool)
+		pool, err := p.(*httpPeer).getHTTP2Pool()
+		require.NoError(t, err)
+		pools = append(pools, pool)
 	}
 
 	require.NoError(t, tr.Stop())
