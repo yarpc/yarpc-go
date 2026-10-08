@@ -372,6 +372,35 @@ func TestHTTP2PoolConfigValidation(t *testing.T) {
 	}
 }
 
+func TestHTTP2PoolConfigValidationScalingDisabled(t *testing.T) {
+	newTransport := func() *http2.Transport { return &http2.Transport{} }
+
+	t.Run("scaling fields are ignored", func(t *testing.T) {
+		cfg := baseH2ScalingPoolConfig
+		cfg.DynamicScalingEnabled = false
+		cfg.MinConnections = -1
+		cfg.MaxConnections = 0
+		cfg.ScaleUpThreshold = 0
+		cfg.ScaleDownGap = -1
+		cfg.IdleTimeout = -time.Second
+		cfg.ScalingMonitorInterval = 0
+		pool, err := newHTTP2Pool("127.0.0.1:0", newTransport, cfg, zap.NewNop())
+		require.NoError(t, err)
+		defer pool.Close()
+		assert.Len(t, *pool.connsPtr.Load(), 1)
+	})
+
+	t.Run("maxConcurrentStreams is still validated", func(t *testing.T) {
+		cfg := baseH2ScalingPoolConfig
+		cfg.DynamicScalingEnabled = false
+		cfg.MaxConcurrentStreams = 0
+		pool, err := newHTTP2Pool("127.0.0.1:0", newTransport, cfg, zap.NewNop())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "maxConcurrentStreams must be at least 1")
+		assert.Nil(t, pool)
+	})
+}
+
 func TestHTTP2PoolPrecreatesMinConns(t *testing.T) {
 	addr, newTransport := newTestH2TransportServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))

@@ -38,7 +38,18 @@ var errNoConnsAvailable = yarpcerrors.UnavailableErrorf("http2 pool: no connecti
 // mirroring the gRPC pool's validateResolvedConnPool, plus the monitor interval
 // that time.NewTicker would otherwise panic on. connpool.Config carries no
 // validation of its own.
+//
+// With dynamic scaling disabled the pool holds a single connection and never
+// runs the monitor, so only MaxConcurrentStreams (still used to skip saturated
+// connections when picking) is validated; the sizing and scaling fields are
+// ignored.
 func validateHTTP2PoolConfig(c connpool.Config) error {
+	if c.MaxConcurrentStreams < 1 {
+		return fmt.Errorf("http2 pool: maxConcurrentStreams must be at least 1, got %d", c.MaxConcurrentStreams)
+	}
+	if !c.DynamicScalingEnabled {
+		return nil
+	}
 	if c.MinConnections < 0 {
 		return fmt.Errorf("http2 pool: minConns must be non-negative, got %d", c.MinConnections)
 	}
@@ -47,9 +58,6 @@ func validateHTTP2PoolConfig(c connpool.Config) error {
 	}
 	if c.MaxConnections < 1 {
 		return fmt.Errorf("http2 pool: maxConns must be at least 1, got %d", c.MaxConnections)
-	}
-	if c.MaxConcurrentStreams < 1 {
-		return fmt.Errorf("http2 pool: maxConcurrentStreams must be at least 1, got %d", c.MaxConcurrentStreams)
 	}
 	if c.ScaleUpThreshold <= 0 || c.ScaleUpThreshold > 1 {
 		return fmt.Errorf("http2 pool: scaleUpThreshold must be in (0, 1], got %v", c.ScaleUpThreshold)
@@ -120,7 +128,7 @@ func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg connpoo
 	if logger == nil {
 		logger = zap.NewNop()
 	}
-	if cfg.ScalingMonitorInterval < minHTTP2PoolScalingMonitorInterval {
+	if cfg.DynamicScalingEnabled && cfg.ScalingMonitorInterval < minHTTP2PoolScalingMonitorInterval {
 		logger.Warn("http2 pool: scalingMonitorInterval is below the minimum; clamping to avoid pool thrashing",
 			zap.Duration("configured", cfg.ScalingMonitorInterval),
 			zap.Duration("effective", minHTTP2PoolScalingMonitorInterval),
