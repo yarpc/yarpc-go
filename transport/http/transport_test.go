@@ -41,6 +41,7 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	ypeer "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
@@ -789,6 +790,113 @@ func TestRetainPeerRejectsInvalidHTTP2PoolConfig(t *testing.T) {
 	tr.lock.Lock()
 	defer tr.lock.Unlock()
 	assert.Empty(t, tr.peers, "a peer whose pool config is invalid must not be registered")
+}
+
+func TestHTTP2PoolOptionsDefaultsAndMapping(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		tr := NewTransport()
+		assert.False(t, tr.http2PoolEnabled, "the scaling pool is opt-in")
+		assert.Equal(t, defaultHTTP2PoolConfig(), tr.http2PoolCfg)
+	})
+
+	t.Run("options map to the pool config", func(t *testing.T) {
+		tr := NewTransport(
+			EnableHTTP2ConnPool(),
+			HTTP2DynamicScalingEnabled(false),
+			HTTP2MinConns(2),
+			HTTP2MaxConns(7),
+			HTTP2MaxConcurrentStreams(33),
+			HTTP2ScaleUpThreshold(0.6),
+			HTTP2ScaleDownGap(0.2),
+			HTTP2ConnIdleTimeout(time.Minute),
+			HTTP2ScalingMonitorInterval(time.Hour),
+		)
+		assert.True(t, tr.http2PoolEnabled)
+		assert.Equal(t, connpool.Config{
+			DynamicScalingEnabled:  false,
+			MinConnections:         2,
+			MaxConnections:         7,
+			MaxConcurrentStreams:   33,
+			ScaleUpThreshold:       0.6,
+			ScaleDownGap:           0.2,
+			IdleTimeout:            time.Minute,
+			ScalingMonitorInterval: time.Hour,
+		}, tr.http2PoolCfg)
+	})
+}
+
+// newAnySubscriber returns a subscriber that accepts any number of status
+// notifications; each peer's connection loop notifies from its own goroutine.
+func newAnySubscriber(t *testing.T) peer.Subscriber {
+	sub := NewMockSubscriber(gomock.NewController(t))
+	sub.EXPECT().NotifyStatusChanged(gomock.Any()).AnyTimes()
+	return sub
+}
+
+func TestHTTP2PoolClampsShortMonitorInterval(t *testing.T) {
+	tr := NewTransport(EnableHTTP2ConnPool(), HTTP2ScalingMonitorInterval(10*time.Second))
+	require.NoError(t, tr.Start())
+	defer func() { assert.NoError(t, tr.Stop()) }()
+
+	p, err := tr.RetainPeer(hostport.Identify("127.0.0.1:1"), newAnySubscriber(t))
+	require.NoError(t, err, "an interval below the minimum is clamped, not rejected")
+	pool := p.(*httpPeer).pool
+	require.NotNil(t, pool)
+	assert.Equal(t, minHTTP2PoolScalingMonitorInterval, pool.cfg.ScalingMonitorInterval)
+}
+
+func TestHTTP2PoolCreatedOnlyWhenEnabled(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		var opts []TransportOption
+		if enabled {
+			opts = append(opts, EnableHTTP2ConnPool())
+		}
+		tr := NewTransport(opts...)
+		require.NoError(t, tr.Start())
+
+		p, err := tr.RetainPeer(hostport.Identify("127.0.0.1:1"), newAnySubscriber(t))
+		require.NoError(t, err)
+		if enabled {
+			assert.NotNil(t, p.(*httpPeer).pool, "enabled: peer gets a pool")
+		} else {
+			assert.Nil(t, p.(*httpPeer).pool, "disabled: peer must not get a pool")
+		}
+		require.NoError(t, tr.Stop())
+	}
+}
+
+func TestReleasePeerClosesHTTP2Pool(t *testing.T) {
+	tr := NewTransport(EnableHTTP2ConnPool())
+	require.NoError(t, tr.Start())
+	defer func() { assert.NoError(t, tr.Stop()) }()
+
+	id := hostport.Identify("127.0.0.1:1")
+	sub := newAnySubscriber(t)
+	p, err := tr.RetainPeer(id, sub)
+	require.NoError(t, err)
+	pool := p.(*httpPeer).pool
+	require.NotNil(t, pool)
+	require.False(t, pool.closed.Load())
+
+	require.NoError(t, tr.ReleasePeer(id, sub))
+	assert.True(t, pool.closed.Load(), "releasing the last subscriber must close the peer's pool")
+}
+
+func TestStopClosesHTTP2PoolsOfRetainedPeers(t *testing.T) {
+	tr := NewTransport(EnableHTTP2ConnPool())
+	require.NoError(t, tr.Start())
+
+	var pools []*http2Pool
+	for _, addr := range []string{"127.0.0.1:1", "127.0.0.1:2"} {
+		p, err := tr.RetainPeer(hostport.Identify(addr), newAnySubscriber(t))
+		require.NoError(t, err)
+		pools = append(pools, p.(*httpPeer).pool)
+	}
+
+	require.NoError(t, tr.Stop())
+	for _, pool := range pools {
+		assert.True(t, pool.closed.Load(), "Stop must close the pools of peers that were never released")
+	}
 }
 
 // mustNewPeer builds a peer for addr, failing the test if newPeer rejects the
