@@ -102,6 +102,14 @@ type http2Pool struct {
 	// on the request hot path (pickConn) never block on a lock.
 	connsPtr atomic.Pointer[[]*http2Conn]
 
+	// metrics publishes this pool's connection counts and scaling events to
+	// the transport-wide connpool metrics. It is nil-safe: a nil Reporter
+	// records nothing. metricsMu makes a refresh atomic with respect to the
+	// final withdrawal in Close, so a refresh racing with Close cannot
+	// re-publish counts after they were zeroed.
+	metrics   *connpool.Reporter
+	metricsMu sync.Mutex
+
 	// scalingUp is the single-flight guard for every path that grows the pool
 	// (growPool and maybeScaleUp).
 	scalingUp atomic.Bool
@@ -122,6 +130,13 @@ type http2Pool struct {
 // *http2.Transport doesn't expose the peer's real negotiated value (unlike
 // *http2.ClientConn.State()), so scaling decisions are made against it instead.
 func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg connpool.Config, logger *zap.Logger) (*http2Pool, error) {
+	return newHTTP2PoolWithReporter(addr, newTransport, cfg, logger, nil)
+}
+
+// newHTTP2PoolWithReporter is newHTTP2Pool with a connpool.Reporter that the
+// pool publishes its connection counts and scaling events to. A nil reporter
+// records no metrics.
+func newHTTP2PoolWithReporter(addr string, newTransport func() *http2.Transport, cfg connpool.Config, logger *zap.Logger, metrics *connpool.Reporter) (*http2Pool, error) {
 	if err := validateHTTP2PoolConfig(cfg); err != nil {
 		return nil, err
 	}
@@ -150,6 +165,7 @@ func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg connpoo
 		newTransport: newTransport,
 		cfg:          cfg,
 		logger:       logger,
+		metrics:      metrics,
 		stop:         make(chan struct{}),
 	}
 	p.connsPtr.Store(&[]*http2Conn{})
@@ -163,6 +179,7 @@ func newHTTP2Pool(addr string, newTransport func() *http2.Transport, cfg connpoo
 	for i := 0; i < initial; i++ {
 		p.addConn(p.newConn())
 	}
+	p.refreshMetrics()
 
 	if cfg.DynamicScalingEnabled {
 		p.monitorWG.Add(1)
@@ -282,6 +299,8 @@ func (p *http2Pool) growPool() (*http2Conn, error) {
 func (p *http2Pool) growOne() *http2Conn {
 	if c := p.unparkConn(); c != nil {
 		p.logger.Debug("http2 pool: re-activated parked connection", zap.String("peer", p.addr))
+		p.metrics.IncIdleReactivation()
+		p.refreshMetrics()
 		return c
 	}
 	// Check for room before building the connection, so a request that finds
@@ -305,6 +324,8 @@ func (p *http2Pool) growOne() *http2Conn {
 	}
 	p.logger.Debug("http2 pool: added connection",
 		zap.String("peer", p.addr), zap.Int("conns", len(*p.connsPtr.Load())))
+	p.metrics.IncScaleUp()
+	p.refreshMetrics()
 	return c
 }
 
@@ -406,6 +427,10 @@ func (p *http2Pool) monitorLoop() {
 		case <-ticker.C:
 			p.maybeScaleDown()
 			p.cleanupConns()
+			// Also picks up connections that finished draining since the
+			// last event: that happens on the request path (decInflight),
+			// which deliberately does not touch the metrics.
+			p.refreshMetrics()
 		case <-p.stop:
 			return
 		}
@@ -442,6 +467,8 @@ func (p *http2Pool) maybeScaleDown() {
 	if float64(totalActive) < remainingCapacity*scaleDownThreshold && conns[len(conns)-1].park() {
 		p.logger.Debug("http2 pool: parked connection",
 			zap.String("peer", p.addr), zap.Int("active", len(conns)-1), zap.Int("inflight", totalActive))
+		p.metrics.IncScaleDown()
+		p.refreshMetrics()
 	}
 }
 
@@ -517,5 +544,45 @@ func (p *http2Pool) Close() {
 		for _, c := range *p.connsPtr.Load() {
 			c.shutdown()
 		}
+		p.withdrawMetrics()
 	})
+}
+
+// refreshMetrics publishes the pool's current connection counts, mapped onto
+// the connpool states: active is a usable connection, draining a parked one
+// still finishing requests, and idle a parked one with none, waiting to have
+// its sockets closed. It does nothing once the pool is closed.
+func (p *http2Pool) refreshMetrics() {
+	if p.metrics == nil {
+		return
+	}
+	p.metricsMu.Lock()
+	defer p.metricsMu.Unlock()
+	if p.closed.Load() {
+		return
+	}
+	var active, draining, idle int64
+	for _, c := range *p.connsPtr.Load() {
+		switch {
+		case c.usable():
+			active++
+		case c.streamsActive() > 0:
+			draining++
+		default:
+			idle++
+		}
+	}
+	p.metrics.SetCounts(active, draining, idle)
+}
+
+// withdrawMetrics removes this pool's contribution from the transport-wide
+// gauges. Close calls it after the pool is marked closed, so refreshMetrics
+// cannot publish anything afterwards.
+func (p *http2Pool) withdrawMetrics() {
+	if p.metrics == nil {
+		return
+	}
+	p.metricsMu.Lock()
+	defer p.metricsMu.Unlock()
+	p.metrics.SetCounts(0, 0, 0)
 }

@@ -955,6 +955,38 @@ func TestStopClosesHTTP2PoolsOfRetainedPeers(t *testing.T) {
 	}
 }
 
+func TestHTTP2PoolMetricsAggregateAcrossPeers(t *testing.T) {
+	root := metrics.New()
+	tr := NewTransport(EnableHTTP2ConnPool(), Meter(root.Scope()))
+	require.NoError(t, tr.Start())
+
+	active := func() int64 {
+		for _, g := range root.Snapshot().Gauges {
+			if g.Name == "conn_pool_active_connections" {
+				return g.Value
+			}
+		}
+		t.Fatal("conn_pool_active_connections is not registered")
+		return 0
+	}
+
+	sub := newAnySubscriber(t)
+	ids := []peer.Identifier{hostport.Identify("127.0.0.1:1"), hostport.Identify("127.0.0.1:2")}
+	for _, id := range ids {
+		p, err := tr.RetainPeer(id, sub)
+		require.NoError(t, err)
+		_, err = p.(*httpPeer).getHTTP2Pool()
+		require.NoError(t, err)
+	}
+	assert.EqualValues(t, 2, active(), "each peer's pool contributes one connection")
+
+	require.NoError(t, tr.ReleasePeer(ids[0], sub))
+	assert.EqualValues(t, 1, active(), "releasing a peer withdraws its pool's connections")
+
+	require.NoError(t, tr.Stop())
+	assert.EqualValues(t, 0, active(), "stopping the transport withdraws the rest")
+}
+
 // mustNewPeer builds a peer for addr, failing the test if newPeer rejects the
 // transport's configuration.
 func mustNewPeer(tb testing.TB, addr string, tr *Transport) *httpPeer {

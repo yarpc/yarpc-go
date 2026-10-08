@@ -40,6 +40,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -1259,4 +1260,126 @@ func TestSendDoesNotBuildHTTP2PoolForHTTP1(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 	assert.Equal(t, 1, s.calls)
 	assert.Nil(t, p.scalingPool.Load(), "an HTTP/1 request must not build the peer's HTTP/2 pool")
+}
+
+// h2PoolMetricsFixture builds the shared connpool metrics the transport owns
+// (h2PoolMetrics), on a fresh root scope the test can snapshot.
+func h2PoolMetricsFixture() (*metrics.Root, *connpool.Metrics) {
+	root := metrics.New()
+	m := connpool.NewMetrics(connpool.MetricsParams{
+		Meter:       root.Scope(),
+		Logger:      zap.NewNop(),
+		ServiceName: "svc",
+		Transport:   "http2",
+	})
+	return root, m
+}
+
+// h2PoolMetricValue returns the value of the named gauge or counter in root's
+// current snapshot, failing the test if it is not registered.
+func h2PoolMetricValue(t *testing.T, root *metrics.Root, name string) int64 {
+	t.Helper()
+	snap := root.Snapshot()
+	for _, g := range snap.Gauges {
+		if g.Name == name {
+			return g.Value
+		}
+	}
+	for _, c := range snap.Counters {
+		if c.Name == name {
+			return c.Value
+		}
+	}
+	t.Fatalf("metric %q is not registered", name)
+	return 0
+}
+
+func TestHTTP2PoolMetricsFollowScalingEvents(t *testing.T) {
+	root, shared := h2PoolMetricsFixture()
+	val := func(name string) int64 { return h2PoolMetricValue(t, root, "conn_pool_"+name) }
+
+	cfg := baseH2ScalingPoolConfig
+	cfg.MinConnections = 1
+	cfg.MaxConnections = 3
+	cfg.MaxConcurrentStreams = 2
+	cfg.ScaleUpThreshold = 0.5
+	cfg.ScaleDownGap = 0.1
+	pool, err := newHTTP2PoolWithReporter("127.0.0.1:0", func() *http2.Transport { return &http2.Transport{} },
+		cfg, zap.NewNop(), connpool.NewReporter(shared))
+	require.NoError(t, err)
+	defer pool.Close()
+
+	// The initial slot is reported, but is not a scale-up.
+	assert.EqualValues(t, 1, val("active_connections"))
+	assert.EqualValues(t, 0, val("scale_up_total"))
+
+	// Load at the scale-up threshold opens a second connection.
+	first := (*pool.connsPtr.Load())[0]
+	first.incInflight()
+	pool.maybeScaleUp(first)
+	assert.EqualValues(t, 2, val("active_connections"))
+	assert.EqualValues(t, 1, val("scale_up_total"))
+
+	// With the load gone, the monitor parks one: it has no requests, so it
+	// is idle rather than draining.
+	first.decInflight()
+	pool.maybeScaleDown()
+	assert.EqualValues(t, 1, val("active_connections"))
+	assert.EqualValues(t, 1, val("idle_connections"))
+	assert.EqualValues(t, 0, val("draining_connections"))
+	assert.EqualValues(t, 1, val("scale_down_total"))
+
+	// A request still running on the parked connection makes it draining.
+	parked := (*pool.connsPtr.Load())[1]
+	require.True(t, parked.parked())
+	parked.incInflight()
+	pool.refreshMetrics()
+	assert.EqualValues(t, 1, val("draining_connections"))
+	assert.EqualValues(t, 0, val("idle_connections"))
+
+	// Under load again, the parked connection is reused instead of dialing.
+	first.incInflight()
+	pool.maybeScaleUp(first)
+	assert.EqualValues(t, 2, val("active_connections"))
+	assert.EqualValues(t, 0, val("draining_connections"))
+	assert.EqualValues(t, 1, val("idle_reactivation_total"))
+	assert.EqualValues(t, 1, val("scale_up_total"), "re-activating must not count as a scale-up")
+}
+
+func TestHTTP2PoolMetricsWithdrawnOnClose(t *testing.T) {
+	root, shared := h2PoolMetricsFixture()
+	newPool := func() *http2Pool {
+		pool, err := newHTTP2PoolWithReporter("127.0.0.1:0", func() *http2.Transport { return &http2.Transport{} },
+			baseH2ScalingPoolConfig, zap.NewNop(), connpool.NewReporter(shared))
+		require.NoError(t, err)
+		return pool
+	}
+
+	a, b := newPool(), newPool()
+	defer b.Close()
+	assert.EqualValues(t, 2, h2PoolMetricValue(t, root, "conn_pool_active_connections"),
+		"pools sum into the shared gauge")
+
+	a.Close()
+	assert.EqualValues(t, 1, h2PoolMetricValue(t, root, "conn_pool_active_connections"),
+		"a closed pool withdraws its own contribution only")
+
+	a.refreshMetrics()
+	assert.EqualValues(t, 1, h2PoolMetricValue(t, root, "conn_pool_active_connections"),
+		"a closed pool must not publish again")
+}
+
+func TestHTTP2PoolMetricsWithScalingDisabled(t *testing.T) {
+	root, shared := h2PoolMetricsFixture()
+	cfg := baseH2ScalingPoolConfig
+	cfg.DynamicScalingEnabled = false
+	cfg.MinConnections = 3
+	pool, err := newHTTP2PoolWithReporter("127.0.0.1:0", func() *http2.Transport { return &http2.Transport{} },
+		cfg, zap.NewNop(), connpool.NewReporter(shared))
+	require.NoError(t, err)
+
+	assert.EqualValues(t, 1, h2PoolMetricValue(t, root, "conn_pool_active_connections"),
+		"a fixed pool is one connection regardless of minConns")
+	pool.Close()
+	assert.EqualValues(t, 0, h2PoolMetricValue(t, root, "conn_pool_active_connections"))
 }
