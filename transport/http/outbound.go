@@ -703,17 +703,20 @@ func (o *Outbound) doWithPeer(
 ) (*http.Response, error) {
 	hreq.URL.Host = p.HostPort()
 
-	if o.useHTTP2 {
+	if o.useHTTP2 && !p.transport.http2PoolEnabled {
 		// Route through the peer's own dedicated HTTP/2 connection pool so
 		// duplicate peers for the same address get independent HTTP/2
 		// connections instead of sharing one. h2PeerSender also replays a
 		// request on a different connection when it fails for a reason
 		// *http2.Transport would itself have retried transparently (see
 		// h2PeerSender's doc comment).
+		//
+		// When EnableHTTP2ConnPool is set the peer uses its own http2Pool
+		// instead (see httpPeer.getHTTP2Pool), and send routes through that.
 		sender = &h2PeerSender{peer: p}
 	}
 
-	response, err := sender.Do(hreq.WithContext(ctx))
+	response, err := o.send(ctx, hreq, p, sender)
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
 		// https://github.com/golang/go/issues/17711 is resolved.
@@ -749,6 +752,49 @@ func (o *Outbound) doWithPeer(
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}
 
+	return response, nil
+}
+
+// send issues hreq to p, routing through the peer's per-connection HTTP/2
+// pool when the outbound is using HTTP/2 and pooling is enabled on the
+// transport; otherwise it falls through to today's shared-client behavior.
+//
+// A pooled connection's in-flight slot is held until the response body is
+// finished (read to EOF, a read error, or closed), since the HTTP/2 stream
+// stays open until then; it is released immediately if no response is handed
+// back. A RoundTrip error leaves the
+// connection in the pool: its *http2.Transport redials on its own, and
+// doWithPeer already reports the error to the peer.
+func (o *Outbound) send(ctx context.Context, hreq *http.Request, p *httpPeer, sender sender) (*http.Response, error) {
+	if !o.useHTTP2 {
+		return sender.Do(hreq.WithContext(ctx))
+	}
+	// The pool is built on the peer's first HTTP/2 request. It is nil when
+	// the transport doesn't have pooling enabled.
+	pool, err := p.getHTTP2Pool()
+	if err != nil {
+		return nil, err
+	}
+	if pool == nil {
+		return sender.Do(hreq.WithContext(ctx))
+	}
+
+	conn, err := pool.pickConn()
+	if err != nil {
+		return nil, err
+	}
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			conn.decInflight()
+		}
+	}()
+
+	response, err := conn.transport.RoundTrip(hreq.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+	handedOff = conn.releaseWithBody(response)
 	return response, nil
 }
 

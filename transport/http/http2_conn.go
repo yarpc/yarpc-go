@@ -21,6 +21,9 @@
 package http
 
 import (
+	"io"
+	"net/http"
+	"sync"
 	"time"
 
 	"go.uber.org/atomic"
@@ -155,4 +158,50 @@ func (c *http2Conn) closeIdle() {
 func (c *http2Conn) shutdown() {
 	c.closing.Store(true)
 	c.closeIdle()
+}
+
+// releaseWithBody arranges for this connection's in-flight slot to be released
+// when resp.Body is finished, rather than when RoundTrip returns: an HTTP/2
+// stream stays open until its body is finished, so releasing any earlier would
+// undercount the streams the connection is really carrying. The body is
+// finished at EOF, on a read error, or when it is closed, whichever comes
+// first, so a caller that never closes the body after reading it does not leak
+// the slot. It reports whether it took over responsibility for the release; if
+// resp has no body, it returns false and the caller must release the slot.
+func (c *http2Conn) releaseWithBody(resp *http.Response) bool {
+	if resp.Body == nil || resp.Body == http.NoBody {
+		return false
+	}
+	resp.Body = &inflightBody{ReadCloser: resp.Body, release: c.decInflight}
+	return true
+}
+
+// inflightBody calls release exactly once, when the body is first finished.
+type inflightBody struct {
+	io.ReadCloser
+	release func()
+	once    sync.Once
+}
+
+func (b *inflightBody) done() { b.once.Do(b.release) }
+
+// Read releases the slot as soon as the stream is finished: at EOF, or on a
+// read error, since an HTTP/2 stream does not survive one.
+//
+// Callers are expected to Close the body, and Close still releases the slot,
+// but not every caller does so on a read error: getYARPCErrorFromResponse
+// returns on an ioutil.ReadAll error without calling Close. Releasing here
+// keeps such a path from leaking the slot for good.
+func (b *inflightBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if err != nil {
+		b.done()
+	}
+	return n, err
+}
+
+func (b *inflightBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.done()
+	return err
 }
