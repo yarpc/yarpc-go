@@ -137,6 +137,10 @@ func MaxIdleConnsPerHost(i int) TransportOption {
 // connection will remain idle before closing itself.
 // Zero means no limit.
 //
+// This applies to HTTP/1 connections only. Connections of an HTTP/2 outbound
+// are closed by its connection pool instead (see ConnIdleTimeout), which never
+// goes below MinConnections.
+//
 // Defaults to 15 minutes.
 func IdleConnTimeout(t time.Duration) TransportOption {
 	return func(options *transportOptions) {
@@ -443,9 +447,13 @@ func buildH2Transport(options *transportOptions) *http2.Transport {
 			return dialContext(ctx, network, addr)
 		},
 		DisableCompression: options.disableCompression,
-		IdleConnTimeout:    options.idleConnTimeout,
-		PingTimeout:        defaultHTTP2PingTimeout,
-		ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
+		// IdleConnTimeout is deliberately left zero (never): this transport
+		// only builds the pool's *http2.ClientConns, and the pool owns when
+		// an idle connection is closed (ConnIdleTimeout, and never below
+		// MinConnections). A ClientConn closing itself on its own idle timer
+		// would drop the pool under its floor until the monitor re-dialed.
+		PingTimeout:     defaultHTTP2PingTimeout,
+		ReadIdleTimeout: defaultHTTP2ReadIdleTimeout,
 	}
 }
 
