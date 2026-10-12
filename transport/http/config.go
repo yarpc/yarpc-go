@@ -29,6 +29,7 @@ import (
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
+	"go.uber.org/zap"
 )
 
 // TransportSpec returns a TransportSpec for the HTTP transport.
@@ -470,7 +471,16 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 	// regardless, otherwise its settings would land on a peer shared with
 	// other outbounds to the same address.
 	dialer := x.NewDialer(dialOpts...)
-	if x.isolateOutboundConnections || oc.ClientConnectionPool != nil || hasLiveProvider {
+	isolate := x.isolateOutboundConnections || oc.ClientConnectionPool != nil || hasLiveProvider
+	x.logger.Info("http2: [test] building YAML outbound",
+		zap.String("outboundKey", k.OutboundKey()),
+		zap.String("url", oc.URL),
+		zap.Bool("isolated", isolate),
+		zap.Bool("isolationFromTransportOption", x.isolateOutboundConnections),
+		zap.Bool("isolationFromPoolOverride", oc.ClientConnectionPool != nil),
+		zap.Bool("isolationFromLiveProvider", hasLiveProvider),
+		zap.Any("outboundPoolOverride", oc.ClientConnectionPool))
+	if isolate {
 		dialer = dialer.WithConnectionIsolation()
 	}
 	if oc.ClientConnectionPool != nil {

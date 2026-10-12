@@ -236,6 +236,15 @@ func (l *ConfigResolver) Get() Config {
 		cached.DynamicScalingEnabled = &v
 	}
 	l.last.Store(&resolvedConfig{overlay: cached, cfg: next})
+	// TEST BRANCH: surface every change the live provider makes to the
+	// effective config. This point is only reached when the overlay changed
+	// (the fast path above returns otherwise), so it logs once per change.
+	if l.logger != nil && last.cfg != next {
+		l.logger.Info(l.logPrefix+": [test] effective connection pool config changed by live provider",
+			zap.String("peer", l.id),
+			zap.Any("previous", last.cfg),
+			zap.Any("current", next))
+	}
 	return next
 }
 

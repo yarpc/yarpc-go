@@ -23,6 +23,7 @@ package http
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
@@ -482,6 +483,15 @@ type peerKey struct {
 	connectionScope *connectionScope
 }
 
+// scopeLabel formats a connectionScope for logs (TEST BRANCH): "shared" for
+// the nil scope, else a pointer that is stable and distinct per isolated Dialer.
+func scopeLabel(scope *connectionScope) string {
+	if scope == nil {
+		return "shared"
+	}
+	return fmt.Sprintf("%p", scope)
+}
+
 // Transport keeps track of HTTP peers and the associated HTTP client. It
 // allows using a single HTTP client to make requests to multiple YARPC
 // services and pooling the resources needed therein.
@@ -567,6 +577,11 @@ var _ transport.Transport = (*Transport)(nil)
 // Start starts the HTTP transport.
 func (a *Transport) Start() error {
 	return a.once.Start(func() error {
+		a.logger.Info("http2: [test] transport starting",
+			zap.Bool("isolateOutboundConnections", a.isolateOutboundConnections),
+			zap.Bool("hasGlobalLiveProvider", a.h2PoolProvider != nil),
+			zap.Bool("hasOutboundLiveProviderFactory", a.h2OutboundPoolFactory != nil),
+			zap.Any("transportPoolConfig", a.h2PoolConfig))
 		return nil // Nothing to do
 	})
 }
@@ -574,10 +589,14 @@ func (a *Transport) Start() error {
 // Stop stops the HTTP transport.
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
+		a.lock.Lock()
+		a.logger.Info("http2: [test] transport stopping", zap.Int("peersStillRetained", len(a.peers)))
+		a.lock.Unlock()
 		a.h1Transport.CloseIdleConnections()
 		a.stopPeerH2Pools()
 		a.releasedPoolWg.Wait()
 		a.connectorsGroup.Wait()
+		a.logger.Info("http2: [test] transport stopped: every pool and connector has exited")
 		return nil
 	})
 }
@@ -674,15 +693,30 @@ func (a *Transport) h2PoolProviderFor(options *dialOptions) LiveConnectionPoolPr
 func (a *Transport) getOrCreatePeer(pid peer.Identifier, options *dialOptions, connectionScope *connectionScope) (*httpPeer, error) {
 	key := peerKey{identifier: pid.Identifier(), connectionScope: connectionScope}
 	if p, ok := a.peers[key]; ok {
+		a.logger.Info("http2: [test] reusing existing peer",
+			zap.String("peerIdentifier", key.identifier),
+			zap.String("connectionScope", scopeLabel(connectionScope)),
+			zap.Int64("peerDebugID", p.debugID),
+			zap.Int("subscribers", p.NumSubscribers()))
 		return p, nil
 	}
 	startupPool, err := a.resolveH2PoolConfig(options)
 	if err != nil {
+		a.logger.Info("http2: [test] refusing to create peer: pool config is invalid",
+			zap.String("peerIdentifier", key.identifier), zap.Error(err))
 		return nil, err
 	}
 	realAddr := peeraddr.Address(pid.Identifier())
 	p := newPeerWithPool(realAddr, a, startupPool, a.h2PoolProviderFor(options))
 	a.peers[key] = p
+	a.logger.Info("http2: [test] registered new peer",
+		zap.String("peerIdentifier", key.identifier),
+		zap.String("connectionScope", scopeLabel(connectionScope)),
+		zap.Int64("peerDebugID", p.debugID),
+		zap.Int("totalPeers", len(a.peers)),
+		zap.Bool("dialerOverridesPool", options.connPoolOverride != nil),
+		zap.Bool("dialerHasLiveProvider", options.poolConfigProvider != nil),
+		zap.Any("startupPoolConfig", startupPool))
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
@@ -711,8 +745,17 @@ func (a *Transport) releasePeer(pid peer.Identifier, connectionScope *connection
 		return err
 	}
 
+	a.logger.Info("http2: [test] subscriber released peer",
+		zap.String("peerIdentifier", key.identifier),
+		zap.String("connectionScope", scopeLabel(connectionScope)),
+		zap.Int64("peerDebugID", p.debugID),
+		zap.Int("subscribersLeft", p.NumSubscribers()))
 	if p.NumSubscribers() == 0 {
 		delete(a.peers, key)
+		a.logger.Info("http2: [test] last subscriber gone; removing peer and releasing its pool",
+			zap.String("peerIdentifier", key.identifier),
+			zap.Int64("peerDebugID", p.debugID),
+			zap.Int("totalPeers", len(a.peers)))
 		p.Release()
 		// Release only asks the peer's HTTP/2 pool to stop. Track its
 		// teardown so Transport.Stop can wait for it, unless Stop already

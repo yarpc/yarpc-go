@@ -30,6 +30,7 @@ import (
 
 	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 )
 
@@ -64,6 +65,8 @@ type h2ConnSender struct {
 	// whether the pool needs to grow (see connpool.Pool.TryScaleUp), the way
 	// the gRPC outbound does after picking a connection. Nil disables that.
 	pool *connpool.Pool[*http2.ClientConn]
+	// peerDebugID tags this request's logs with its peer (TEST BRANCH).
+	peerDebugID int64
 }
 
 func (s *h2ConnSender) Do(req *http.Request) (*http.Response, error) {
@@ -74,6 +77,8 @@ func (s *h2ConnSender) Do(req *http.Request) (*http.Response, error) {
 	// count reaches zero, so releasing it while the body is still being read
 	// would let the pool close a connection under an open stream.
 	s.wrapper.IncStreamCount()
+	s.logRequest("request: stream opened on connection",
+		zap.String("method", req.Method), zap.String("path", req.URL.Path))
 	if s.pool != nil {
 		s.pool.TryScaleUp(s.wrapper)
 	}
@@ -81,6 +86,8 @@ func (s *h2ConnSender) Do(req *http.Request) (*http.Response, error) {
 	resp, err := s.wrapper.Conn.RoundTrip(req)
 	if err != nil {
 		s.wrapper.DecStreamCount()
+		s.logRequest("request: round trip failed; stream released",
+			zap.String("method", req.Method), zap.String("path", req.URL.Path), zap.Error(err))
 		// A request can fail on its own -- a timeout, a cancelled context, a
 		// stream reset -- without the connection being at fault. Tearing the
 		// connection down for that would abort every other request still in
@@ -101,8 +108,25 @@ func (s *h2ConnSender) Do(req *http.Request) (*http.Response, error) {
 		return resp, err
 	}
 
-	resp.Body = &streamCountBody{ReadCloser: resp.Body, release: s.wrapper.DecStreamCount}
+	s.logRequest("request: response headers received; stream stays open until the body ends",
+		zap.Int("status", resp.StatusCode))
+	resp.Body = &streamCountBody{ReadCloser: resp.Body, release: func() {
+		s.wrapper.DecStreamCount()
+		s.logRequest("request: response body finished or closed; stream released")
+	}}
 	return resp, nil
+}
+
+// logRequest logs one step of a request's stream accounting with the pool's
+// shape at that moment. Silent without a pool (and so without a logger).
+func (s *h2ConnSender) logRequest(msg string, fields ...zap.Field) {
+	if s.pool == nil || s.pool.Logger == nil {
+		return
+	}
+	s.pool.Snapshot("[req] "+msg, append([]zap.Field{
+		zap.Int64("peerDebugID", s.peerDebugID),
+		zap.Int32("this_conn_streams", s.wrapper.StreamCount()),
+	}, fields...)...)
 }
 
 // streamCountBody holds a response's stream count until the stream is

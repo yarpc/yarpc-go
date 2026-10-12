@@ -35,8 +35,18 @@ import (
 	"golang.org/x/net/http2"
 )
 
+// httpPeerDebugSeq tags every httpPeer with a stable, human-readable ID in
+// logs (TEST BRANCH): a pointer is hard to eyeball, and duplicate peers for
+// one address must be told apart to verify each owns its own connections.
+var httpPeerDebugSeq = atomic.NewInt64(0)
+
 type httpPeer struct {
 	*abstractpeer.Peer
+
+	// debugID identifies this peer in logs; see httpPeerDebugSeq.
+	debugID int64
+	// h2DialCount counts dials made by this peer's pool, logged on each dial.
+	h2DialCount stdatomic.Int64
 
 	transport             *Transport
 	addr                  string
@@ -97,8 +107,15 @@ func newPeerWithPool(addr string, t *Transport, startupPool connpool.Config, pro
 		<-timer.C
 	}
 
+	debugID := httpPeerDebugSeq.Inc()
+	t.logger.Info("http2: [test] peer created",
+		zap.String("peer", addr),
+		zap.Int64("peerDebugID", debugID),
+		zap.Bool("hasLiveProvider", provider != nil),
+	)
 	t.logger.Info("http2: connection pool config resolved",
 		zap.String("peer", addr),
+		zap.Int64("peerDebugID", debugID),
 		zap.Bool("dynamicScalingEnabled", startupPool.DynamicScalingEnabled),
 		zap.Int("minConnections", startupPool.MinConnections),
 		zap.Int("maxConnections", startupPool.MaxConnections),
@@ -110,6 +127,7 @@ func newPeerWithPool(addr string, t *Transport, startupPool connpool.Config, pro
 	)
 
 	return &httpPeer{
+		debugID:               debugID,
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport:             t,
 		addr:                  addr,
@@ -133,7 +151,7 @@ func (p *httpPeer) loadH2Pool() *connpool.Pool[*http2.ClientConn] {
 func (p *httpPeer) h2Sender() (sender, error) {
 	if pool := p.loadH2Pool(); pool != nil {
 		if w := pool.PickConn(); w != nil {
-			return &h2ConnSender{wrapper: w, pool: pool}, nil
+			return p.newH2ConnSender(w, pool), nil
 		}
 	}
 
@@ -145,7 +163,23 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		pool = connpool.NewPool(
 			context.Background(),
 			p.poolConfig.Get,
-			func(ctx context.Context) (*http2.ClientConn, error) { return p.transport.dialH2Conn(ctx, p.addr) },
+			func(ctx context.Context) (*http2.ClientConn, error) {
+				seq := p.h2DialCount.Add(1)
+				start := time.Now()
+				p.transport.logger.Info("http2: [test] dialing new connection",
+					zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID), zap.Int64("dialSeq", seq))
+				cc, err := p.transport.dialH2Conn(ctx, p.addr)
+				if err != nil {
+					p.transport.logger.Info("http2: [test] dial failed",
+						zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID),
+						zap.Int64("dialSeq", seq), zap.Duration("took", time.Since(start)), zap.Error(err))
+					return nil, err
+				}
+				p.transport.logger.Info("http2: [test] dial succeeded",
+					zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID),
+					zap.Int64("dialSeq", seq), zap.Duration("took", time.Since(start)))
+				return cc, nil
+			},
 			p.transport.logger,
 			p.addr,
 			connpool.NewReporter(p.transport.h2PoolMetrics),
@@ -165,6 +199,8 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		// count 0.
 		_ = pool.Start(0, false)
 		p.h2Pool.Store(pool)
+		p.transport.logger.Info("http2: [test] created HTTP/2 connection pool for peer",
+			zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID))
 		// Release may have run before the pool was stored; it would have
 		// found no pool to stop, and nothing else ever would.
 		select {
@@ -177,15 +213,23 @@ func (p *httpPeer) h2Sender() (sender, error) {
 	// Re-check: another goroutine may have dialed the first connection while
 	// we were waiting for the lock.
 	if w := pool.PickConn(); w != nil {
-		return &h2ConnSender{wrapper: w, pool: pool}, nil
+		return p.newH2ConnSender(w, pool), nil
 	}
 	w, err := pool.AddConn()
 	if err != nil {
+		p.transport.logger.Info("http2: [test] first connection for this request could not be dialed; the request fails and the next one retries",
+			zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID), zap.Error(err))
 		return nil, err
 	}
 	p.countH2ActivePeer()
 	p.startH2Monitor(pool)
-	return &h2ConnSender{wrapper: w, pool: pool}, nil
+	return p.newH2ConnSender(w, pool), nil
+}
+
+// newH2ConnSender builds the per-request sender for w, tagged with this
+// peer's debug ID so request logs can be traced to a peer.
+func (p *httpPeer) newH2ConnSender(w *connpool.Wrapper[*http2.ClientConn], pool *connpool.Pool[*http2.ClientConn]) *h2ConnSender {
+	return &h2ConnSender{wrapper: w, pool: pool, peerDebugID: p.debugID}
 }
 
 // startH2Monitor starts the pool's scaling monitor (scale-down, idle cleanup,
@@ -195,9 +239,16 @@ func (p *httpPeer) h2Sender() (sender, error) {
 // would only add an idle per-peer ticker: watchH2Conn already evicts broken
 // connections itself.
 func (p *httpPeer) startH2Monitor(pool *connpool.Pool[*http2.ClientConn]) {
-	if p.poolConfig.Startup().DynamicScalingEnabled || p.poolConfig.HasProvider() {
+	startup, hasProvider := p.poolConfig.Startup().DynamicScalingEnabled, p.poolConfig.HasProvider()
+	if startup || hasProvider {
+		p.transport.logger.Info("http2: [test] starting the scaling monitor",
+			zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID),
+			zap.Bool("scalingEnabledAtStartup", startup), zap.Bool("hasLiveProvider", hasProvider))
 		pool.StartMonitor()
+		return
 	}
+	p.transport.logger.Info("http2: [test] NOT starting the scaling monitor: scaling is off at startup and there is no live provider",
+		zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID))
 }
 
 // countH2ActivePeer counts this peer in the h2ActivePeers gauge once its first
@@ -247,10 +298,17 @@ func (p *httpPeer) watchH2Conn(w *connpool.Wrapper[*http2.ClientConn]) {
 			// would abort its in-flight requests and add a re-dial to an
 			// already busy server.
 			if st := w.Conn.State(); st.Closed || st.Closing {
+				p.transport.logger.Info("http2: [test] connection health poll found it closed or closing; evicting",
+					zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID),
+					zap.Bool("closed", st.Closed), zap.Bool("closing", st.Closing),
+					zap.Int32("streams", w.StreamCount()))
 				w.TransitionState(connpool.StateActive, connpool.StateDraining)
 				w.Cancel()
 			}
 		case <-w.Context().Done():
+			p.transport.logger.Info("http2: [test] connection context done; closing the connection and removing it from the pool",
+				zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID),
+				zap.String("state", w.GetState().String()), zap.Int32("streams", w.StreamCount()))
 			w.Conn.Close()
 			pool := p.loadH2Pool()
 			pool.Remove(w)
@@ -347,6 +405,9 @@ func (p *httpPeer) onDisconnected() {
 }
 
 func (p *httpPeer) Release() {
+	p.transport.logger.Info("http2: [test] peer released",
+		zap.String("peer", p.addr), zap.Int64("peerDebugID", p.debugID),
+		zap.Bool("hadPool", p.loadH2Pool() != nil))
 	close(p.released)
 	// Tear down this peer's dedicated HTTP/2 connection pool, if h2Sender
 	// ever created one; nothing else references it once the peer is
