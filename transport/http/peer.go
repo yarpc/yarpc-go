@@ -135,6 +135,13 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		// with count 0.
 		_ = pool.Start(0, false)
 		p.h2Pool.Store(pool)
+		// Release may have run before the pool was stored; it would have
+		// found no pool to stop, and nothing else ever would.
+		select {
+		case <-p.released:
+			pool.Stop()
+		default:
+		}
 	}
 
 	// Re-check: another goroutine may have dialed the first connection while

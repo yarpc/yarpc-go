@@ -22,8 +22,10 @@ package http
 
 import (
 	"context"
+	"io"
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"go.uber.org/yarpc/transport/internal/connpool"
@@ -61,11 +63,17 @@ type h2ConnSender struct {
 }
 
 func (s *h2ConnSender) Do(req *http.Request) (*http.Response, error) {
+	// The stream is counted as in flight from here until the response body
+	// is finished (see streamCountBody) -- not until RoundTrip returns,
+	// which is only the response headers. The count decides when the pool may
+	// drain and close a connection (once it reaches zero), so releasing it
+	// while the body is still being read would let the pool close a
+	// connection under an open stream.
 	s.wrapper.IncStreamCount()
-	defer s.wrapper.DecStreamCount()
 
 	resp, err := s.wrapper.Conn.RoundTrip(req)
 	if err != nil {
+		s.wrapper.DecStreamCount()
 		// A request can fail on its own -- a timeout, a cancelled context, a
 		// stream reset -- without the connection being at fault. Tearing the
 		// connection down for that would abort every other request still in
@@ -83,8 +91,34 @@ func (s *h2ConnSender) Do(req *http.Request) (*http.Response, error) {
 			s.wrapper.TransitionState(connpool.StateActive, connpool.StateDraining)
 			s.wrapper.Cancel()
 		}
+		return resp, err
 	}
-	return resp, err
+
+	resp.Body = &streamCountBody{ReadCloser: resp.Body, release: s.wrapper.DecStreamCount}
+	return resp, nil
+}
+
+// streamCountBody holds a response's stream count until the stream is
+// finished: the body reaching EOF or failing, or being closed, whichever
+// comes first. release runs exactly once.
+type streamCountBody struct {
+	io.ReadCloser
+	release func()
+	once    sync.Once
+}
+
+func (b *streamCountBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if err != nil {
+		b.once.Do(b.release)
+	}
+	return n, err
+}
+
+func (b *streamCountBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.once.Do(b.release)
+	return err
 }
 
 // maxH2RetryAttempts bounds replay attempts for a request that failed for a
