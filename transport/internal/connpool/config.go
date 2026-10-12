@@ -156,8 +156,13 @@ type ConfigResolver struct {
 	logPrefix string
 	id        string
 
-	// lastValid holds the last Config that passed validation (a Config).
-	lastValid atomic.Value
+	// last is the most recent overlay that resolved to a valid Config, with
+	// the Config it produced. It starts as the zero overlay and startup, and
+	// is replaced only by a valid result. Get returns it directly while the
+	// provider keeps returning the same overlay, so the per-RPC call does no
+	// Apply, Validate or allocation, and falls back to it when an overlay is
+	// invalid.
+	last atomic.Pointer[resolvedConfig]
 	// invalidWarned limits the invalid-overlay warning to once per invalid
 	// streak: Get runs on every RPC scale-up check and monitor tick, so
 	// logging each time would flood.
@@ -175,7 +180,7 @@ func NewConfigResolver(startup Config, provider func() Override, logger *zap.Log
 		logPrefix: logPrefix,
 		id:        id,
 	}
-	l.lastValid.Store(startup)
+	l.last.Store(&resolvedConfig{cfg: startup})
 	return l
 }
 
@@ -196,6 +201,13 @@ func (l *ConfigResolver) Get() Config {
 		return l.startup
 	}
 	overlay := l.provider()
+	// Fast path, taken on every RPC: the provider's answer has not changed
+	// since it last produced a valid Config, so that Config is still current.
+	// A change is seen on the very next call.
+	last := l.last.Load()
+	if last.overlay.equal(overlay) {
+		return last.cfg
+	}
 	next := l.startup.Apply(&overlay)
 	if err := next.Validate(); err != nil {
 		if l.logger != nil && l.invalidWarned.CompareAndSwap(false, true) {
@@ -203,12 +215,33 @@ func (l *ConfigResolver) Get() Config {
 				zap.String("peer", l.id),
 				zap.Error(err))
 		}
-		if prev, ok := l.lastValid.Load().(Config); ok {
-			return prev
-		}
-		return l.startup
+		return last.cfg
 	}
 	l.invalidWarned.Store(false)
-	l.lastValid.Store(next)
+	l.last.Store(&resolvedConfig{overlay: overlay, cfg: next})
 	return next
+}
+
+// resolvedConfig pairs a valid Config with the overlay it was resolved from.
+type resolvedConfig struct {
+	overlay Override
+	cfg     Config
+}
+
+// equal reports whether two overlays set the same values. The enabled flag is
+// compared by value, since a provider may return a fresh pointer on each call.
+func (o Override) equal(other Override) bool {
+	if (o.DynamicScalingEnabled == nil) != (other.DynamicScalingEnabled == nil) {
+		return false
+	}
+	if o.DynamicScalingEnabled != nil && *o.DynamicScalingEnabled != *other.DynamicScalingEnabled {
+		return false
+	}
+	return o.MaxConcurrentStreams == other.MaxConcurrentStreams &&
+		o.ScaleUpThreshold == other.ScaleUpThreshold &&
+		o.ScaleDownGap == other.ScaleDownGap &&
+		o.MinConnections == other.MinConnections &&
+		o.MaxConnections == other.MaxConnections &&
+		o.IdleTimeout == other.IdleTimeout &&
+		o.ScalingMonitorInterval == other.ScalingMonitorInterval
 }
