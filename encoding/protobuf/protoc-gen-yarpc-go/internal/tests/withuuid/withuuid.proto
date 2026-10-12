@@ -21,6 +21,10 @@
 //     `repeated Msg` hop; the accessor ranges the slice and recurses.
 //   - MapMessageRequest reaches the annotation through a
 //     `map<string,Msg>` hop; the accessor ranges the values and recurses.
+//   - WrapperActorsRequest annotates message-typed fields, as single,
+//     repeated, and map-value fields, including wrapper types around the
+//     UUID string (UUID, UserId, google.protobuf.StringValue); every
+//     string inside an annotated message is collected.
 //   - IgnoredAnnotationsRequest has annotations on shapes that must be
 //     ignored (a non-string scalar, and a message-typed field whose
 //     subtree holds no string leaf); the generator must NOT emit an
@@ -34,6 +38,7 @@ package uber.yarpc.tests.protouuid;
 option go_package = "withuuid";
 
 import "encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto";
+import "google/protobuf/wrappers.proto";
 
 message DeleteUserRequest {
   string actor = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
@@ -139,6 +144,37 @@ message MapMessageRequest {
   map<string, ActorItem> items_by_id = 1;
 }
 
+// UUID and UserId are wrapper types around the UUID string, protobuf's
+// stand-in for a Thrift typedef of string: UUID wraps the string, UserId
+// wraps UUID. Neither carries an annotation itself; annotating a field of
+// either type makes the string inside it the leaf.
+message UUID {
+  string value = 1;
+}
+
+message UserId {
+  UUID uuid = 1;
+}
+
+// Actor has more than one string field: annotating a field of this type
+// collects all of them.
+message Actor {
+  string uuid = 1;
+  string name = 2;
+}
+
+// WrapperActorsRequest annotates message-typed fields. trace has the
+// same type as actor but is not annotated, so it must not be collected.
+message WrapperActorsRequest {
+  UUID actor = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
+  UserId user = 2 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
+  google.protobuf.StringValue legacy_actor = 3 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
+  repeated UUID actors = 4 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
+  map<string, UserId> users_by_role = 5 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
+  Actor owner = 6 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
+  UUID trace = 7;
+}
+
 // IgnoredAnnotationsRequest carries annotations only on shapes that must
 // be ignored: a non-string scalar (timestamp), and a message-typed field
 // (creds) whose subtree holds no string leaf. None of these are valid
@@ -146,9 +182,8 @@ message MapMessageRequest {
 // request type.
 message IgnoredAnnotationsRequest {
   int64 timestamp = 1 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
-  // The annotation on a message-typed field is ignored. The walker does
-  // still descend into creds looking for a string leaf - and finds none,
-  // since IgnoredCredsContainer holds only a non-string scalar.
+  // IgnoredCredsContainer holds no string field, so the annotated creds
+  // subtree has nothing to collect.
   IgnoredCredsContainer creds = 2 [(uber.security.engsec.utoken.annotations.actor_uuid) = true];
 }
 
@@ -181,5 +216,6 @@ service UserService {
   rpc MapActorsAction(MapActorsRequest) returns (DeleteUserResponse);
   rpc RepeatedMessageAction(RepeatedMessageRequest) returns (DeleteUserResponse);
   rpc MapMessageAction(MapMessageRequest) returns (DeleteUserResponse);
+  rpc WrapperAction(WrapperActorsRequest) returns (DeleteUserResponse);
   rpc IgnoredAction(IgnoredAnnotationsRequest) returns (DeleteUserResponse);
 }

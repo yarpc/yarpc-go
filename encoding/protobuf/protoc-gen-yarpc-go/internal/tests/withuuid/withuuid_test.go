@@ -35,6 +35,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/gogo/protobuf/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -197,6 +198,41 @@ func TestActorUUIDAccessor_MapMessage(t *testing.T) {
 	})
 }
 
+// TestActorUUIDAccessor_WrapperMessages covers annotations on
+// message-typed fields: the accessor collects every string inside the
+// annotated message, at any depth. The unannotated trace, of the same
+// type as actor, is not collected.
+func TestActorUUIDAccessor_WrapperMessages(t *testing.T) {
+	t.Run("every_string_in_annotated_messages_collected", func(t *testing.T) {
+		req := &WrapperActorsRequest{
+			Actor:       &UUID{Value: "alice"},
+			User:        &UserId{Uuid: &UUID{Value: "bob"}},
+			LegacyActor: &types.StringValue{Value: "carol"},
+			Actors:      []*UUID{{Value: "dave"}, {Value: "erin"}},
+			Owner:       &Actor{Uuid: "frank", Name: "Frank"},
+			Trace:       &UUID{Value: "not-annotated"},
+		}
+		assert.Equal(t,
+			[]string{"alice", "bob", "carol", "dave", "erin", "frank", "Frank"},
+			req.ActorUUID())
+	})
+
+	t.Run("map_of_wrappers_collected", func(t *testing.T) {
+		req := &WrapperActorsRequest{UsersByRole: map[string]*UserId{
+			"admin":  {Uuid: &UUID{Value: "alice"}},
+			"editor": {Uuid: &UUID{Value: "bob"}},
+		}}
+		got := req.ActorUUID()
+		assert.Subset(t, got, []string{"alice", "bob"})
+		assert.NotContains(t, got, "admin", "map keys are never collected")
+	})
+
+	t.Run("unset_wrappers_are_nil_safe", func(t *testing.T) {
+		assert.Equal(t, []string{"", "", "", "", ""}, (&WrapperActorsRequest{}).ActorUUID(),
+			"each single-valued annotated path surfaces the empty string; empty containers contribute nothing")
+	})
+}
+
 // TestActorUUIDAccessor_NonRequestMessages pins the emission rule that
 // every message declared in the file with a path to an annotated leaf
 // gets an accessor - not just service request types. The declaring file
@@ -243,6 +279,9 @@ func TestUnannotatedRequestHasNoActorUUID(t *testing.T) {
 		{"ListUsersResponse", &ListUsersResponse{}},
 		{"IgnoredAnnotationsRequest", &IgnoredAnnotationsRequest{}},
 		{"IgnoredCredsContainer", &IgnoredCredsContainer{}},
+		{"UUID", &UUID{}},
+		{"UserId", &UserId{}},
+		{"Actor", &Actor{}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
