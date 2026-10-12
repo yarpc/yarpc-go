@@ -193,12 +193,16 @@ func newActorUUIDMethod(goType string, paths []*protogen.Path) *actorUUIDMethod 
 // The produced graph holds only walk-relevant fields, in declaration
 // order: message-typed hops and actor_uuid-annotated string-valued
 // leaves. A leaf is a plain `string`, a `repeated string`, or a
-// `map<K, string>` field carrying the annotation. Annotations on any
-// other shape (non-string scalars, repeated non-string scalars, or a
-// message-typed field itself) are silently dropped, though message-typed
-// fields are still descended into looking for string leaves inside.
-// Message-typed fields whose type reference does not resolve are
-// likewise dropped.
+// `map<K, string>` field carrying the annotation. An annotation on a
+// message-typed field (singular, repeated, or a map<K, Msg>) marks every
+// string-valued field below it, at any depth, as a leaf. Annotations on
+// non-string scalars are silently dropped. Message-typed fields whose
+// type reference does not resolve are likewise dropped.
+//
+// Messages reached through an annotated message field are converted by a
+// separate collect-all converter (see collector), so each converter's
+// memo maps a message to exactly one Node regardless of the route taken
+// to reach it.
 //
 // An annotation-read failure (see hasActorUUID) aborts the conversion:
 // the error propagates up and the caller fails generation with it.
@@ -206,6 +210,8 @@ type uuidConverter struct {
 	num  int32
 	ctx  *uuidContext
 	memo map[*protoplugin.Message]*protogen.Node
+	all  bool           // every string-valued field is a leaf
+	sub  *uuidConverter // collect-all converter, created on first use
 }
 
 func newUUIDConverter(num int32, ctx *uuidContext) *uuidConverter {
@@ -214,6 +220,41 @@ func newUUIDConverter(num int32, ctx *uuidContext) *uuidConverter {
 		ctx:  ctx,
 		memo: map[*protoplugin.Message]*protogen.Node{},
 	}
+}
+
+// collector returns the collect-all converter used below annotated
+// message fields.
+func (c *uuidConverter) collector() *uuidConverter {
+	if c.all {
+		return c
+	}
+	if c.sub == nil {
+		c.sub = newUUIDConverter(c.num, c.ctx)
+		c.sub.all = true
+	}
+	return c.sub
+}
+
+// annotated reports whether f carries the actor_uuid annotation, which
+// every field of a collect-all converter implicitly does.
+func (c *uuidConverter) annotated(f *protoplugin.Field) (bool, error) {
+	if c.all {
+		return true, nil
+	}
+	return hasActorUUID(f.GetOptions(), c.num)
+}
+
+// convertChild converts msg, reached through the message-typed field f,
+// with the collect-all converter when f is annotated.
+func (c *uuidConverter) convertChild(f *protoplugin.Field, msg *protoplugin.Message) (*protogen.Node, error) {
+	annotated, err := c.annotated(f)
+	if err != nil {
+		return nil, err
+	}
+	if annotated {
+		return c.collector().convert(msg)
+	}
+	return c.convert(msg)
 }
 
 // convert returns the memoized Node for msg, building it (and,
@@ -249,7 +290,7 @@ func (c *uuidConverter) convertField(f *protoplugin.Field) (*protogen.Field, err
 		if f.GetType() != descriptor.FieldDescriptorProto_TYPE_STRING {
 			return nil, nil
 		}
-		annotated, err := hasActorUUID(f.GetOptions(), c.num)
+		annotated, err := c.annotated(f)
 		if err != nil {
 			return nil, err
 		}
@@ -279,7 +320,7 @@ func (c *uuidConverter) convertField(f *protoplugin.Field) (*protogen.Field, err
 	if isRepeated {
 		kind = protogen.StepRepeatedMessage
 	}
-	child, err := c.convert(inner)
+	child, err := c.convertChild(f, inner)
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +340,7 @@ func (c *uuidConverter) convertMapField(f *protoplugin.Field, entry *protoplugin
 	case descriptor.FieldDescriptorProto_TYPE_STRING:
 		// map<K, string>: the values are the leaves. The annotation
 		// lives on the map field itself, not the synthetic entry.
-		annotated, err := hasActorUUID(f.GetOptions(), c.num)
+		annotated, err := c.annotated(f)
 		if err != nil {
 			return nil, err
 		}
@@ -313,7 +354,7 @@ func (c *uuidConverter) convertMapField(f *protoplugin.Field, entry *protoplugin
 		if valMsg == nil {
 			return nil, nil
 		}
-		child, err := c.convert(valMsg)
+		child, err := c.convertChild(f, valMsg)
 		if err != nil {
 			return nil, err
 		}

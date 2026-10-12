@@ -379,16 +379,142 @@ func TestConvertAndWalk(t *testing.T) {
 		assert.Equal(t, []string{"id"}, stepNames(paths[0]))
 	})
 
-	t.Run("annotationOnMessageFieldIgnored", func(t *testing.T) {
-		// Annotation directly on a message-typed field is ignored
-		// (the leaf must be a string), but the walker still recurses
-		// into the message looking for a string leaf inside.
+	t.Run("annotatedWrapperMessageReadsInnerString", func(t *testing.T) {
+		// UUID { string value = 1; } with the annotation on the field
+		// that holds it: the unannotated inner string is the leaf.
+		uuid := newMessage(t, "UUID", stringField(t, "value", false))
+		req := newMessage(t, "Req", annotatedMessageField(t, "actor", uuid))
+		paths := walkPathOf(t, req, uuid)
+		require.Len(t, paths, 1)
+		assert.Equal(t, []string{"actor", "value"}, stepNames(paths[0]))
+		assert.Equal(t, []protogen.StepKind{protogen.StepScalarMessage, protogen.StepStringLeaf}, stepKinds(paths[0]))
+	})
+
+	t.Run("annotatedNestedWrapperReadsInnermostString", func(t *testing.T) {
+		// UserId { UUID uuid = 1; } wraps UUID { string value = 1; }:
+		// the annotation carries down through both levels.
+		uuid := newMessage(t, "UUID", stringField(t, "value", false))
+		userID := newMessage(t, "UserId", messageField(t, "uuid", uuid))
+		req := newMessage(t, "Req", annotatedMessageField(t, "actor", userID))
+		paths := walkPathOf(t, req, userID, uuid)
+		require.Len(t, paths, 1)
+		assert.Equal(t, []string{"actor", "uuid", "value"}, stepNames(paths[0]))
+	})
+
+	t.Run("annotatedRepeatedWrapper", func(t *testing.T) {
+		uuid := newMessage(t, "UUID", stringField(t, "value", false))
+		actors := annotatedMessageField(t, "actors", uuid)
+		actors.FieldDescriptorProto.Label = descriptor.FieldDescriptorProto_LABEL_REPEATED.Enum()
+		req := newMessage(t, "Req", actors)
+		paths := walkPathOf(t, req, uuid)
+		require.Len(t, paths, 1)
+		assert.Equal(t, []string{"actors", "value"}, stepNames(paths[0]))
+		assert.Equal(t, []protogen.StepKind{protogen.StepRepeatedMessage, protogen.StepStringLeaf}, stepKinds(paths[0]))
+	})
+
+	t.Run("annotatedMapOfWrappers", func(t *testing.T) {
+		uuid := newMessage(t, "UUID", stringField(t, "value", false))
+		entry := mapEntryMessage(t, "ActorsByRoleEntry", messageValueField(t, uuid))
+		req := newMessage(t, "Req", mapField(t, "actors_by_role", entry, true))
+		paths := walkPathOf(t, req, entry, uuid)
+		require.Len(t, paths, 1)
+		assert.Equal(t, []string{"actors_by_role", "value"}, stepNames(paths[0]))
+		assert.Equal(t, []protogen.StepKind{protogen.StepMapMessage, protogen.StepStringLeaf}, stepKinds(paths[0]),
+			"only map values are leaves, never the keys")
+	})
+
+	t.Run("annotatedMessageCollectsEveryString", func(t *testing.T) {
+		// Every string in the annotated subtree is collected, single and
+		// repeated alike; non-string scalars are still skipped.
+		actor := newMessage(t, "Actor",
+			stringField(t, "uuid", false),
+			int64Field(t, "age", false),
+			repeatedStringField(t, "aliases", false),
+		)
+		req := newMessage(t, "Req", annotatedMessageField(t, "actor", actor))
+		paths := walkPathOf(t, req, actor)
+		assert.Equal(t, [][]string{{"actor", "uuid"}, {"actor", "aliases"}}, allStepNames(paths))
+	})
+
+	t.Run("annotatedCycleTerminates", func(t *testing.T) {
+		node := &protoplugin.Message{
+			DescriptorProto: &descriptor.DescriptorProto{Name: proto.String("Node")},
+		}
+		node.Fields = []*protoplugin.Field{
+			messageField(t, "next", node),
+			stringField(t, "id", false),
+		}
+		for _, f := range node.Fields {
+			f.Message = node
+		}
+		req := newMessage(t, "Req", annotatedMessageField(t, "root", node))
+		paths := walkPathOf(t, req, node)
+		assert.Equal(t, [][]string{{"root", "id"}}, allStepNames(paths),
+			"the self-reference below the annotated field is skipped")
+	})
+
+	t.Run("annotatedDiamondsHitPathCap", func(t *testing.T) {
+		// Below an annotated field, 7 chained diamonds over an
+		// unannotated leaf expand to 2^7 = 128 paths, over the cap of
+		// 100: generation fails with the same error as unannotated
+		// diamonds.
+		root, rest := diamondChain(t, 7)
+		root.Fields[0].FieldDescriptorProto.Options = withActorUUIDOption(t, true)
+		rest[0].Fields[0].FieldDescriptorProto.Options = nil
+		info := newTemplateInfoWithServices(t,
+			append([]*protoplugin.Message{root}, rest...),
+			svc(t, "S", method(t, "M", root, root)),
+		)
+		_, err := actorUUIDMethods(info)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "actor_uuid paths")
+		assert.Contains(t, err.Error(), "Req")
+	})
+
+	t.Run("annotatedDiamondsUnderCapSucceed", func(t *testing.T) {
+		// 6 annotated diamonds over an unannotated leaf: each route
+		// reaches the leaf once, and only Req has an accessor because
+		// nothing else is annotated.
+		root, rest := diamondChain(t, 6)
+		root.Fields[0].FieldDescriptorProto.Options = withActorUUIDOption(t, true)
+		rest[0].Fields[0].FieldDescriptorProto.Options = nil
+		info := newTemplateInfoWithServices(t,
+			append([]*protoplugin.Message{root}, rest...),
+			svc(t, "S", method(t, "M", root, root)),
+		)
+		got, err := actorUUIDMethods(info)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, "Req", got[0].GoTypeName)
+		assert.Len(t, got[0].Exprs, 64)
+	})
+
+	t.Run("annotatedMessageWithoutStringsYieldsNothing", func(t *testing.T) {
+		creds := newMessage(t, "Creds", int64Field(t, "issued_at", false))
+		req := newMessage(t, "Req", annotatedMessageField(t, "creds", creds))
+		assert.Empty(t, walkPathOf(t, req, creds))
+	})
+
+	t.Run("annotatedLeafInsideAnnotatedMessageCollectedOnce", func(t *testing.T) {
 		inner := newMessage(t, "Inner", stringField(t, "uuid", true))
 		req := newMessage(t, "Req", annotatedMessageField(t, "creds", inner))
 		paths := walkPathOf(t, req, inner)
 		require.Len(t, paths, 1)
-		assert.Equal(t, []string{"creds", "uuid"}, stepNames(paths[0]),
-			"the annotation on creds is silently ignored, but the walker still descends into Inner and finds uuid")
+		assert.Equal(t, []string{"creds", "uuid"}, stepNames(paths[0]))
+	})
+
+	t.Run("sameMessageAnnotatedAndUnannotated", func(t *testing.T) {
+		// The same wrapper type reached through an unannotated field and
+		// an annotated one: only the annotated route is collected, in
+		// either declaration order.
+		uuid := newMessage(t, "UUID", stringField(t, "value", false))
+		req := newMessage(t, "Req",
+			messageField(t, "trace", uuid),
+			annotatedMessageField(t, "actor", uuid),
+			messageField(t, "span", uuid),
+		)
+		paths := walkPathOf(t, req, uuid)
+		assert.Equal(t, [][]string{{"actor", "value"}}, allStepNames(paths))
 	})
 
 	t.Run("cycleWithSiblingAnnotation", func(t *testing.T) {
@@ -695,6 +821,26 @@ func TestActorUUIDMethods(t *testing.T) {
 			"a scalar message chain collapses to a single return literal")
 		assert.Equal(t, []string{"t.GetInner().GetUuid()"}, got[1].Exprs)
 	})
+
+	t.Run("rendersChainThroughAnnotatedWrappers", func(t *testing.T) {
+		// The wrapper types themselves carry no annotation, so only the
+		// request gets an accessor.
+		uuid := newMessage(t, "UUID", stringField(t, "value", false))
+		userID := newMessage(t, "UserId", messageField(t, "uuid", uuid))
+		req := newMessage(t, "Req",
+			annotatedMessageField(t, "actor", uuid),
+			annotatedMessageField(t, "user", userID),
+		)
+		info := newTemplateInfoWithServices(t,
+			[]*protoplugin.Message{uuid, userID, req},
+			svc(t, "S", method(t, "M", req, req)),
+		)
+		got, err := actorUUIDMethods(info)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, "Req", got[0].GoTypeName)
+		assert.Equal(t, []string{"t.GetActor().GetValue()", "t.GetUser().GetUuid().GetValue()"}, got[0].Exprs)
+	})
 }
 
 // --- helpers --------------------------------------------------------------
@@ -900,8 +1046,7 @@ func messageField(t *testing.T, name string, target *protoplugin.Message) *proto
 }
 
 // annotatedMessageField is messageField with the actor_uuid option set
-// to true on the field itself. Used to confirm the walker silently
-// ignores the misplaced annotation but still recurses into target.
+// to true on the field itself, so every string inside target is a leaf.
 func annotatedMessageField(t *testing.T, name string, target *protoplugin.Message) *protoplugin.Field {
 	t.Helper()
 	f := messageField(t, name, target)
