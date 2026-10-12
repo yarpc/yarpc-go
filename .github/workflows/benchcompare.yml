@@ -1,0 +1,66 @@
+name: Benchmark Comparison
+
+# Runs benchstat over the benchmarks of the packages a PR changes, comparing the
+# PR against its merge base, and uploads the Markdown result as an artifact.
+#
+# This workflow runs PR code, so it has read-only permissions and no secrets.
+# That is what lets it run on PRs from forks. It cannot comment on the PR
+# itself; .github/workflows/benchcompare-comment.yml does that from a trusted
+# context once this workflow completes.
+#
+# Informational only: the result never blocks a merge.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  benchcompare:
+    name: Compare benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Drafts re-run on `ready_for_review`.
+    if: github.event.pull_request.draft == false
+    env:
+      # Not a hidden directory, so upload-artifact includes it by default.
+      BENCHCOMPARE_OUT_DIR: benchcompare-out
+      SUPPRESS_DOCKER: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The PR head, not the merge commit, so the diff against the merge
+          # base matches the PR's own changes. Full history for git merge-base.
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Compare benchmarks
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+        run: make benchcompare
+
+      # The comment workflow needs the PR number. It cannot trust this value
+      # (a fork controls this job) and verifies it against the head SHA.
+      - name: Record PR number
+        if: always()
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          mkdir -p "${BENCHCOMPARE_OUT_DIR}"
+          echo "${PR_NUMBER}" > "${BENCHCOMPARE_OUT_DIR}/pr_number"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchcompare
+          path: benchcompare-out
+          retention-days: 7
+          if-no-files-found: warn

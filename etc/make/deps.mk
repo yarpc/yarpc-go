@@ -19,6 +19,7 @@ ERRCHECK_VERSION := 1.7.0
 GOLINT_VERSION := 0.0.0-20210508222113-6edffad5e616
 STATICHCHECK_VERSION := 0.5.1
 GOIMPORTS_VERSION := 0.24.0
+BENCHSTAT_VERSION := 0.0.0-20230113213139-801c7ef9e5c5
 
 THRIFT_OS := $(UNAME_OS)
 PROTOC_OS := $(UNAME_OS)
@@ -102,6 +103,10 @@ $(BIN)/goimports:
 	@mkdir -p $(BIN)
 	GOBIN=$(BIN) go install "golang.org/x/tools/cmd/goimports@v$(GOIMPORTS_VERSION)"
 
+$(BIN)/benchstat:
+	@mkdir -p $(BIN)
+	GOBIN=$(BIN) go install "golang.org/x/perf/cmd/benchstat@v$(BENCHSTAT_VERSION)"
+
 define generatedeprule
 GEN_BINS += $(BIN)/$(shell basename $1)
 endef
@@ -126,6 +131,7 @@ GOLINT = $(BIN)/golint
 ERRCHECK = $(BIN)/errcheck
 STATICCHECK = $(BIN)/staticcheck
 GOIMPORTS = $(BIN)/goimports
+BENCHSTAT = $(BIN)/benchstat
 
 .PHONY: predeps
 predeps: $(THRIFT) $(PROTOC) $(RAGEL)
