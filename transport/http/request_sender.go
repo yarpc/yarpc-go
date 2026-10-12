@@ -60,16 +60,23 @@ func (t *transportSender) Do(req *http.Request) (*http.Response, error) {
 // for the HTTP/1 path above.
 type h2ConnSender struct {
 	wrapper *connpool.Wrapper[*http2.ClientConn]
+	// pool is the pool wrapper belongs to. When set, each request checks
+	// whether the pool needs to grow (see connpool.Pool.TryScaleUp), the way
+	// the gRPC outbound does after picking a connection. Nil disables that.
+	pool *connpool.Pool[*http2.ClientConn]
 }
 
 func (s *h2ConnSender) Do(req *http.Request) (*http.Response, error) {
 	// The stream is counted as in flight from here until the response body
 	// is finished (see streamCountBody) -- not until RoundTrip returns,
-	// which is only the response headers. The count decides when the pool may
-	// drain and close a connection (once it reaches zero), so releasing it
-	// while the body is still being read would let the pool close a
-	// connection under an open stream.
+	// which is only the response headers. The count drives both scale-up and
+	// the scale-down/idle transitions, which close connections once their
+	// count reaches zero, so releasing it while the body is still being read
+	// would let the pool close a connection under an open stream.
 	s.wrapper.IncStreamCount()
+	if s.pool != nil {
+		s.pool.TryScaleUp(s.wrapper)
+	}
 
 	resp, err := s.wrapper.Conn.RoundTrip(req)
 	if err != nil {
