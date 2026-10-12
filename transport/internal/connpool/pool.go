@@ -183,6 +183,10 @@ func (p *Pool[T]) Start(initialConnCount int, startMonitor bool) error {
 	if startMonitor {
 		p.startScalingMonitor()
 	}
+	p.testLog("pool started",
+		zap.Int("initial_conns", initialConnCount),
+		zap.Bool("monitor_requested", startMonitor),
+		zap.Any("config", p.Config()))
 
 	// Close stoppedC once all pool goroutines have finished. shutdownStarted
 	// gates new connWg.Add(1) calls; addingCount waits for any in-flight
@@ -194,6 +198,7 @@ func (p *Pool[T]) Start(initialConnCount int, startMonitor bool) error {
 			runtime.Gosched()
 		}
 		p.connWg.Wait()
+		p.testLog("pool torn down: all connection watchers and the monitor have exited")
 		// Zero this pool's contribution after every pool goroutine has
 		// stopped so a late RefreshMetrics snapshot cannot leave residual
 		// values on the shared gauges.
@@ -208,7 +213,10 @@ func (p *Pool[T]) Start(initialConnCount int, startMonitor bool) error {
 
 // Stop begins asynchronous teardown of the pool. It does not block; use Wait
 // to block until teardown completes.
-func (p *Pool[T]) Stop() { p.cancel() }
+func (p *Pool[T]) Stop() {
+	p.testLog("pool stopping", p.snapshot()...)
+	p.cancel()
+}
 
 // Wait blocks until the pool has fully torn down (all connections closed,
 // background goroutines exited) after Stop.
@@ -228,11 +236,14 @@ func (p *Pool[T]) LoadConns() []*Wrapper[T] {
 // it to the pool, and invokes OnConnAdded so the caller can start watching
 // it.
 func (p *Pool[T]) AddConn() (*Wrapper[T], error) {
+	dialStart := time.Now()
 	conn, err := p.Dial(p.ctx)
 	if err != nil {
+		p.testLog("dial failed", zap.Duration("took", time.Since(dialStart)), zap.Error(err))
 		p.metrics.IncDialFailure()
 		return nil, err
 	}
+	p.testLog("dial succeeded", zap.Duration("took", time.Since(dialStart)))
 	p.metrics.IncDial()
 	w := newWrapper(p.ctx, conn)
 
@@ -267,6 +278,7 @@ func (p *Pool[T]) AddConn() (*Wrapper[T], error) {
 		go p.OnConnAdded(w)
 	}
 	p.RefreshMetrics()
+	p.testLog("connection added to pool", p.snapshot()...)
 	return w, nil
 }
 
@@ -297,6 +309,7 @@ func (p *Pool[T]) Remove(w *Wrapper[T]) {
 		copy(next[idx:], oldSlice[idx+1:])
 		if p.connsPtr.CompareAndSwap(old, &next) {
 			p.connCount.Store(int32(len(next)))
+			p.testLog("connection removed from pool", p.snapshot()...)
 			return
 		}
 	}

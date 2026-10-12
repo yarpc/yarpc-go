@@ -54,6 +54,7 @@ func (p *Pool[T]) runScalingMonitor() {
 			p.EvaluateScaling()
 			timer.Reset(p.scalingMonitorInterval())
 		case <-p.ctx.Done():
+			p.testLog("scaling monitor stopped")
 			return
 		}
 	}
@@ -85,11 +86,18 @@ func (p *Pool[T]) scalingMonitorInterval() time.Duration {
 // is enabled), idle cleanup, then a scale-down check.
 func (p *Pool[T]) EvaluateScaling() {
 	cfg := p.Config()
+	p.testLog("monitor pass: before", append(p.snapshot(),
+		zap.Bool("scaling_enabled", cfg.DynamicScalingEnabled),
+		zap.Int("min_connections", cfg.MinConnections),
+		zap.Int("max_connections", cfg.MaxConnections),
+		zap.Int32("max_concurrent_streams", cfg.MaxConcurrentStreams),
+		zap.Duration("idle_timeout", cfg.IdleTimeout))...)
 	if cfg.DynamicScalingEnabled {
 		p.ensureMinConnections()
 	}
 	p.CleanupIdleConns()
 	p.MaybeScaleDown()
+	p.testLog("monitor pass: after", p.snapshot()...)
 }
 
 // StartMonitor starts the background scale-down/idle/min-fill loop if it is
@@ -111,6 +119,7 @@ func (p *Pool[T]) startScalingMonitor() {
 		return
 	}
 	p.connWg.Add(1)
+	p.testLog("scaling monitor starting", zap.Duration("interval", p.scalingMonitorInterval()))
 	go p.runScalingMonitor()
 }
 
@@ -232,6 +241,8 @@ func (p *Pool[T]) MaybeScaleDown() {
 
 	floor := ScaleDownFloor(cfg)
 	if len(active) <= floor {
+		p.testLog("scale-down skipped: at the floor",
+			zap.Int("active_conns", len(active)), zap.Int("floor", floor))
 		return
 	}
 
@@ -249,6 +260,10 @@ func (p *Pool[T]) MaybeScaleDown() {
 	if cfg.DynamicScalingEnabled {
 		capacityAfterDrain := scaleDownThreshold * int32(len(active)-1)
 		if totalStreams >= capacityAfterDrain {
+			p.testLog("scale-down skipped: remaining connections could not absorb the load",
+				zap.Int32("total_streams", totalStreams),
+				zap.Int32("capacity_after_drain", capacityAfterDrain),
+				zap.Int32("scale_down_threshold_per_conn", scaleDownThreshold))
 			return
 		}
 	}
@@ -332,6 +347,8 @@ func (p *Pool[T]) CleanupIdleConns() {
 	for _, c := range drained {
 		if c.TransitionState(StateDraining, StateIdle) {
 			c.setIdleNow()
+			p.testLog("draining connection finished its streams; now idle, closes after the idle timeout",
+				zap.Duration("idle_timeout", idleTimeout))
 		}
 	}
 
@@ -386,8 +403,19 @@ func (p *Pool[T]) TryScaleUp(leastLoadedConn *Wrapper[T]) {
 	// Set isScaling to 1 (from 0) to claim the scale-up slot.
 	// If another goroutine already holds it, bail out.
 	if !atomic.CompareAndSwapInt32(&p.isScaling, 0, 1) {
+		p.testLog("scale-up wanted but another scale-up is already running",
+			zap.Bool("need_min", needMin), zap.Bool("need_load", needLoad))
 		return
 	}
+	leastStreams := int32(-1) // -1: no connection yet (pool below its minimum)
+	if leastLoadedConn != nil {
+		leastStreams = leastLoadedConn.StreamCount()
+	}
+	p.testLog("scale-up triggered", append(p.snapshot(),
+		zap.Bool("need_min", needMin),
+		zap.Bool("need_load", needLoad),
+		zap.Int32("threshold_streams", threshold),
+		zap.Int32("least_loaded_streams", leastStreams))...)
 	p.addingCount.Add(1)
 	defer p.addingCount.Add(-1)
 	if p.shutdownStarted.Load() || p.ctx.Err() != nil {
@@ -409,6 +437,7 @@ func (p *Pool[T]) TryScaleUp(leastLoadedConn *Wrapper[T]) {
 		p.fillToMinConnections()
 		cfg := p.Config()
 		if !cfg.DynamicScalingEnabled {
+			p.testLog("scale-up aborted: scaling was switched off")
 			return
 		}
 		// Min-fill may have reactivated or dialed; re-read the least-loaded
@@ -419,6 +448,9 @@ func (p *Pool[T]) TryScaleUp(leastLoadedConn *Wrapper[T]) {
 		}
 		threshold := int32(float64(cfg.MaxConcurrentStreams) * cfg.ScaleUpThreshold)
 		if leastLoadedConn.StreamCount() < threshold {
+			p.testLog("scale-up not needed: load dropped below the threshold, or min-fill covered it",
+				zap.Int32("least_loaded_streams", leastLoadedConn.StreamCount()),
+				zap.Int32("threshold_streams", threshold))
 			return
 		}
 

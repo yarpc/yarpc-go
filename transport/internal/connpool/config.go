@@ -158,6 +158,9 @@ type ConfigResolver struct {
 
 	// lastValid holds the last Config that passed validation (a Config).
 	lastValid atomic.Value
+	// lastLogged is the last effective Config Get returned from a live
+	// provider, so a change can be logged once instead of on every call.
+	lastLogged atomic.Value
 	// invalidWarned limits the invalid-overlay warning to once per invalid
 	// streak: Get runs on every RPC scale-up check and monitor tick, so
 	// logging each time would flood.
@@ -176,6 +179,7 @@ func NewConfigResolver(startup Config, provider func() Override, logger *zap.Log
 		id:        id,
 	}
 	l.lastValid.Store(startup)
+	l.lastLogged.Store(startup)
 	return l
 }
 
@@ -210,5 +214,16 @@ func (l *ConfigResolver) Get() Config {
 	}
 	l.invalidWarned.Store(false)
 	l.lastValid.Store(next)
+	// TEST BRANCH: surface every change the live provider makes to the
+	// effective config, once, so live toggling can be followed in the logs.
+	if l.logger != nil {
+		if prev, ok := l.lastLogged.Load().(Config); !ok || prev != next {
+			l.lastLogged.Store(next)
+			l.logger.Info(l.logPrefix+": [test] effective connection pool config changed by live provider",
+				zap.String("peer", l.id),
+				zap.Any("previous", prev),
+				zap.Any("current", next))
+		}
+	}
 	return next
 }
