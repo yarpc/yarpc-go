@@ -83,6 +83,9 @@ func (s *recordingServer) RepeatedMessageAction(context.Context, *RepeatedMessag
 func (s *recordingServer) MapMessageAction(context.Context, *MapMessageRequest) (*DeleteUserResponse, error) {
 	return &DeleteUserResponse{}, nil
 }
+func (s *recordingServer) WrapperAction(context.Context, *WrapperActorsRequest) (*DeleteUserResponse, error) {
+	return &DeleteUserResponse{}, nil
+}
 func (s *recordingServer) IgnoredAction(context.Context, *IgnoredAnnotationsRequest) (*DeleteUserResponse, error) {
 	return &DeleteUserResponse{}, nil
 }
