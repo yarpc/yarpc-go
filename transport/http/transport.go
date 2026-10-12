@@ -503,6 +503,12 @@ type Transport struct {
 	// h2PoolConfig is the connpool.Config every peer's HTTP/2 pool is built
 	// with. See defaultH2PoolConfig's doc comment.
 	h2PoolConfig connpool.Config
+	// releasedPoolWg tracks the HTTP/2 pools of peers released via
+	// ReleasePeer. Release only stops a pool (asynchronously), so Stop joins
+	// these to make sure no scaling monitor or connection watcher outlives
+	// the transport. They cannot be waited on inside releasePeer: it runs
+	// under a.lock, which other transport paths take.
+	releasedPoolWg sync.WaitGroup
 	// h2PoolMetrics holds the shared, transport-wide connection-pool metric
 	// handles (active/draining/idle connection gauges, scale-event and
 	// dial-outcome counters). It is created once here and each peer's pool
@@ -536,6 +542,7 @@ func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
 		a.h1Transport.CloseIdleConnections()
 		a.stopPeerH2Pools()
+		a.releasedPoolWg.Wait()
 		a.connectorsGroup.Wait()
 		return nil
 	})
@@ -641,6 +648,15 @@ func (a *Transport) releasePeer(pid peer.Identifier, connectionScope *connection
 	if p.NumSubscribers() == 0 {
 		delete(a.peers, key)
 		p.Release()
+		// Release only asks the peer's HTTP/2 pool to stop. Track its
+		// teardown so Transport.Stop can wait for it.
+		if pool := p.loadH2Pool(); pool != nil {
+			a.releasedPoolWg.Add(1)
+			go func() {
+				defer a.releasedPoolWg.Done()
+				pool.Wait()
+			}()
+		}
 	}
 
 	return nil
