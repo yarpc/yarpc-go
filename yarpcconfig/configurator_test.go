@@ -1567,26 +1567,26 @@ func TestConfigurator(t *testing.T) {
 					BuildUnaryOutbound(
 						outboundConfig{URL: "http://localhost:8080/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar", OutboundKey: "bar"}).
 					Return(unary, nil)
 				http.EXPECT().
 					BuildOnewayOutbound(
 						outboundConfig{URL: "http://localhost:8080/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar", OutboundKey: "bar"}).
 					Return(oneway, nil)
 
 				http.EXPECT().
 					BuildUnaryOutbound(
 						outboundConfig{URL: "http://localhost:8081/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar", OutboundKey: "bar-staging"}).
 					Return(unaryStaging, nil)
 				http.EXPECT().
 					BuildOnewayOutbound(
 						outboundConfig{URL: "http://localhost:8081/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar", OutboundKey: "bar-staging"}).
 					Return(onewayStaging, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}

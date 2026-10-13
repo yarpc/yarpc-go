@@ -56,6 +56,7 @@ var (
 		401: {yarpcerrors.CodeUnauthenticated},
 		403: {yarpcerrors.CodePermissionDenied},
 		404: {yarpcerrors.CodeNotFound},
+		408: {yarpcerrors.CodeDeadlineExceeded},
 		409: {
 			yarpcerrors.CodeAborted,
 			yarpcerrors.CodeAlreadyExists,
@@ -69,6 +70,7 @@ var (
 			yarpcerrors.CodeDataLoss,
 		},
 		501: {yarpcerrors.CodeUnimplemented},
+		502: {yarpcerrors.CodeUnavailable},
 		503: {yarpcerrors.CodeUnavailable},
 		504: {yarpcerrors.CodeDeadlineExceeded},
 	}

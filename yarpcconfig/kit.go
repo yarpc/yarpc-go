@@ -38,9 +38,10 @@ type Kit struct {
 
 	name string
 
-	// outboundName is the name of the outbound. It is set in the Kit used for
-	// building outbound.
+	// outboundName is the destination service name for the outbound.
 	outboundName string
+	// outboundKey is the unique YARPC client configuration name for the outbound.
+	outboundKey string
 
 	// Used to resolve interpolated variables.
 	resolver interpolate.VariableResolver
@@ -56,10 +57,17 @@ func (k *Kit) withTransportSpec(spec *compiledTransportSpec) *Kit {
 	return &newK
 }
 
-// Returns a shallow copy of this Kit with outbound name set to given value.
+// Returns a shallow copy of this Kit with destination service name set.
 func (k *Kit) withOutboundName(name string) *Kit {
 	newK := *k
 	newK.outboundName = name
+	return &newK
+}
+
+// Returns a shallow copy of this Kit with outbound key set.
+func (k *Kit) withOutboundKey(key string) *Kit {
+	newK := *k
+	newK.outboundKey = key
 	return &newK
 }
 
@@ -70,6 +78,9 @@ func (k *Kit) ServiceName() string { return k.name }
 // OutboundServiceName returns the name of the service for which outbound is
 // being built.
 func (k *Kit) OutboundServiceName() string { return k.outboundName }
+
+// OutboundKey returns the key used to select this outbound from the client config provider.
+func (k *Kit) OutboundKey() string { return k.outboundKey }
 
 var _typeOfKit = reflect.TypeOf((*Kit)(nil))
 

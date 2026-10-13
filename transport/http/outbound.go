@@ -155,14 +155,18 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		opt(o)
 	}
 
-	var client *http.Client
 	if o.useHTTP2 {
-		client = createHTTP2Client(o)
+		if o.tlsConfig != nil {
+			panic("http2 with tls is not supported")
+		}
+		// HTTP/2 requests are sent through the chosen peer's own dedicated
+		// *http2.Transport (see doWithPeer), so there's no outbound-wide
+		// client to build here.
 	} else {
-		client = createHTTP1Client(o)
+		client := createHTTP1Client(o)
+		o.client = client
+		o.sender = &transportSender{Client: client}
 	}
-	o.client = client
-	o.sender = &transportSender{Client: client}
 	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
 	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
 	return o
@@ -200,20 +204,6 @@ func createHTTP1TLSClient(o *Outbound) *http.Client {
 	return &http.Client{
 		Transport: h1transport,
 	}
-}
-
-func createHTTP2Client(o *Outbound) *http.Client {
-	if o.tlsConfig != nil {
-		return createHTTP2TLSClient(o)
-	}
-
-	return &http.Client{
-		Transport: o.transport.h2Transport,
-	}
-}
-
-func createHTTP2TLSClient(o *Outbound) *http.Client {
-	panic("http2 with tls is not supported")
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
@@ -349,7 +339,7 @@ func (o *Outbound) DirectCallOneway(ctx context.Context, treq *transport.Request
 		return nil, err
 	}
 	if err = res.Body.Close(); err != nil {
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 	}
 	return time.Now(), nil
 }
@@ -387,7 +377,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
 		if err = response.Body.Close(); err != nil {
-			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 		return nil, transport.UpdateSpanWithErr(span,
 			yarpcerrors.InternalErrorf("service name sent from the request "+
@@ -395,7 +385,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	tres := &transport.Response{
-		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
+		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeadersWithCapacity(len(response.Header))),
 		Body:             response.Body,
 		BodySize:         int(response.ContentLength),
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
@@ -480,6 +470,14 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	// A body that can rewind itself supplies GetBody.
 	if rewinder, ok := treq.Body.(bodyRewinder); ok {
 		hreq.GetBody = rewinder.GetBody
+	// net/http only infers Content-Length for *bytes.Buffer, *bytes.Reader and
+	// *strings.Reader bodies. Encodings that hand over any other reader (for
+	// example the Thrift no-wire client's pooled-buffer ReadCloser) would
+	// otherwise be sent with chunked transfer encoding on HTTP/1.1 and without a
+	// content-length on HTTP/2, which some proxies cannot relay. Use the size
+	// the encoding already recorded on the request when it is known.
+	if hreq.ContentLength == 0 && treq.BodySize > 0 {
+		hreq.ContentLength = int64(treq.BodySize)
 	}
 
 	// Patch net/http.Request.GetBody through bodyHelper
@@ -490,12 +488,6 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 		}
 	}
 
-	// net/http sets ContentLength only for *bytes.Buffer, *bytes.Reader, and
-	// *strings.Reader. Set it from the known size. Without it, the request goes
-	// out chunked and the inbound payload size metric reads zero.
-	if hreq.ContentLength == 0 && treq.BodySize > 0 {
-		hreq.ContentLength = int64(treq.BodySize)
-	}
 
 	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
 	// was propagated from a YARPC transport middleware to a HTTP/1 service.
@@ -555,7 +547,7 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)
 	if ttl != 0 {
-		req.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
+		req.Header.Set(TTLMSHeader, strconv.FormatInt(int64(ttl/time.Millisecond), 10))
 	}
 	if treq.ShardKey != "" {
 		req.Header.Set(ShardKeyHeader, treq.ShardKey)
@@ -594,10 +586,10 @@ func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response
 			var err error
 			details, err = ioutil.ReadAll(response.Body)
 			if err != nil {
-				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 			}
 			if err := response.Body.Close(); err != nil {
-				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 			}
 			// nil out body so that it isn't read later
 			tres.Body = nil
@@ -605,11 +597,11 @@ func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response
 	} else {
 		contentsBytes, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 		contents = string(contentsBytes)
 		if err := response.Body.Close(); err != nil {
-			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "%s", err.Error())
+			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 	}
 	// use the status code if we can't get a code from the headers
@@ -624,7 +616,6 @@ func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response
 	yarpcErr := intyarpcerrors.NewWithNamef(
 		code,
 		response.Header.Get(ErrorNameHeader),
-		"%s",
 		strings.TrimSuffix(contents, "\n"),
 	).WithDetails(details)
 
@@ -692,7 +683,7 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
 			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
 			CallerProcedure: hreq.Header.Get(CallerProcedureHeader),
-			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
+			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.NewHeadersWithCapacity(len(hreq.Header))),
 		}
 	}
 
@@ -724,6 +715,16 @@ func (o *Outbound) doWithPeer(
 	sender sender,
 ) (*http.Response, error) {
 	hreq.URL.Host = p.HostPort()
+
+	if o.useHTTP2 {
+		// Route through the peer's own dedicated HTTP/2 connection pool so
+		// duplicate peers for the same address get independent HTTP/2
+		// connections instead of sharing one. h2PeerSender also replays a
+		// request on a different connection when it fails for a reason
+		// *http2.Transport would itself have retried transparently (see
+		// h2PeerSender's doc comment).
+		sender = &h2PeerSender{peer: p}
+	}
 
 	response, err := sender.Do(hreq.WithContext(ctx))
 	if err != nil {

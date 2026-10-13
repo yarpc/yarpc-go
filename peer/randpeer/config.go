@@ -21,6 +21,7 @@
 package randpeer
 
 import (
+	"fmt"
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
@@ -72,7 +73,7 @@ func SpecWithOptions(options ...ListOption) yarpcconfig.PeerListSpec {
 			if cfg.Capacity != nil {
 				if *cfg.Capacity <= 0 {
 					return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument,
-						"Capacity must be greater than 0. Got: %d.", *cfg.Capacity)
+						fmt.Sprintf("Capacity must be greater than 0. Got: %d.", *cfg.Capacity))
 				}
 				opts = append(opts, Capacity(*cfg.Capacity))
 			}

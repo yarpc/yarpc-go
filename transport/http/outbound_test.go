@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
@@ -66,6 +67,12 @@ func TestTransportNamer(t *testing.T) {
 
 	t.Run("outbound is http2", func(t *testing.T) {
 		assert.Equal(t, TransportHTTP2Name, NewOutbound(nil, UseHTTP2()).TransportName())
+	})
+}
+
+func TestNewOutboundHTTP2WithTLSPanics(t *testing.T) {
+	require.PanicsWithValue(t, "http2 with tls is not supported", func() {
+		NewOutbound(nil, UseHTTP2(), OutboundTLSConfiguration(&tls.Config{}))
 	})
 }
 
@@ -117,6 +124,59 @@ func TestCreateRequest(t *testing.T) {
 			for k, v := range appHeader {
 				assert.Equal(t, v, hreq.Header.Get(ApplicationHeaderPrefix+k), "header value mismatch")
 			}
+		})
+	}
+}
+
+func TestCreateRequestContentLength(t *testing.T) {
+	payload := []byte("some-payload")
+	tests := []struct {
+		desc              string
+		body              io.Reader
+		bodySize          int
+		wantContentLength int64
+	}{
+		{
+			desc:              "bytes.Reader is sized by net/http",
+			body:              bytes.NewReader(payload),
+			bodySize:          len(payload),
+			wantContentLength: int64(len(payload)),
+		},
+		{
+			desc:              "net/http size wins over a mismatched BodySize",
+			body:              bytes.NewReader(payload),
+			bodySize:          1,
+			wantContentLength: int64(len(payload)),
+		},
+		{
+			desc:              "unsized ReadCloser uses BodySize",
+			body:              io.NopCloser(bytes.NewReader(payload)),
+			bodySize:          len(payload),
+			wantContentLength: int64(len(payload)),
+		},
+		{
+			desc:              "unsized ReadCloser without BodySize stays unknown",
+			body:              io.NopCloser(bytes.NewReader(payload)),
+			bodySize:          0,
+			wantContentLength: 0,
+		},
+		{
+			desc:              "no body",
+			body:              nil,
+			bodySize:          0,
+			wantContentLength: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			o := &Outbound{urlTemplate: defaultURLTemplate}
+			hreq, err := o.createRequest(&transport.Request{
+				Body:     tt.body,
+				BodySize: tt.bodySize,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantContentLength, hreq.ContentLength)
 		})
 	}
 }
@@ -826,14 +886,12 @@ func TestCallWithHTTP2(t *testing.T) {
 			},
 		)
 		h2s := &http2.Server{
+			NewWriteScheduler: func() http2.WriteScheduler {
+				return http2.NewPriorityWriteScheduler(nil)
+			},
 			IdleTimeout: defaultIdleConnTimeout,
 		}
-		h1s := httptest.NewUnstartedServer(handler)
-		h1s.Config.Protocols = new(http.Protocols)
-		h1s.Config.Protocols.SetHTTP1(true)
-		h1s.Config.Protocols.SetUnencryptedHTTP2(true)
-		http2.ConfigureServer(h1s.Config, h2s)
-		h1s.Start()
+		h1s := httptest.NewServer(h2c.NewHandler(handler, h2s))
 		t.Cleanup(h1s.Close)
 
 		httpTransport := NewTransport()
@@ -849,7 +907,6 @@ func TestCallWithHTTP2(t *testing.T) {
 			if err := out.Stop(); err != nil {
 				t.Logf("failed to stop outbound: %v", err)
 			}
-			out.client.CloseIdleConnections()
 		})
 
 		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
@@ -905,14 +962,12 @@ func TestCallWithHTTP2(t *testing.T) {
 			},
 		)
 		h2s := &http2.Server{
+			NewWriteScheduler: func() http2.WriteScheduler {
+				return http2.NewPriorityWriteScheduler(nil)
+			},
 			IdleTimeout: defaultIdleConnTimeout,
 		}
-		h1s := httptest.NewUnstartedServer(handler)
-		h1s.Config.Protocols = new(http.Protocols)
-		h1s.Config.Protocols.SetHTTP1(true)
-		h1s.Config.Protocols.SetUnencryptedHTTP2(true)
-		http2.ConfigureServer(h1s.Config, h2s)
-		h1s.Start()
+		h1s := httptest.NewServer(h2c.NewHandler(handler, h2s))
 		t.Cleanup(h1s.Close)
 
 		httpTransport := NewTransport()
@@ -982,7 +1037,6 @@ func TestCallWithHTTP2(t *testing.T) {
 			if err := out.Stop(); err != nil {
 				t.Logf("failed to stop outbound: %v", err)
 			}
-			out.client.CloseIdleConnections()
 		})
 
 		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
@@ -1760,4 +1814,35 @@ func TestIsolatedSchemaChange(t *testing.T) {
 	assert.NotEqual(t, plainOutbound.urlTemplate, tlsOutbound.urlTemplate)
 	assert.Equal(t, "http", plainOutbound.urlTemplate.Scheme)
 	assert.Equal(t, "https", tlsOutbound.urlTemplate.Scheme)
+}
+
+// A proxy or load balancer in the request path can answer with a plain HTTP
+// error that carries no Rpc-Status header. The outbound must then derive the
+// YARPC code from the HTTP status alone.
+func TestGetYARPCErrorFromResponseWithoutRPCHeaders(t *testing.T) {
+	tests := []struct {
+		statusCode int
+		wantCode   yarpcerrors.Code
+	}{
+		{statusCode: http.StatusRequestTimeout, wantCode: yarpcerrors.CodeDeadlineExceeded},
+		{statusCode: http.StatusBadGateway, wantCode: yarpcerrors.CodeUnavailable},
+		{statusCode: http.StatusServiceUnavailable, wantCode: yarpcerrors.CodeUnavailable},
+		{statusCode: http.StatusGatewayTimeout, wantCode: yarpcerrors.CodeDeadlineExceeded},
+	}
+
+	for _, tt := range tests {
+		t.Run(strconv.Itoa(tt.statusCode), func(t *testing.T) {
+			const body = "body"
+			response := &http.Response{
+				StatusCode: tt.statusCode,
+				Header:     http.Header{},
+				Body:       io.NopCloser(strings.NewReader(body)),
+			}
+
+			_, err := getYARPCErrorFromResponse(&transport.Response{}, response, false)
+			require.Error(t, err)
+			assert.Equal(t, tt.wantCode, yarpcerrors.FromError(err).Code())
+			assert.Equal(t, body, yarpcerrors.FromError(err).Message())
+		})
+	}
 }

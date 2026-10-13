@@ -47,7 +47,7 @@ build: __eval_packages ## go build all packages
 .PHONY: generate
 generate: $(GEN_BINS) $(GEN_BINS_INTERNAL) ## call generation script
 	@GOBIN=$(BIN) go install github.com/golang/mock/mockgen
-	@GOBIN=$(BIN) go install golang.org/x/tools/cmd/stringer@v0.45.0
+	@GOBIN=$(BIN) go install golang.org/x/tools/cmd/stringer@v0.20.0
 	@PATH=$(BIN):$$PATH ./etc/bin/generate.sh
 ifdef WITHIN_DOCKER
 	@chown -R --reference . .
@@ -181,6 +181,10 @@ codecov: cover ## run code coverage and upload to codecov.io
 .PHONY: examples
 examples: ## run all examples tests
 	RUN=$(RUN) V=$(V) $(MAKE) -j $(EXAMPLES_JOBS) -C internal/examples
+
+.PHONY: benchcompare
+benchcompare: $(BENCHSTAT) ## compare benchmarks for changed packages against the PR base branch
+	PATH=$(BIN):$$PATH ./etc/bin/benchcompare.sh
 
 .PHONY: __eval_packages
 __eval_packages:

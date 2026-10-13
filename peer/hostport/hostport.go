@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/internal/peeraddr"
 )
 
 // PeerIdentifier uniquely references a host:port combination using a common interface
@@ -66,7 +67,7 @@ type Peer struct {
 // HostPort surfaces the HostPort in this function, if you want to access the hostport directly (for a downstream call)
 // You need to cast the Peer to a *hostport.Peer and run this function
 func (p *Peer) HostPort() string {
-	return string(p.PeerIdentifier)
+	return peeraddr.Address(p.PeerIdentifier.Identifier())
 }
 
 // Transport returns the peer.Transport that is in charge of this hostport.Peer (and should be the one to handle requests)

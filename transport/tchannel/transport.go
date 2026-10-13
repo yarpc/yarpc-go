@@ -38,6 +38,7 @@ import (
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/peeraddr"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
@@ -190,13 +191,15 @@ func (t *Transport) retainPeer(pid peer.Identifier, sub peer.Subscriber, ch *tch
 
 // **NOTE** should only be called while the lock write mutex is acquired
 func (t *Transport) getOrCreatePeer(pid peer.Identifier, ch *tchannel.Channel) *tchannelPeer {
-	addr := pid.Identifier()
-	if p, ok := t.peers[addr]; ok {
+	mapKey := pid.Identifier()
+	if p, ok := t.peers[mapKey]; ok {
 		return p
 	}
 
-	p := newPeer(addr, t, ch)
-	t.peers[addr] = p
+	realAddr := peeraddr.Address(pid.Identifier())
+	p := newPeer(realAddr, t, ch)
+	t.peers[mapKey] = p
+
 	// Start a peer connection loop
 	t.connectorsGroup.Add(1)
 	go p.maintainConnection()
@@ -356,16 +359,18 @@ func (t *Transport) IsRunning() bool {
 }
 
 // onPeerStatusChanged receives notifications from TChannel Channel when any
-// peer's status changes.
+// peer's status changes. For duplicate peer support, this notifies all YARPC
+// peers that share the same real network address.
 func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	p, ok := t.peers[tp.HostPort()]
-	if !ok {
-		return
+	// get map key values
+	for _, peer := range t.peers {
+		if peer.addr == tp.HostPort() {
+			peer.notifyConnectionStatusChanged()
+		}
 	}
-	p.notifyConnectionStatusChanged()
 }
 
 // CreateTLSOutboundChannel creates a outbound channel for managing tls

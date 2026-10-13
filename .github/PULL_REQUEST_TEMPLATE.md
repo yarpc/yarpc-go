@@ -10,9 +10,15 @@ How did you verify this works? e.g. `make test`, specific cases exercised,
 before/after behaviour. Write "N/a" for docs-only or comment-only changes.
 -->
 
-## Checklist
-- [ ] Description and context for reviewers: one partner, one stranger
-- [ ] Docs (package doc)
+## Risk
+
+[ ]Low
+[ ]Medium
+[ ]High
+
+### Reason:
+<!-- Why this risk level? e.g. "No behavior change, allocation efficiency only,
+on an already-covered code path." -->
 
 RELEASE NOTES:
 <!-- Significant changes, used to compile the release notes. Write "N/a" if none. -->

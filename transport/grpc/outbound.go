@@ -300,7 +300,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 		message = ""
 	}
 
-	yarpcErr := intyarpcerrors.NewWithNamef(code, name, "%s", message)
+	yarpcErr := intyarpcerrors.NewWithNamef(code, name, message)
 	if details, err := marshalError(status); err != nil {
 		return err
 	} else if details != nil {

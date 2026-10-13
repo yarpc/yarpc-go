@@ -215,7 +215,6 @@ func makeYarpcOutbound(tb testing.TB, s *h2cGoAwayServer, mw middleware.UnaryOut
 	require.NoError(tb, out.Start(), "failed to start http2 outbound")
 	tb.Cleanup(func() {
 		assert.NoError(tb, out.Stop())
-		out.client.CloseIdleConnections()
 	})
 
 	return middleware.ApplyUnaryOutbound(out, mw)

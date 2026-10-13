@@ -381,6 +381,41 @@ func TestIsolatedDialersDoNotSharePeer(t *testing.T) {
 	assert.Len(t, transport.peers, 1)
 }
 
+// TestOutboundConnectionPoolOverride verifies that an OutboundConnectionPool
+// DialOption applies to peers retained through that Dialer. Isolation keeps
+// those peers from being shared with other dialers.
+func TestOutboundConnectionPoolOverride(t *testing.T) {
+	address := startTestServer(t)
+
+	transport := NewTransport(MaxConnections(5), MinConnections(1))
+	require.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	id := testIdentifier{address}
+
+	sharedDialer := transport.NewDialer(OutboundConnectionPool(ClientConnectionPoolConfig{
+		MaxConnections: 9,
+	}))
+	sharedPeer, err := sharedDialer.RetainPeer(id, idSubscriber{1})
+	require.NoError(t, err)
+	sp, ok := sharedPeer.(*grpcPeer)
+	require.True(t, ok)
+	assert.Equal(t, 9, sp.startupPool.maxConnections, "override applies to peers retained through this Dialer")
+
+	isolatedDialer := transport.NewDialer(OutboundConnectionPool(ClientConnectionPoolConfig{
+		MaxConnections: 9,
+	})).WithConnectionIsolation()
+	isolatedPeer, err := isolatedDialer.RetainPeer(id, idSubscriber{2})
+	require.NoError(t, err)
+	ip, ok := isolatedPeer.(*grpcPeer)
+	require.True(t, ok)
+	assert.Equal(t, 9, ip.startupPool.maxConnections)
+	assert.NotSame(t, sp, ip)
+
+	require.NoError(t, sharedDialer.ReleasePeer(id, idSubscriber{1}))
+	require.NoError(t, isolatedDialer.ReleasePeer(id, idSubscriber{2}))
+}
+
 // TestDialersSharePeerByDefault verifies that ordinary dialers retain the
 // existing address-based peer sharing behavior.
 func TestDialersSharePeerByDefault(t *testing.T) {
@@ -508,4 +543,44 @@ func BenchmarkRetainPeerParallel(b *testing.B) {
 			}
 		}
 	})
+}
+
+func TestRetainDuplicatePeers(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(listener)
+	defer grpcServer.Stop()
+
+	trans := NewTransport()
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+
+	address := listener.Addr().String()
+	sub := testPeerSubscriber{}
+
+	// The same address listed twice must yield two peers, each with its own
+	// connection, but both dialing the real address.
+	first, err := trans.RetainPeer(testIdentifier{address + "#1"}, sub)
+	require.NoError(t, err)
+	second, err := trans.RetainPeer(testIdentifier{address + "#2"}, sub)
+	require.NoError(t, err)
+
+	assert.NotSame(t, first, second, "duplicate peers must not be shared")
+	assert.Len(t, trans.peers, 2)
+	assert.Equal(t, address, first.Identifier(), "peer must dial the bare address")
+	assert.Equal(t, address, second.Identifier(), "peer must dial the bare address")
+
+	// Retaining the same identifier again reuses the existing peer.
+	firstAgain, err := trans.RetainPeer(testIdentifier{address + "#1"}, sub)
+	require.NoError(t, err)
+	assert.Same(t, first, firstAgain)
+	assert.Len(t, trans.peers, 2)
+
+	// Releasing one occurrence leaves the other connected.
+	require.NoError(t, trans.ReleasePeer(testIdentifier{address + "#1"}, sub))
+	assert.Len(t, trans.peers, 1)
+	require.NoError(t, trans.ReleasePeer(testIdentifier{address + "#2"}, sub))
+	assert.Empty(t, trans.peers)
 }

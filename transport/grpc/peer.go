@@ -70,14 +70,14 @@ type grpcPeer struct {
 	// successful CAS.
 	connsPtr atomic.Pointer[[](*grpcClientConnWrapper)]
 
-	// addingCount tracks addConn calls that have passed their entry point but
-	// have not yet called connWg.Add(1) or bailed. The lifecycle goroutine
-	// spins on this counter (after setting shutdownStarted) to guarantee that
-	// connWg.Wait is not called before any racing connWg.Add(1) completes.
+	// addingCount tracks goroutines that have passed their entry point but
+	// have not yet called connWg.Add(1) or bailed (addConn, startScalingMonitor,
+	// tryScaleUp). The lifecycle goroutine spins on this counter after setting
+	// shutdownStarted so connWg.Wait is not called before any racing Add completes.
 	addingCount atomic.Int32
 
 	// shutdownStarted is set to true when the peer begins shutting down.
-	// addConn checks this after incrementing addingCount to avoid calling
+	// Callers check this after incrementing addingCount to avoid calling
 	// connWg.Add(1) after the lifecycle goroutine has passed its spin.
 	shutdownStarted atomic.Bool
 
@@ -85,7 +85,14 @@ type grpcPeer struct {
 	// pool size without a full slice load.
 	connCount atomic.Int32
 
-	poolCfg connPoolConfig
+	// startupPool is the snapshot at peer creation (TransportOptions, YAML,
+	// outbound overlay). livePoolCfg() overlays the live provider on top.
+	startupPool          connPoolConfig
+	outboundLiveProvider LiveConnectionPoolProvider // per-outbound hook; nil uses the global hook
+	lastValidLivePool    atomic.Value               // connPoolConfig, last snapshot that passed validation
+	invalidLiveWarned    atomic.Bool                // warn once per invalid live streak; skip later ticks until valid again
+	monitorStarted       atomic.Bool                // runScalingMonitor started once from newPeer
+	intervalClampWarned  atomic.Bool                // warn once while live/startup interval stays below 30s
 }
 
 // loadConns returns the current immutable connection snapshot.
@@ -120,45 +127,43 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	p := &grpcPeer{
-		Peer:         abstractpeer.NewPeer(abstractpeer.PeerIdentifier(address), t),
-		t:            t,
-		ctx:          ctx,
-		cancel:       cancel,
-		stoppedC:     make(chan struct{}),
-		grpcDialOpts: dialOptions,
-		metrics:      newPeerPoolReporter(t.metrics),
-		poolCfg: connPoolConfig{
-			dynamicScalingEnabled:  t.options.clientConnPoolDynamicScalingEnabled,
-			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
-			scaleUpThreshold:       t.options.clientConnPoolScaleUpThreshold,
-			scaleDownGap:           t.options.clientConnPoolScaleDownGap,
-			minConnections:         t.options.clientConnPoolMinConnections,
-			maxConnections:         t.options.clientConnPoolMaxConnections,
-			idleTimeout:            t.options.clientConnPoolIdleTimeout,
-			scalingMonitorInterval: t.options.clientConnPoolScalingMonitorInterval,
-		},
+	startupPool := options.resolvedPoolConfig(t.baseConnPoolConfig())
+	if err := validateResolvedConnPool(startupPool); err != nil {
+		cancel()
+		return nil, err
 	}
+
+	p := &grpcPeer{
+		Peer:                 abstractpeer.NewPeer(abstractpeer.PeerIdentifier(address), t),
+		t:                    t,
+		ctx:                  ctx,
+		cancel:               cancel,
+		stoppedC:             make(chan struct{}),
+		grpcDialOpts:         dialOptions,
+		metrics:              newPeerPoolReporter(t.metrics),
+		startupPool:          startupPool,
+		outboundLiveProvider: options.poolConfigProvider,
+	}
+	p.lastValidLivePool.Store(p.startupPool)
 	t.options.logger.Debug("grpc: connection pool config resolved",
 		zap.String("peer", address),
-		zap.Bool("dynamicScalingEnabled", p.poolCfg.dynamicScalingEnabled),
-		zap.Int("minConnections", p.poolCfg.minConnections),
-		zap.Int("maxConnections", p.poolCfg.maxConnections),
-		zap.Int32("maxConcurrentStreams", p.poolCfg.maxConcurrentStreams),
-		zap.Float64("scaleUpThreshold", p.poolCfg.scaleUpThreshold),
-		zap.Float64("scaleDownGap", p.poolCfg.scaleDownGap),
-		zap.Duration("idleTimeout", p.poolCfg.idleTimeout),
-		zap.Duration("scalingMonitorInterval", p.poolCfg.scalingMonitorInterval),
+		zap.Bool("dynamicScalingEnabled", p.startupPool.dynamicScalingEnabled),
+		zap.Int("minConnections", p.startupPool.minConnections),
+		zap.Int("maxConnections", p.startupPool.maxConnections),
+		zap.Int32("maxConcurrentStreams", p.startupPool.maxConcurrentStreams),
+		zap.Float64("scaleUpThreshold", p.startupPool.scaleUpThreshold),
+		zap.Float64("scaleDownGap", p.startupPool.scaleDownGap),
+		zap.Duration("idleTimeout", p.startupPool.idleTimeout),
+		zap.Duration("scalingMonitorInterval", p.startupPool.scalingMonitorInterval),
 	)
 	// Publish an empty slice so loadConns() never returns nil before the first
 	// addConn() call.
 	p.storeConns(nil)
 
 	// All connections are created via addConn — no special primary connection.
-	initialConnCount := 1
-	if p.poolCfg.dynamicScalingEnabled {
-		initialConnCount = p.poolCfg.minConnections
-	}
+	// scaleDownFloor is 1 when scaling is off and min capped by max when on,
+	// so an invalid MinConnections > MaxConnections cannot over-dial.
+	initialConnCount := scaleDownFloor(p.startupPool)
 	for i := 0; i < initialConnCount; i++ {
 		if err := p.addConn(); err != nil {
 			p.cancel()
@@ -166,14 +171,15 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		}
 	}
 
-	if p.poolCfg.dynamicScalingEnabled {
-		p.connWg.Add(1)
-		go p.runScalingMonitor()
+	// Start the monitor when scaling is on at create, or when a live hook
+	// may enable it later (and to wind extras down if live turns scaling off).
+	if p.startupPool.dynamicScalingEnabled || p.liveProvider() != nil {
+		p.startScalingMonitor()
 	}
 
 	// Close stoppedC once all pool goroutines have finished. shutdownStarted
-	// gates new connWg.Add(1) calls; addingCount ensures we wait for any addConn
-	// already past its ctx check before calling Wait.
+	// gates new connWg.Add(1) calls; addingCount waits for any in-flight
+	// addConn / startScalingMonitor / tryScaleUp before Wait.
 	go func() {
 		<-p.ctx.Done()
 		p.shutdownStarted.Store(true)

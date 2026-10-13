@@ -1,0 +1,79 @@
+name: Benchmark Comparison Comment
+
+# Posts the result of the "Benchmark Comparison" workflow as a PR comment.
+#
+# workflow_run executes in the context of the base repository with a write
+# token, even when the PR comes from a fork. For that reason this workflow
+# NEVER checks out or runs PR code. It only reads the artifact as data, and
+# treats everything in it as untrusted.
+
+on:
+  workflow_run:
+    workflows: ["Benchmark Comparison"]
+    types: [completed]
+
+permissions:
+  actions: read        # download the artifact from the triggering run
+  pull-requests: write # create or update the comment
+  issues: write        # PR comments are issue comments in the API
+
+jobs:
+  comment:
+    name: Post benchmark comment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event.workflow_run.event == 'pull_request'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchcompare
+          path: out
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post or update comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          pr="$(head -n1 out/pr_number | tr -d '[:space:]')"
+          if ! [[ "${pr}" =~ ^[0-9]+$ ]]; then
+            echo "pr_number is not a number, refusing to comment"
+            exit 1
+          fi
+          if [ ! -s out/annotation.md ]; then
+            echo "no annotation.md in the artifact, nothing to post"
+            exit 1
+          fi
+
+          # The artifact is written by PR code, so check that the PR number it
+          # names really belongs to the commit this run was triggered for.
+          pr_head_sha="$(gh api "repos/${REPO}/pulls/${pr}" --jq .head.sha)"
+          if [ "${pr_head_sha}" != "${RUN_HEAD_SHA}" ]; then
+            echo "PR #${pr} head ${pr_head_sha} does not match run head ${RUN_HEAD_SHA}, skipping (newer push?)"
+            exit 0
+          fi
+
+          marker='<!-- benchcompare -->'
+          {
+            echo "${marker}"
+            # Cap the size and stop @mentions from notifying people.
+            head -c 60000 out/annotation.md | sed 's/@/@\xe2\x80\x8b/g'
+          } > body.md
+          jq -n --rawfile b body.md '{body: $b}' > payload.json
+
+          # Only ever edit our own comment.
+          comment_id="$(gh api "repos/${REPO}/issues/${pr}/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"${marker}\"))) | .id" \
+            | head -n1)"
+
+          if [ -n "${comment_id}" ]; then
+            gh api -X PATCH "repos/${REPO}/issues/comments/${comment_id}" --input payload.json > /dev/null
+            echo "updated comment ${comment_id} on PR #${pr}"
+          else
+            gh api -X POST "repos/${REPO}/issues/${pr}/comments" --input payload.json > /dev/null
+            echo "created comment on PR #${pr}"
+          fi
