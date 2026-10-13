@@ -87,7 +87,7 @@ func TestPooledBodyReadAfterDrainReportsEOF(t *testing.T) {
 		n, err := body.Read(make([]byte, 8))
 		assert.Zero(t, n)
 		require.ErrorIs(t, err, io.EOF)
-		require.NotErrorIs(t, err, ErrRequestBodyReleased)
+		require.NotErrorIs(t, err, errRequestBodyReleased)
 	}
 }
 
@@ -107,7 +107,7 @@ func TestPooledBodyReadAfterCloseIsRefused(t *testing.T) {
 	assert.Zero(t, n)
 	// Not io.EOF. With io.EOF, the HTTP/2 writer thinks the body ended
 	// cleanly. It then sends END_STREAM on a truncated request.
-	require.ErrorIs(t, err, ErrRequestBodyReleased)
+	require.ErrorIs(t, err, errRequestBodyReleased)
 	assert.NotErrorIs(t, err, io.EOF)
 }
 

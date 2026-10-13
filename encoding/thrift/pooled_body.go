@@ -29,9 +29,9 @@ import (
 	"go.uber.org/yarpc/internal/bufferpool"
 )
 
-// ErrRequestBodyReleased is the error a Read returns after Close. Close has
+// errRequestBodyReleased is the error a Read returns after Close. Close has
 // then put the buffer back in the pool.
-var ErrRequestBodyReleased = errors.New("pooled request body has been released")
+var errRequestBodyReleased = errors.New("pooled request body has been released")
 
 // pooledBody is a request body. It holds one buffer from the pool.
 //
@@ -41,7 +41,7 @@ var ErrRequestBodyReleased = errors.New("pooled request body has been released")
 //
 // The end reason is the answer to every later Read. A drained body answers
 // io.EOF. The transport reads once more after ContentLength bytes and expects
-// io.EOF. A closed body answers ErrRequestBodyReleased. This error stops the
+// io.EOF. A closed body answers errRequestBodyReleased. This error stops the
 // transport from ending the stream cleanly on a truncated request.
 //
 // To send the request again, the transport calls GetBody. GetBody encodes the
@@ -110,7 +110,7 @@ func (p *pooledBody) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.end(ErrRequestBodyReleased)
+	p.end(errRequestBodyReleased)
 	if !p.reading {
 		p.release()
 	}

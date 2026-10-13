@@ -450,12 +450,12 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	return hpPeer, onFinish, nil
 }
 
-// BodyRewinder is an optional interface for the body of a transport.Request. A
+// bodyRewinder is an optional interface for the body of a transport.Request. A
 // body that implements it supplies net/http.Request.GetBody. Then net/http can
 // send the request again after an HTTP/2 GOAWAY or a retried connection error.
 //
 // GetBody must return a body that reads the whole request from the start.
-type BodyRewinder interface {
+type bodyRewinder interface {
 	GetBody() (io.ReadCloser, error)
 }
 
@@ -478,7 +478,7 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	}
 
 	// A body that can rewind itself supplies GetBody.
-	if rewinder, ok := treq.Body.(BodyRewinder); ok {
+	if rewinder, ok := treq.Body.(bodyRewinder); ok {
 		hreq.GetBody = rewinder.GetBody
 	}
 
@@ -860,7 +860,7 @@ func needBodyHelper(treq *transport.Request) bool {
 
 	// A body that rewinds itself already has a GetBody. A TeeReader would copy
 	// the whole payload for no reason.
-	if _, ok := treq.Body.(BodyRewinder); ok {
+	if _, ok := treq.Body.(bodyRewinder); ok {
 		return false
 	}
 
