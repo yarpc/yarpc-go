@@ -156,6 +156,47 @@ func TestPooledBodyGetBodyBodiesAreIndependent(t *testing.T) {
 	assert.True(t, body.isReleased())
 }
 
+// The request changed during the call, and it now encodes to a different
+// length. The retry would not match its Content-Length, so GetBody refuses.
+func TestPooledBodyGetBodyRefusesChangedLength(t *testing.T) {
+	tests := []struct {
+		name   string
+		retry []byte
+	}{
+		{name: "longer", retry: []byte("payload plus more")},
+		{name: "shorter", retry: []byte("pay")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := newPooledBody(fillTestBuffer(t, []byte("payload")), func() (*bufferpool.Buffer, error) {
+				return fillTestBuffer(t, tt.retry), nil
+			})
+			defer body.Close()
+
+			retry, err := body.GetBody()
+			require.ErrorIs(t, err, errRequestBodyChanged)
+			assert.Nil(t, retry)
+		})
+	}
+}
+
+// The same length with different bytes is a valid retry. Thrift maps can
+// encode in a different order each time.
+func TestPooledBodyGetBodyAllowsSameLength(t *testing.T) {
+	body := newPooledBody(fillTestBuffer(t, []byte("ab")), func() (*bufferpool.Buffer, error) {
+		return fillTestBuffer(t, []byte("ba")), nil
+	})
+	defer body.Close()
+
+	retry, err := body.GetBody()
+	require.NoError(t, err)
+	got, err := io.ReadAll(retry)
+	require.NoError(t, err)
+	assert.Equal(t, []byte("ba"), got)
+	require.NoError(t, retry.Close())
+}
+
 // GOAWAY more than once in a row. Every body has the same encode function.
 func TestPooledBodyGetBodyCanRetryARetry(t *testing.T) {
 	payload := []byte("payload")

@@ -33,6 +33,10 @@ import (
 // then put the buffer back in the pool.
 var errRequestBodyReleased = errors.New("pooled request body has been released")
 
+// errRequestBodyChanged is the error GetBody returns when the request encodes
+// to a different length than the first time.
+var errRequestBodyChanged = errors.New("request changed during the call, so it cannot be sent again")
+
 // pooledBody is a request body. It holds one buffer from the pool.
 //
 // The body ends when a Read reaches io.EOF or when Close runs. The first event
@@ -55,6 +59,10 @@ type pooledBody struct {
 	// calls it. It never changes, so GetBody can read it without the mutex.
 	encode func() (*bufferpool.Buffer, error)
 
+	// size is the length of the first encode. The transport declares it as
+	// the Content-Length.
+	size int
+
 	// ended is nil while the body can still be read.
 	ended error
 
@@ -75,6 +83,7 @@ func newPooledBody(buf *bufferpool.Buffer, encode func() (*bufferpool.Buffer, er
 		buf:    buf,
 		reader: bytes.NewReader(buf.Bytes()),
 		encode: encode,
+		size:   buf.Len(),
 	}
 }
 
@@ -124,6 +133,10 @@ func (p *pooledBody) GetBody() (io.ReadCloser, error) {
 	buf, err := p.encode()
 	if err != nil {
 		return nil, err
+	}
+	if buf.Len() != p.size {
+		bufferpool.Put(buf)
+		return nil, errRequestBodyChanged
 	}
 	return newPooledBody(buf, p.encode), nil
 }

@@ -260,9 +260,9 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 
 // encodeEnvelopedRequest writes one complete Thrift envelope into buffer.
 //
-// It must give the same bytes each time it runs for the same reqBody.
-// pooledBody.GetBody retries a request by running it again. A stream.Enveloper
-// serializes itself, so this holds.
+// pooledBody.GetBody retries a request by running it again. For the same
+// reqBody, each run gives the same length, because the transport declares that
+// length as the Content-Length.
 func encodeEnvelopedRequest(
 	proto stream.Protocol,
 	buffer *bufferpool.Buffer,
