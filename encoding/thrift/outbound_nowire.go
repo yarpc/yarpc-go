@@ -22,7 +22,6 @@ package thrift
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
