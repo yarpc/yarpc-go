@@ -561,6 +561,19 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	return req
 }
 
+// readAndClose reads body to EOF and closes it. The body is closed even when
+// the read fails: a response body must always be closed, and a read error (for
+// example a connection reset mid-body) is exactly when callers tend to skip it,
+// which leaks the connection. If both the read and the close fail, both errors
+// are returned, joined.
+func readAndClose(body io.ReadCloser) ([]byte, error) {
+	b, readErr := ioutil.ReadAll(body)
+	if err := errors.Join(readErr, body.Close()); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
 func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response, bothResponseError bool) (*transport.Response, error) {
 	var contents string
 	var details []byte
@@ -571,25 +584,20 @@ func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response
 			// use the contents in the body, in case the contents were not ASCII and
 			// the contents were not preserved in the header.
 			var err error
-			details, err = ioutil.ReadAll(response.Body)
+			details, err = readAndClose(response.Body)
+			// nil out body so that it isn't read later, even on error: it has
+			// been consumed and closed either way
+			tres.Body = nil
 			if err != nil {
 				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 			}
-			if err := response.Body.Close(); err != nil {
-				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
-			}
-			// nil out body so that it isn't read later
-			tres.Body = nil
 		}
 	} else {
-		contentsBytes, err := ioutil.ReadAll(response.Body)
+		contentsBytes, err := readAndClose(response.Body)
 		if err != nil {
 			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 		contents = string(contentsBytes)
-		if err := response.Body.Close(); err != nil {
-			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
-		}
 	}
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(response.StatusCode)
