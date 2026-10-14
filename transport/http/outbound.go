@@ -470,6 +470,8 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	// A body that can rewind itself supplies GetBody.
 	if rewinder, ok := treq.Body.(bodyRewinder); ok {
 		hreq.GetBody = rewinder.GetBody
+	}
+
 	// net/http only infers Content-Length for *bytes.Buffer, *bytes.Reader and
 	// *strings.Reader bodies. Encodings that hand over any other reader (for
 	// example the Thrift no-wire client's pooled-buffer ReadCloser) would
@@ -487,7 +489,6 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 			return nil, err
 		}
 	}
-
 
 	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
 	// was propagated from a YARPC transport middleware to a HTTP/1 service.

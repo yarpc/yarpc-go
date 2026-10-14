@@ -160,7 +160,7 @@ func TestPooledBodyGetBodyBodiesAreIndependent(t *testing.T) {
 // length. The retry would not match its Content-Length, so GetBody refuses.
 func TestPooledBodyGetBodyRefusesChangedLength(t *testing.T) {
 	tests := []struct {
-		name   string
+		name  string
 		retry []byte
 	}{
 		{name: "longer", retry: []byte("payload plus more")},
