@@ -21,10 +21,12 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"testing"
 	"time"
@@ -36,6 +38,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/clientconfig"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/transport/internal/tls/testscenario"
@@ -189,6 +192,50 @@ func TestBothResponseError(t *testing.T) {
 				} else {
 					assert.Empty(t, response.One)
 				}
+			})
+		})
+	}
+}
+
+func TestResponseBodySize(t *testing.T) {
+	tests := []struct {
+		name     string
+		size     int
+		outbound []OutboundOption
+	}{
+		{name: "HTTP/1.1 small", size: 5},
+		// Larger than the write buffer of the HTTP server, so the server does
+		// not set Content-Length itself.
+		{name: "HTTP/1.1 large", size: 64 << 10},
+		{name: "HTTP/2 small", size: 5, outbound: []OutboundOption{UseHTTP2()}},
+		{name: "HTTP/2 large", size: 64 << 10, outbound: []OutboundOption{UseHTTP2()}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := bytes.Repeat([]byte("a"), tt.size)
+			doWithTestEnv(t, testEnvOptions{
+				Procedures: raw.Procedure("body", func(context.Context, []byte) ([]byte, error) {
+					return body, nil
+				}),
+				OutboundOptions: tt.outbound,
+			}, func(t *testing.T, testEnv *testEnv) {
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+				res, err := testEnv.Outbound.Call(ctx, &transport.Request{
+					Caller:    "example-client",
+					Service:   "example",
+					Procedure: "body",
+					Encoding:  raw.Encoding,
+					Body:      bytes.NewReader(nil),
+				})
+				require.NoError(t, err)
+				defer res.Body.Close()
+
+				assert.Equal(t, tt.size, res.BodySize)
+				got, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				assert.Equal(t, body, got)
 			})
 		})
 	}

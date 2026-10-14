@@ -21,8 +21,12 @@
 package thrift
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"sync"
 
 	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/protocol/stream"
@@ -36,6 +40,14 @@ import (
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
 )
+
+const _responseReadBufferSize = 32 << 10
+
+var _responseReaderPool = sync.Pool{
+	New: func() interface{} {
+		return bufio.NewReaderSize(nil, _responseReadBufferSize)
+	},
+}
 
 // NoWireClient is a generic Thrift client for encoding/decoding using
 // ThriftRW's "streaming" mechanisms. The body of the provided request
@@ -159,7 +171,23 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 		return err
 	}
 
-	sr := proto.Reader(tres.Body)
+	var responseReader io.Reader = tres.Body
+	// Memory-backed responses such as pooled TChannel bodies support seeking.
+	// Preserve that capability so the protocol can skip fields without copying.
+	if _, ok := responseReader.(io.Seeker); !ok {
+		// Stream protocols make many small reads. Batch those reads before they
+		// reach the transport, avoiding HTTP/2 locks and flow-control flushes on
+		// each field. The buffer belongs to this decode, not to the transport.
+		buffered := _responseReaderPool.Get().(*bufio.Reader)
+		buffered.Reset(responseReader)
+		defer func() {
+			buffered.Reset(nil)
+			_responseReaderPool.Put(buffered)
+		}()
+		responseReader = buffered
+	}
+
+	sr := proto.Reader(responseReader)
 	defer sr.Close()
 
 	envelope, err := sr.ReadEnvelopeBegin()
