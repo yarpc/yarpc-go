@@ -168,10 +168,16 @@ func fxGenerator(data *serviceTemplateData, files map[string][]byte) (err error)
 	// kv.thrift => .../kv/keyvaluefx/doc.go
 	docPath := filepath.Join(data.Module.Directory, packageName, "doc.go")
 	files[docPath], err = plugin.GoFileFromTemplate(docPath, fxDocTemplate, data, templateOptions...)
+	if err != nil {
+		return err
+	}
 
 	// kv.thrift => .../kv/keyvaluefx/client.go
 	clientPath := filepath.Join(data.Module.Directory, packageName, "client.go")
 	files[clientPath], err = plugin.GoFileFromTemplate(clientPath, fxClientTemplate, data, templateOptions...)
+	if err != nil {
+		return err
+	}
 
 	// kv.thrift => .../kv/keyvaluefx/server.go
 	serverPath := filepath.Join(data.Module.Directory, packageName, "server.go")
