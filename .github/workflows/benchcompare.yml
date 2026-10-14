@@ -8,7 +8,10 @@ name: Benchmark Comparison
 # itself; .github/workflows/benchcompare-comment.yml does that from a trusted
 # context once this workflow completes.
 #
-# Informational only: the result never blocks a merge.
+# A timeout or a failure to run is informational only. The check fails only on
+# a large, statistically significant regression (see
+# BENCHCOMPARE_FAIL_ON_REGRESSION below); it blocks a merge only if the branch
+# protection rules make it a required check.
 
 on:
   pull_request:
@@ -21,13 +24,21 @@ jobs:
   benchcompare:
     name: Compare benchmarks
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Two sequential benchmark runs (PR head, then merge base). Each is capped
+    # at BENCH_PHASE_TIMEOUT (18m by default) by etc/bin/benchcompare.sh, which
+    # reports a timeout as a result instead of dying silently; this is the
+    # backstop for setup, checkout and anything outside those two runs.
+    timeout-minutes: 45
     # Drafts re-run on `ready_for_review`.
     if: github.event.pull_request.draft == false
     env:
       # Not a hidden directory, so upload-artifact includes it by default.
       BENCHCOMPARE_OUT_DIR: benchcompare-out
       SUPPRESS_DOCKER: "1"
+      # Fail the check when a benchmark gets at least BENCH_FAIL_THRESHOLD_PCT
+      # (50 by default) percent worse with p <= 0.01. Set to "0" to go back to
+      # informational only.
+      BENCHCOMPARE_FAIL_ON_REGRESSION: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,7 +56,21 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
-        run: make benchcompare
+        run: |
+          # This workflow's definition comes from the PR merge ref, but the
+          # checkout is the PR head. A branch cut before benchcompare existed
+          # has no make target; say so rather than failing with "No rule to
+          # make target".
+          if [ ! -f etc/bin/benchcompare.sh ] || ! make -n benchcompare >/dev/null 2>&1; then
+            mkdir -p "${BENCHCOMPARE_OUT_DIR}"
+            echo info > "${BENCHCOMPARE_OUT_DIR}/style"
+            printf '%s\n\n%s\n' \
+              '### Benchmarks did not run (informational, does not block merge)' \
+              "Reason: this branch does not contain \`make benchcompare\` yet. Rebase or merge \`${BASE_BRANCH}\` into it to get benchmark comparisons." \
+              > "${BENCHCOMPARE_OUT_DIR}/annotation.md"
+            exit 0
+          fi
+          make benchcompare
 
       # The comment workflow needs the PR number. It cannot trust this value
       # (a fork controls this job) and verifies it against the head SHA.
