@@ -36,6 +36,7 @@ import (
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/interceptor"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -679,14 +680,14 @@ func newDialOptions(options []DialOption) *dialOptions {
 	return &dopts
 }
 
-// resolvedPoolConfig returns the connPoolConfig to use for a peer retained
+// resolvedPoolConfig returns the connpool.Config to use for a peer retained
 // through this Dialer: the transport-wide base config, overridden field by
 // field by connPoolOverride when set.
 //
 // Fields left at their zero value in the override are inherited from base,
 // mirroring how TransportConfig.ClientConnectionPool fields are applied over
 // programmatic TransportOption defaults in buildTransport.
-func (d *dialOptions) resolvedPoolConfig(base connPoolConfig) connPoolConfig {
+func (d *dialOptions) resolvedPoolConfig(base connpool.Config) connpool.Config {
 	if d.connPoolOverride == nil {
 		return base
 	}

@@ -23,79 +23,80 @@ package grpc
 import (
 	"fmt"
 
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/zap"
 )
 
 // applyPoolOverride overlays set fields from override onto base.
 // A nil DynamicScalingEnabled leaves the base flag unchanged.
-func applyPoolOverride(base connPoolConfig, override *ClientConnectionPoolConfig) connPoolConfig {
+func applyPoolOverride(base connpool.Config, override *ClientConnectionPoolConfig) connpool.Config {
 	if override == nil {
 		return base
 	}
 	cfg := base
 	if override.DynamicScalingEnabled != nil {
-		cfg.dynamicScalingEnabled = *override.DynamicScalingEnabled
+		cfg.DynamicScalingEnabled = *override.DynamicScalingEnabled
 	}
 	if override.MaxConcurrentStreams > 0 {
-		cfg.maxConcurrentStreams = override.MaxConcurrentStreams
+		cfg.MaxConcurrentStreams = override.MaxConcurrentStreams
 	}
 	if override.ScaleUpThreshold > 0 {
-		cfg.scaleUpThreshold = override.ScaleUpThreshold
+		cfg.ScaleUpThreshold = override.ScaleUpThreshold
 	}
 	if override.ScaleDownGap > 0 {
-		cfg.scaleDownGap = override.ScaleDownGap
+		cfg.ScaleDownGap = override.ScaleDownGap
 	}
 	if override.MinConnections > 0 {
-		cfg.minConnections = override.MinConnections
+		cfg.MinConnections = override.MinConnections
 	}
 	if override.MaxConnections > 0 {
-		cfg.maxConnections = override.MaxConnections
+		cfg.MaxConnections = override.MaxConnections
 	}
 	if override.IdleTimeout > 0 {
-		cfg.idleTimeout = override.IdleTimeout
+		cfg.IdleTimeout = override.IdleTimeout
 	}
 	if override.ScalingMonitorInterval > 0 {
-		cfg.scalingMonitorInterval = override.ScalingMonitorInterval
+		cfg.ScalingMonitorInterval = override.ScalingMonitorInterval
 	}
 	return cfg
 }
 
-func (t *Transport) baseConnPoolConfig() connPoolConfig {
+func (t *Transport) baseConnPoolConfig() connpool.Config {
 	if t == nil || t.options == nil {
-		return connPoolConfig{}
+		return connpool.Config{}
 	}
 	o := t.options
-	return connPoolConfig{
-		dynamicScalingEnabled:  o.clientConnPoolDynamicScalingEnabled,
-		maxConcurrentStreams:   o.clientConnPoolMaxConcurrentStreams,
-		scaleUpThreshold:       o.clientConnPoolScaleUpThreshold,
-		scaleDownGap:           o.clientConnPoolScaleDownGap,
-		minConnections:         o.clientConnPoolMinConnections,
-		maxConnections:         o.clientConnPoolMaxConnections,
-		idleTimeout:            o.clientConnPoolIdleTimeout,
-		scalingMonitorInterval: o.clientConnPoolScalingMonitorInterval,
+	return connpool.Config{
+		DynamicScalingEnabled:  o.clientConnPoolDynamicScalingEnabled,
+		MaxConcurrentStreams:   o.clientConnPoolMaxConcurrentStreams,
+		ScaleUpThreshold:       o.clientConnPoolScaleUpThreshold,
+		ScaleDownGap:           o.clientConnPoolScaleDownGap,
+		MinConnections:         o.clientConnPoolMinConnections,
+		MaxConnections:         o.clientConnPoolMaxConnections,
+		IdleTimeout:            o.clientConnPoolIdleTimeout,
+		ScalingMonitorInterval: o.clientConnPoolScalingMonitorInterval,
 	}
 }
 
-func validateResolvedConnPool(cfg connPoolConfig) error {
-	if cfg.minConnections < 0 {
-		return fmt.Errorf("clientConnectionPool.minConnections must be non-negative, got %d", cfg.minConnections)
+func validateResolvedConnPool(cfg connpool.Config) error {
+	if cfg.MinConnections < 0 {
+		return fmt.Errorf("clientConnectionPool.minConnections must be non-negative, got %d", cfg.MinConnections)
 	}
-	if cfg.maxConnections < cfg.minConnections {
-		return fmt.Errorf("clientConnectionPool.maxConnections (%d) must be >= minConnections (%d)", cfg.maxConnections, cfg.minConnections)
+	if cfg.MaxConnections < cfg.MinConnections {
+		return fmt.Errorf("clientConnectionPool.maxConnections (%d) must be >= minConnections (%d)", cfg.MaxConnections, cfg.MinConnections)
 	}
-	if cfg.maxConcurrentStreams < 1 {
-		return fmt.Errorf("clientConnectionPool.maxConcurrentStreams must be at least 1, got %d", cfg.maxConcurrentStreams)
+	if cfg.MaxConcurrentStreams < 1 {
+		return fmt.Errorf("clientConnectionPool.maxConcurrentStreams must be at least 1, got %d", cfg.MaxConcurrentStreams)
 	}
-	if cfg.scaleUpThreshold <= 0 || cfg.scaleUpThreshold > 1 {
-		return fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in (0, 1], got %v", cfg.scaleUpThreshold)
+	if cfg.ScaleUpThreshold <= 0 || cfg.ScaleUpThreshold > 1 {
+		return fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in (0, 1], got %v", cfg.ScaleUpThreshold)
 	}
-	if cfg.scaleUpThreshold-cfg.scaleDownGap <= 0 {
+	if cfg.ScaleUpThreshold-cfg.ScaleDownGap <= 0 {
 		return fmt.Errorf("clientConnectionPool.scaleUpThreshold (%.2f) minus scaleDownGap (%.2f) must be > 0",
-			cfg.scaleUpThreshold, cfg.scaleDownGap)
+			cfg.ScaleUpThreshold, cfg.ScaleDownGap)
 	}
-	if cfg.idleTimeout < 0 {
-		return fmt.Errorf("clientConnectionPool.idleTimeout must be non-negative, got %v", cfg.idleTimeout)
+	if cfg.IdleTimeout < 0 {
+		return fmt.Errorf("clientConnectionPool.idleTimeout must be non-negative, got %v", cfg.IdleTimeout)
 	}
 	return nil
 }
@@ -114,7 +115,7 @@ func (p *grpcPeer) liveProvider() LiveConnectionPoolProvider {
 // snapshot, overlaid by the live hook when set. A broken live overlay is
 // dropped and the last valid snapshot is used. The whole struct is swapped
 // so the scaler never sees a torn mix of old and new fields.
-func (p *grpcPeer) livePoolCfg() connPoolConfig {
+func (p *grpcPeer) livePoolCfg() connpool.Config {
 	base := p.startupPool
 	provider := p.liveProvider()
 	if provider == nil {
@@ -131,7 +132,7 @@ func (p *grpcPeer) livePoolCfg() connPoolConfig {
 				zap.Error(err))
 		}
 		if v := p.lastValidLivePool.Load(); v != nil {
-			if prev, ok := v.(connPoolConfig); ok {
+			if prev, ok := v.(connpool.Config); ok {
 				return prev
 			}
 		}

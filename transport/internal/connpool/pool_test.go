@@ -23,6 +23,7 @@ package connpool
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -297,5 +298,93 @@ func TestPool_ConcurrentPickAndStreamCounting(t *testing.T) {
 	}
 	for range 20 {
 		<-done
+	}
+}
+
+// --- ported from the former transport/grpc metrics tests ---
+
+func TestPool_TeardownZeroesAllSharedGaugesAndKeepsTags(t *testing.T) {
+	root := metrics.New()
+	shared := NewMetrics(MetricsParams{Meter: root.Scope(), ServiceName: "test-svc", Transport: "grpc"})
+	p := NewPool(context.Background(), fixedConfig(baseConfig()),
+		func(context.Context) (*fakeConn, error) { return &fakeConn{}, nil },
+		zap.NewNop(), "test-pool", NewReporter(shared))
+	attachFakeWatcher(p)
+	require.NoError(t, p.Start(3, false))
+
+	// Spread connections across all three gauges before stopping.
+	conns := p.LoadConns()
+	require.True(t, conns[1].TransitionState(StateActive, StateDraining))
+	require.True(t, conns[2].TransitionState(StateActive, StateDraining))
+	require.True(t, conns[2].TransitionState(StateDraining, StateIdle))
+	p.RefreshMetrics()
+	active, draining, idle := shared.connectionCount.Load(), shared.drainingConnectionCount.Load(), shared.idleConnectionCount.Load()
+	require.EqualValues(t, 1, active)
+	require.EqualValues(t, 1, draining)
+	require.EqualValues(t, 1, idle)
+
+	p.Stop()
+	p.Wait()
+
+	assert.EqualValues(t, 0, shared.connectionCount.Load())
+	assert.EqualValues(t, 0, shared.drainingConnectionCount.Load())
+	assert.EqualValues(t, 0, shared.idleConnectionCount.Load())
+	snap := root.Snapshot()
+	require.NotEmpty(t, snap.Gauges)
+	for _, g := range snap.Gauges {
+		assert.Equal(t, "yarpc", g.Tags["component"], "gauge %s", g.Name)
+		assert.Equal(t, "test-svc", g.Tags["service"], "gauge %s", g.Name)
+		assert.Equal(t, "grpc", g.Tags["transport"], "gauge %s", g.Name)
+	}
+}
+
+// TestPool_DynamicScalingTeardownRace hammers the scale-up and scale-down
+// paths while stopping a dynamically scaled pool and checks the shared gauges
+// return to zero. Run with -race and a high -count to stress the teardown race.
+func TestPool_DynamicScalingTeardownRace(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping teardown race stress test in short mode")
+	}
+
+	cfg := baseConfig()
+	cfg.MinConnections = 2
+	cfg.MaxConnections = 4
+	cfg.MaxConcurrentStreams = 100
+
+	const iterations = 50
+	for range iterations {
+		shared := NewMetrics(MetricsParams{Meter: metrics.New().Scope(), Transport: "grpc"})
+		var nextID atomic.Int32
+		p := NewPool(context.Background(), fixedConfig(cfg),
+			func(context.Context) (*fakeConn, error) { return &fakeConn{id: int(nextID.Add(1))}, nil },
+			zap.NewNop(), "test-pool", NewReporter(shared))
+		attachFakeWatcher(p)
+		require.NoError(t, p.Start(2, true))
+
+		var wg sync.WaitGroup
+		for range 4 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for range 100 {
+					conn := p.PickConn()
+					if conn == nil {
+						continue
+					}
+					p.TryScaleUp(conn)
+					p.EvaluateScaling()
+					atomic.StoreInt32(&conn.streamCount, 85)
+				}
+			}()
+		}
+
+		time.Sleep(5 * time.Millisecond)
+		p.Stop()
+		wg.Wait()
+		p.Wait()
+
+		assert.EqualValues(t, 0, shared.connectionCount.Load())
+		assert.EqualValues(t, 0, shared.drainingConnectionCount.Load())
+		assert.EqualValues(t, 0, shared.idleConnectionCount.Load())
 	}
 }
