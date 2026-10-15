@@ -22,7 +22,6 @@ package thrift
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -35,6 +34,7 @@ import (
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/pkg/encoding"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
@@ -264,8 +264,39 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		)
 	}
 
-	var buffer bytes.Buffer
-	sw := proto.Writer(&buffer)
+	// encode writes the whole request into a buffer from the pool. It runs
+	// once here. It runs again for each retry that pooledBody.GetBody requests.
+	encode := func() (*bufferpool.Buffer, error) {
+		buffer := bufferpool.Get()
+		if err := encodeEnvelopedRequest(proto, buffer, reqBody, envType); err != nil {
+			bufferpool.Put(buffer)
+			return nil, err
+		}
+		return buffer, nil
+	}
+
+	buffer, err := encode()
+	if err != nil {
+		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+	}
+
+	treq.Body = newPooledBody(buffer, encode)
+	treq.BodySize = buffer.Len()
+	return &treq, proto, nil
+}
+
+// encodeEnvelopedRequest writes one complete Thrift envelope into buffer.
+//
+// pooledBody.GetBody retries a request by running it again. For the same
+// reqBody, each run gives the same length, because the transport declares that
+// length as the Content-Length.
+func encodeEnvelopedRequest(
+	proto stream.Protocol,
+	buffer *bufferpool.Buffer,
+	reqBody stream.Enveloper,
+	envType wire.EnvelopeType,
+) error {
+	sw := proto.Writer(buffer)
 	defer sw.Close()
 
 	if err := sw.WriteEnvelopeBegin(stream.EnvelopeHeader{
@@ -273,18 +304,12 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		Type:  envType,
 		SeqID: 1, // don't care
 	}); err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return err
 	}
 
 	if err := reqBody.Encode(sw); err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return err
 	}
 
-	if err := sw.WriteEnvelopeEnd(); err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
-	}
-
-	treq.Body = &buffer
-	treq.BodySize = buffer.Len()
-	return &treq, proto, nil
+	return sw.WriteEnvelopeEnd()
 }
