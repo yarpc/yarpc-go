@@ -303,40 +303,40 @@ func EnableHTTP2ConnPool() TransportOption {
 	}
 }
 
-// HTTP2DynamicScalingEnabled controls whether the pool automatically scales
+// WithDynamicConnectionScaling controls whether the pool automatically scales
 // the number of connections to a peer up and down with load, once
 // EnableHTTP2ConnPool is set. When disabled, the pool holds a single
-// connection per peer and HTTP2MinConns, HTTP2MaxConns and the scaling
+// connection per peer and MinConnections, MaxConnections and the scaling
 // thresholds are ignored.
 //
 // Defaults to true.
-func HTTP2DynamicScalingEnabled(enabled bool) TransportOption {
+func WithDynamicConnectionScaling(enabled bool) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.DynamicScalingEnabled = enabled
 	}
 }
 
-// HTTP2MinConns sets the minimum number of HTTP/2 connections the transport
+// MinConnections sets the minimum number of HTTP/2 connections the transport
 // keeps open to a peer once EnableHTTP2ConnPool is set.
 //
 // Defaults to 1.
-func HTTP2MinConns(n int) TransportOption {
+func MinConnections(n int) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.MinConnections = n
 	}
 }
 
-// HTTP2MaxConns sets the maximum number of HTTP/2 connections the transport
+// MaxConnections sets the maximum number of HTTP/2 connections the transport
 // will open to a single peer once EnableHTTP2ConnPool is set.
 //
 // Defaults to 50.
-func HTTP2MaxConns(n int) TransportOption {
+func MaxConnections(n int) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.MaxConnections = n
 	}
 }
 
-// HTTP2MaxConcurrentStreams sets the assumed HTTP/2
+// MaxConcurrentStreams sets the assumed HTTP/2
 // SETTINGS_MAX_CONCURRENT_STREAMS ceiling per pooled connection, once
 // EnableHTTP2ConnPool is set. Each pooled connection is a *http2.Transport,
 // which -- unlike a *http2.ClientConn -- doesn't expose the peer's real
@@ -344,56 +344,56 @@ func HTTP2MaxConns(n int) TransportOption {
 // it off the wire.
 //
 // Defaults to 100.
-func HTTP2MaxConcurrentStreams(n int32) TransportOption {
+func MaxConcurrentStreams(n int32) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.MaxConcurrentStreams = n
 	}
 }
 
-// HTTP2ScaleUpThreshold sets the fraction of HTTP2MaxConcurrentStreams that
+// ScaleUpThreshold sets the fraction of MaxConcurrentStreams that
 // must be in use on a connection before the pool opens an additional
 // connection to the same peer.
 //
 // Defaults to 0.7.
-func HTTP2ScaleUpThreshold(f float64) TransportOption {
+func ScaleUpThreshold(f float64) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.ScaleUpThreshold = f
 	}
 }
 
-// HTTP2ScaleDownGap sets the hysteresis margin used when deciding whether to
+// ScaleDownGap sets the hysteresis margin used when deciding whether to
 // park a connection: the pool only scales down when the remaining
 // connections can absorb current load while staying below
-// HTTP2ScaleUpThreshold minus this gap, so a connection that was just parked
+// ScaleUpThreshold minus this gap, so a connection that was just parked
 // is not immediately re-activated. A parked connection is no longer picked
 // for new requests and is re-activated before any new connection is opened.
 //
 // Defaults to 0.1.
-func HTTP2ScaleDownGap(f float64) TransportOption {
+func ScaleDownGap(f float64) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.ScaleDownGap = f
 	}
 }
 
-// HTTP2ConnIdleTimeout sets how long a parked HTTP/2 connection may sit
+// ConnIdleTimeout sets how long a parked HTTP/2 connection may sit
 // without any active streams before its idle sockets are closed. The
 // connection stays in the pool and redials if it is re-activated.
 //
 // Defaults to 5 minutes.
-func HTTP2ConnIdleTimeout(d time.Duration) TransportOption {
+func ConnIdleTimeout(d time.Duration) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.IdleTimeout = d
 	}
 }
 
-// HTTP2ScalingMonitorInterval sets how often the pool re-evaluates whether
+// ScalingMonitorInterval sets how often the pool re-evaluates whether
 // to scale down or reap idle connections.
 //
 // Values below 30 seconds are clamped to 30 seconds so a misconfiguration
 // cannot make the pool thrash.
 //
 // Defaults to 30 seconds.
-func HTTP2ScalingMonitorInterval(d time.Duration) TransportOption {
+func ScalingMonitorInterval(d time.Duration) TransportOption {
 	return func(options *transportOptions) {
 		options.http2PoolCfg.ScalingMonitorInterval = d
 	}
