@@ -778,7 +778,7 @@ func TestRetainDuplicatePeers(t *testing.T) {
 }
 
 func TestRetainPeerRejectsInvalidHTTP2PoolConfig(t *testing.T) {
-	tr := NewTransport(EnableHTTP2ConnPool(), HTTP2ScalingMonitorInterval(0))
+	tr := NewTransport(EnableHTTP2ConnPool(), ScalingMonitorInterval(0))
 	require.NoError(t, tr.Start())
 	defer func() { assert.NoError(t, tr.Stop()) }()
 
@@ -802,14 +802,14 @@ func TestHTTP2PoolOptionsDefaultsAndMapping(t *testing.T) {
 	t.Run("options map to the pool config", func(t *testing.T) {
 		tr := NewTransport(
 			EnableHTTP2ConnPool(),
-			HTTP2DynamicScalingEnabled(false),
-			HTTP2MinConns(2),
-			HTTP2MaxConns(7),
-			HTTP2MaxConcurrentStreams(33),
-			HTTP2ScaleUpThreshold(0.6),
-			HTTP2ScaleDownGap(0.2),
-			HTTP2ConnIdleTimeout(time.Minute),
-			HTTP2ScalingMonitorInterval(time.Hour),
+			WithDynamicConnectionScaling(false),
+			MinConnections(2),
+			MaxConnections(7),
+			MaxConcurrentStreams(33),
+			ScaleUpThreshold(0.6),
+			ScaleDownGap(0.2),
+			ConnIdleTimeout(time.Minute),
+			ScalingMonitorInterval(time.Hour),
 		)
 		assert.True(t, tr.http2PoolEnabled)
 		assert.Equal(t, connpool.Config{
@@ -834,7 +834,7 @@ func newAnySubscriber(t *testing.T) peer.Subscriber {
 }
 
 func TestHTTP2PoolClampsShortMonitorInterval(t *testing.T) {
-	tr := NewTransport(EnableHTTP2ConnPool(), HTTP2ScalingMonitorInterval(10*time.Second))
+	tr := NewTransport(EnableHTTP2ConnPool(), ScalingMonitorInterval(10*time.Second))
 	require.NoError(t, tr.Start())
 	defer func() { assert.NoError(t, tr.Stop()) }()
 

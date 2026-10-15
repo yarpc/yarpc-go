@@ -1082,7 +1082,7 @@ func TestCallWithHTTP2ConnPool(t *testing.T) {
 	h1s.Start()
 	t.Cleanup(h1s.Close)
 
-	httpTransport := NewTransport(EnableHTTP2ConnPool(), HTTP2MaxConns(4), HTTP2ScaleUpThreshold(0.5), HTTP2MaxConcurrentStreams(maxConcurrentStreams))
+	httpTransport := NewTransport(EnableHTTP2ConnPool(), MaxConnections(4), ScaleUpThreshold(0.5), MaxConcurrentStreams(maxConcurrentStreams))
 	t.Cleanup(func() {
 		if err := httpTransport.Stop(); err != nil {
 			t.Logf("failed to stop transport: %v", err)
