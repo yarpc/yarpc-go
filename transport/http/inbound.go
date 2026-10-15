@@ -41,7 +41,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 const (
@@ -279,6 +278,7 @@ type Inbound struct {
 	tlsMode   yarpctls.Mode
 
 	disableHTTP2                             bool
+	h2c                                      *h2cInbound // nil if HTTP/2 is disabled
 	overrideOriginalItemWithCanonicalizedKey bool
 	headerCaseMapping                        map[string][]string
 	headerPreallocationStrategy              HeaderPreallocationStrategy
@@ -370,10 +370,17 @@ func (i *Inbound) start() error {
 
 	i.server.Handler = httpHandler
 	if !i.disableHTTP2 {
-		h2s := &http2.Server{}
-		i.server.Handler = h2c.NewHandler(i.server.Handler, h2s)
-		err := http2.ConfigureServer(i.server.Server, h2s)
+		h2c, err := newH2CInbound(i.server.Server)
 		if err != nil {
+			return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
+		}
+		i.h2c = h2c
+		i.server.Handler = h2c.Handler(httpHandler)
+
+		// HTTP/2 over TLS is negotiated with ALPN and served through the
+		// TLSNextProto hook ConfigureServer installs. net/http keeps tracking
+		// those connections, so Shutdown sends them GOAWAY and waits for them.
+		if err := http2.ConfigureServer(i.server.Server, &http2.Server{}); err != nil {
 			return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
 		}
 	}
@@ -431,8 +438,21 @@ func (i *Inbound) shutdown(ctx context.Context) error {
 		if i.server == nil {
 			return nil
 		}
+		if i.h2c == nil {
+			return i.server.Shutdown(ctx)
+		}
 
-		return i.server.Shutdown(ctx)
+		// GOAWAY h2c connections first, so that their clients stop starting
+		// calls while HTTP/1.1 calls drain.
+		i.h2c.NotifyShutdown()
+		err := i.server.Shutdown(ctx)
+		// Shutdown also waited for connections accepted before the listener
+		// closed to send a first request: GOAWAY those that turned out h2c.
+		i.h2c.NotifyShutdown()
+		if drainErr := i.h2c.Drain(ctx); err == nil {
+			err = drainErr
+		}
+		return err
 	})
 }
 
