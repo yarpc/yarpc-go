@@ -299,3 +299,48 @@ func TestPool_ConcurrentPickAndStreamCounting(t *testing.T) {
 		<-done
 	}
 }
+
+// TestPool_AddConnRecordsDialOutcome pins that AddConn reports exactly one
+// dial metric per attempt: a success counts as a dial, a failure as a dial
+// failure, never both.
+func TestPool_AddConnRecordsDialOutcome(t *testing.T) {
+	root := metrics.New()
+	reporter := NewReporter(NewMetrics(MetricsParams{Meter: root.Scope(), Transport: "http2"}))
+
+	var fail atomic.Bool
+	dial := func(_ context.Context) (*fakeConn, error) {
+		if fail.Load() {
+			return nil, errors.New("dial failed")
+		}
+		return &fakeConn{}, nil
+	}
+	p := NewPool(context.Background(), fixedConfig(baseConfig()), dial, zap.NewNop(), "test-pool", reporter)
+	attachFakeWatcher(p)
+	require.NoError(t, p.Start(0, false))
+	defer func() { p.Stop(); p.Wait() }()
+
+	counts := func() (dials, failures int64) {
+		for _, c := range root.Snapshot().Counters {
+			switch c.Name {
+			case "conn_pool_dials_total":
+				dials = c.Value
+			case "conn_pool_dial_failures_total":
+				failures = c.Value
+			}
+		}
+		return dials, failures
+	}
+
+	_, err := p.AddConn()
+	require.NoError(t, err)
+	d, f := counts()
+	assert.EqualValues(t, 1, d)
+	assert.Zero(t, f)
+
+	fail.Store(true)
+	_, err = p.AddConn()
+	require.Error(t, err)
+	d, f = counts()
+	assert.EqualValues(t, 1, d, "a failed dial must not count as a success")
+	assert.EqualValues(t, 1, f)
+}
