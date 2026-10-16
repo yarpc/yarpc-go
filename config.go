@@ -174,6 +174,33 @@ type MetricsConfig struct {
 	// Anything that reads a disabled histogram, such as a dashboard or alert,
 	// will stop receiving data.
 	DisabledMetrics []string
+	// LatencyBucketsMs replaces the buckets of the histograms of durations:
+	// success_latency_ms, caller_failure_latency_ms, server_failure_latency_ms,
+	// ttl_ms, timeout_ttl_ms and stream_duration_ms. Each value is the upper
+	// bound of a bucket (inclusive), in milliseconds. Observations above the
+	// last value go in one extra bucket.
+	//
+	// Every bucket of every histogram is a series, so fewer buckets means
+	// fewer series to keep, push and store. Percentiles read from the
+	// histograms are only as precise as the buckets are narrow, so keep
+	// buckets where thresholds, such as timeouts and alert limits, are.
+	//
+	// The values must not be negative and must be in increasing order. An
+	// empty list, the default, keeps the buckets YARPC has always used: 1ms to
+	// 10s, in 50 steps that get wider as latency grows. An invalid list is
+	// logged and ignored.
+	//
+	// All the services of a dashboard or alert should use the same buckets, as
+	// they are not comparable otherwise.
+	LatencyBucketsMs []int64
+	// PayloadSizeBucketsBytes replaces the buckets of the histograms of payload
+	// sizes: request_payload_size_bytes, response_payload_size_bytes,
+	// stream_request_payload_size_bytes and
+	// stream_response_payload_size_bytes. Each value is the upper bound of a
+	// bucket (inclusive), in bytes. The same rules as for LatencyBucketsMs
+	// apply. An empty list, the default, keeps the buckets YARPC has always
+	// used: 0 bytes, then powers of two from 1 byte to 256MB.
+	PayloadSizeBucketsBytes []int64
 	// MaxEdges is the maximum number of edges that YARPC emits metrics for.
 	// An edge is one distinct combination of the metric tags: source, dest,
 	// transport, encoding, procedure, routing key, routing delegate,
