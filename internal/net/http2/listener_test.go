@@ -31,27 +31,44 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	xhttp2 "golang.org/x/net/http2"
 )
 
 // recordingHelper is a [ShutdownHelper] that records the connections it is
-// asked to track.
+// asked to track, and those it stops tracking.
 type recordingHelper struct {
 	noopHelper
+	refuse bool // does not track connections
 
-	mu      sync.Mutex
-	tracked []net.Conn
+	mu        sync.Mutex
+	tracked   []net.Conn
+	untracked []net.Conn
 }
 
-func (h *recordingHelper) TrackConnection(conn net.Conn) {
+func (h *recordingHelper) TrackConnection(conn net.Conn) func() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.tracked = append(h.tracked, conn)
+	if h.refuse {
+		return nil
+	}
+	return func() {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		h.untracked = append(h.untracked, conn)
+	}
 }
 
 func (h *recordingHelper) trackedConns() []net.Conn {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return append([]net.Conn(nil), h.tracked...)
+}
+
+func (h *recordingHelper) untrackedConns() []net.Conn {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return append([]net.Conn(nil), h.untracked...)
 }
 
 // stubListener is a [net.Listener] that accepts conn, or fails with err.
@@ -111,12 +128,15 @@ func TestTrackingListenerGetTrackerFunc(t *testing.T) {
 		tl := &TrackingListener{listener: &stubListener{}, helper: helper}
 		fn := tl.getTrackerFunc()
 
-		fn(nil)
+		assert.Nil(t, fn(nil), "must not track a nil connection")
 		assert.Empty(t, helper.trackedConns(), "must not track a nil connection")
 
 		conn := &stubConn{}
-		fn(conn)
+		untrack := fn(conn)
 		assert.Equal(t, []net.Conn{conn}, helper.trackedConns(), "must track through the helper")
+		require.NotNil(t, untrack, "must return the helper's untrack func")
+		untrack()
+		assert.Equal(t, []net.Conn{conn}, helper.untrackedConns(), "must untrack through the helper")
 		assert.Empty(t, conn.calls, "tracking must not touch the connection")
 	})
 }
@@ -134,7 +154,7 @@ func TestTrackingListenerAccept(t *testing.T) {
 		assert.Same(t, conn, tc.conn, "must wrap the accepted connection")
 		assert.Empty(t, helper.trackedConns(), "must not track on Accept")
 
-		tc.trackFn(tc)
+		assert.NotNil(t, tc.trackFn(tc), "trackFn must track through the helper")
 		assert.Equal(t, []net.Conn{tc}, helper.trackedConns(), "trackFn must track through the helper")
 	})
 
@@ -208,6 +228,31 @@ func TestTrackingListenerOverTCP(t *testing.T) {
 	_, err = l.Accept()
 	assert.ErrorIs(t, err, net.ErrClosed, "Accept must fail once the listener closed")
 
-	assert.Empty(t, helper.trackedConns(), "the blueprint must not track connections yet")
+	assert.Empty(t, helper.trackedConns(), "must not track a connection that is not HTTP/2")
 	assert.True(t, helper.IsShutdownComplete(context.Background()))
+}
+
+func TestTrackingListenerOverTCPWithHTTP2(t *testing.T) {
+	inner, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	helper := &recordingHelper{}
+	l := WrapListener(inner, helper)
+	defer l.Close()
+
+	client, err := net.Dial("tcp", l.Addr().String())
+	require.NoError(t, err)
+	defer client.Close()
+
+	server, err := l.Accept()
+	require.NoError(t, err)
+
+	_, err = client.Write([]byte(xhttp2.ClientPreface))
+	require.NoError(t, err)
+	_, err = io.ReadFull(server, make([]byte, len(xhttp2.ClientPreface)))
+	require.NoError(t, err)
+	assert.Equal(t, []net.Conn{server}, helper.trackedConns(), "must track an HTTP/2 connection")
+
+	require.NoError(t, server.Close())
+	assert.Equal(t, []net.Conn{server}, helper.untrackedConns(), "must untrack a closed connection")
 }
