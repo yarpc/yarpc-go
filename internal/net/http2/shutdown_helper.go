@@ -31,7 +31,9 @@ import (
 // to be used in [Server.RegisterOnShutdown].
 type ShutdownHelper interface {
 	// TrackConnection is used to track connections.
-	TrackConnection(conn net.Conn)
+	// It returns the function to stop tracking conn once closed, or nil if
+	// conn is not tracked.
+	TrackConnection(conn net.Conn) (untrack func())
 
 	// BeginShutdown starts the shutdown process.
 	// Note: It MUST be invoked before [net/http.Server.Shutdown] and so before IsShutdownComplete.
@@ -65,7 +67,7 @@ var _ ShutdownHelper = (*noopHelper)(nil)
 type noopHelper struct{}
 
 // TrackConnection implements the [ShutdownHelper] interface for [noopHelper].
-func (h *noopHelper) TrackConnection(conn net.Conn) {}
+func (h *noopHelper) TrackConnection(conn net.Conn) func() { return nil }
 
 // BeginShutdown implements the [ShutdownHelper] interface for [noopHelper].
 func (h *noopHelper) BeginShutdown() {}
