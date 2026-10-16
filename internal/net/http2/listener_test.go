@@ -105,7 +105,11 @@ func TestWrapListener(t *testing.T) {
 	})
 
 	t.Run("noop helper", func(t *testing.T) {
-		assert.Same(t, l, WrapListener(l, NewShutdownHelper()), "must not wrap for a no-op helper")
+		assert.Same(t, l, WrapListener(l, NewNoopShutdownHelper()), "must not wrap for a no-op helper")
+	})
+
+	t.Run("graceful shutdown helper", func(t *testing.T) {
+		assert.IsType(t, &TrackingListener{}, WrapListener(l, NewShutdownHelper()))
 	})
 
 	t.Run("helper", func(t *testing.T) {
