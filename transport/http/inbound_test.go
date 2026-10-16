@@ -25,6 +25,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -722,75 +723,110 @@ func httpGet(t *testing.T, url string) (*http.Response, string, error) {
 // HTTP/2 cleartext (h2c) connection, then drops every server-side connection
 // the moment Stop returns, as the process exiting would.
 //
-// BUG: Stop does not wait for h2c connections. h2c.NewHandler hijacks them,
-// and http.Server.Shutdown neither waits for hijacked connections nor for the
-// HTTP/2 shutdown hook that sends GOAWAY, which it runs in a goroutine. Stop
-// therefore returns with the call still in flight, the GOAWAY races the
-// process exit and often loses, and the client sees its connection drop under
-// a request the server never answered.
+// Stop must hold the contract grpc.Server.GracefulStop provides gRPC
+// inbounds: deliver a GOAWAY and let in-flight calls complete before it
+// returns, since nothing still owed to the client survives the exit.
+//
+// The GOAWAY must follow the two-phase graceful shutdown of RFC 9113 §6.8: a
+// first GOAWAY reserving the whole stream ID space, then, after at least one
+// round trip, a second one carrying the last stream actually processed.
 func TestInboundH2CGracefulShutdown(t *testing.T) {
 	conns := &serverConns{}
-	inbound, h := startBlockingInbound(t, conns.record())
+	inbound, h := startBlockingInbound(t, conns.record(), EnableHTTP2ShutdownHelper(true))
 	addr := inbound.Addr().String()
 
 	c := http2test.DialRawH2C(t, addr)
 	c.OpenStream(t, 1, "/", h2cRequestHeaders("block"), []byte("payload"))
 	h.awaitEntered(t)
 
+	var seq, stopSeq atomic.Int64
 	stopErr := make(chan error, 1)
-	go func() { stopErr <- inbound.Stop() }()
+	go func() {
+		err := inbound.Stop()
+		stopSeq.Store(seq.Inc())
+		stopErr <- err
+	}()
+
+	frames := c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)
+	first := frames[len(frames)-1]
+	assert.Equal(t, http2.ErrCodeNo, first.ErrCode, "graceful shutdown must use NO_ERROR")
+	assert.Equal(t, uint32(math.MaxInt32), first.LastStreamID,
+		"first GOAWAY must reserve the whole stream ID space")
+
+	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)...)
+	goAwaySeq := seq.Inc()
+	second := frames[len(frames)-1]
+	assert.Equal(t, http2.ErrCodeNo, second.ErrCode, "graceful shutdown must use NO_ERROR")
+	assert.Equal(t, uint32(1), second.LastStreamID, "second GOAWAY must carry the last processed stream")
+
+	releaseSeq := seq.Inc()
+	h.releaseAll()
+	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.StreamDone(1))...)
+	res := http2test.ResponseOn(frames, 1)
+	require.False(t, res.Reset, "in-flight stream 1 was reset with %v instead of completing", res.ResetCode)
+	assert.Equal(t, "200", res.Headers[":status"], "unexpected status for in-flight stream 1")
+	assert.Equal(t, "payload", string(res.Body), "unexpected body for in-flight stream 1")
+
+	// The client is done: closing its side lets the server tear down the
+	// connection without waiting out its post-GOAWAY grace period.
+	require.NoError(t, c.Close())
+
 	select {
 	case err := <-stopErr:
-		require.NoError(t, err)
+		require.NoError(t, err, "Stop must succeed once connections have drained")
 	case <-time.After(5 * testtime.Second):
-		require.FailNow(t, "expected Stop to return without waiting for the in-flight h2c call")
+		require.FailNow(t, "Stop did not return after the connection drained")
 	}
 	conns.closeAll()
-
-	frames := c.ReadUntilClosed(t, 5*testtime.Second)
-	assert.False(t, http2test.ResponseOn(frames, 1).Complete,
-		"expected in-flight stream 1 to be lost when the process exits after Stop")
-	goAways := 0
-	for _, f := range frames {
-		if http2test.IsGoAway(f) {
-			goAways++
-		}
-	}
-	// Not asserted: whether the GOAWAY won the race against the exit is
-	// nondeterministic, which is itself part of the bug.
-	t.Logf("GOAWAY frames delivered before the connection dropped: %d", goAways)
+	assert.Less(t, goAwaySeq, stopSeq.Load(),
+		"Stop returned before the client observed a GOAWAY, which exiting the process would lose")
+	assert.Less(t, releaseSeq, stopSeq.Load(),
+		"Stop returned with stream 1 still in flight, which exiting the process would lose")
 
 	_, err := net.Dial("tcp", addr)
 	assert.Error(t, err, "new connections must be refused once Stop returns")
 }
 
 // TestInboundH2CStopWithWedgedHandler stops an inbound whose h2c connection
-// has a call that never completes.
-//
-// BUG: Stop returns immediately instead of waiting up to ShutdownTimeout, and
-// leaves the connection open and served behind it. The GOAWAY does arrive
-// eventually, sent by the shutdown hook that Stop does not wait for: the
-// HTTP/2 shutdown wiring exists, its synchronization with Stop does not.
+// has a call that never completes: Stop must still complete both phases of
+// the RFC 9113 §6.8 graceful shutdown, neither give up on the call before
+// ShutdownTimeout nor wait past it, and close the connection rather than leave
+// it behind.
 func TestInboundH2CStopWithWedgedHandler(t *testing.T) {
-	timeout := time.Minute
-	inbound, h := startBlockingInbound(t, ShutdownTimeout(timeout))
+	timeout := 200 * testtime.Millisecond
+	inbound, h := startBlockingInbound(t, ShutdownTimeout(timeout), EnableHTTP2ShutdownHelper(true))
 
 	c := http2test.DialRawH2C(t, inbound.Addr().String())
 	c.OpenStream(t, 1, "/", h2cRequestHeaders("block"), []byte("payload"))
 	h.awaitEntered(t)
 
 	start := time.Now()
-	require.NoError(t, inbound.Stop())
-	assert.Less(t, time.Since(start), timeout,
-		"expected Stop to return without waiting for ShutdownTimeout")
+	stopErr := make(chan error, 1)
+	go func() { stopErr <- inbound.Stop() }()
 
 	frames := c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)
-	goAway := frames[len(frames)-1]
-	assert.Equal(t, http2.ErrCodeNo, goAway.ErrCode, "graceful shutdown must use NO_ERROR")
-	assert.Equal(t, uint32(1), goAway.LastStreamID, "GOAWAY must cover in-flight stream 1")
+	first := frames[len(frames)-1]
+	assert.Equal(t, http2.ErrCodeNo, first.ErrCode, "graceful shutdown must use NO_ERROR")
+	assert.Equal(t, uint32(math.MaxInt32), first.LastStreamID,
+		"first GOAWAY must reserve the whole stream ID space")
 
-	c.Ping(t)
-	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.IsPingAck)...)
+	// The second GOAWAY does not wait for in-flight calls: it only waits for
+	// the client to acknowledge the first, so a wedged call cannot hold it.
+	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)...)
+	second := frames[len(frames)-1]
+	assert.Equal(t, http2.ErrCodeNo, second.ErrCode, "graceful shutdown must use NO_ERROR")
+	assert.Equal(t, uint32(1), second.LastStreamID, "second GOAWAY must carry the last processed stream")
+
+	select {
+	case err := <-stopErr:
+		assert.ErrorIs(t, err, context.DeadlineExceeded, "Stop must report that the drain timed out")
+	case <-time.After(timeout + 5*testtime.Second):
+		require.FailNow(t, "Stop hung past ShutdownTimeout")
+	}
+	assert.GreaterOrEqual(t, time.Since(start), timeout,
+		"Stop gave up on the in-flight call before ShutdownTimeout")
+
+	frames = append(frames, c.ReadUntilClosed(t, 5*testtime.Second)...)
 	assert.False(t, http2test.ResponseOn(frames, 1).Complete,
 		"stream 1 completed although its handler never returned")
 }
