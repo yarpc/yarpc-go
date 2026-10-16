@@ -39,8 +39,8 @@ var _ net.Conn = (*TrackedConn)(nil)
 // TrackedConn represents a connection tracked for shutdown purposes.
 // Implements the [net.Conn] interface.
 type TrackedConn struct {
-	conn      net.Conn
-	trackFn   ConnectionTrackerFunc
+	conn    net.Conn
+	trackFn ConnectionTrackerFunc
 }
 
 // newTrackedConn is the constructor for [TrackedConn].
