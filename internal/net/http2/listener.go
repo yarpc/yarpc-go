@@ -57,11 +57,11 @@ func (tl *TrackingListener) getTrackerFunc() ConnectionTrackerFunc {
 	if tl.helper == nil {
 		return noopTrackerFunc
 	}
-	return func(conn net.Conn) {
+	return func(conn net.Conn) func() {
 		if conn == nil {
-			return
+			return nil
 		}
-		tl.helper.TrackConnection(conn)
+		return tl.helper.TrackConnection(conn)
 	}
 }
 
