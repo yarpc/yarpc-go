@@ -147,16 +147,18 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	tests := []test{
+		// Inbound cases use port 0 so the OS picks a free port. Fixed ports in
+		// the ephemeral range collide with other tests' listeners.
 		{
 			desc:        "simple inbound",
-			inboundCfg:  attrs{"address": ":54567", "tls": attrs{"mode": "enforced"}},
-			wantInbound: &wantInbound{Address: ":54567", TLSMode: yarpctls.Enforced},
+			inboundCfg:  attrs{"address": ":0", "tls": attrs{"mode": "enforced"}},
+			wantInbound: &wantInbound{TLSMode: yarpctls.Enforced},
 		},
 		{
 			desc:        "inbound interpolation",
 			inboundCfg:  attrs{"address": "${HOST:}:${PORT}"},
-			env:         map[string]string{"HOST": "127.0.0.1", "PORT": "54568"},
-			wantInbound: &wantInbound{Address: "127.0.0.1:54568"},
+			env:         map[string]string{"HOST": "127.0.0.1", "PORT": "0"},
+			wantInbound: &wantInbound{Address: "127.0.0.1:"},
 		},
 		{
 			desc:       "bad inbound address",
@@ -256,9 +258,8 @@ func TestTransportSpec(t *testing.T) {
 				"clientMaxSendMsgSize":    "8192",
 				"clientMaxHeaderListSize": "16384",
 			},
-			inboundCfg: attrs{"address": ":54571"},
+			inboundCfg: attrs{"address": ":0"},
 			wantInbound: &wantInbound{
-				Address:                 ":54571",
 				ServerMaxRecvMsgSize:    1024,
 				ServerMaxSendMsgSize:    2048,
 				ServerMaxHeaderListSize: 32768,
@@ -281,7 +282,7 @@ func TestTransportSpec(t *testing.T) {
 		{
 			desc: "TLS enabled on an inbound",
 			inboundCfg: attrs{
-				"address": "localhost:54569",
+				"address": "localhost:0",
 				"tls": attrs{
 					"enabled":  true,
 					"certFile": "testdata/cert",
@@ -289,7 +290,7 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 			wantInbound: &wantInbound{
-				Address: "127.0.0.1:54569",
+				Address: "127.0.0.1:",
 				TLS:     true,
 			},
 		},
