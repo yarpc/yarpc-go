@@ -184,10 +184,14 @@ type MetricsConfig struct {
 	// TagsBlocklist, and use MaxEdges as a safety net.
 	//
 	// When the limit is reached, calls on edges that do not have metrics yet
-	// are recorded together, one overflow edge for each direction and RPC
-	// type, with all tags except direction and RPC type set to "__overflow__".
-	// Edges that already exist are not affected. YARPC logs once when this
-	// happens. Logs of overflowed calls still describe the real request.
+	// are recorded together on overflow edges: one for each destination,
+	// transport, direction and RPC type. On them, all other tags are set to
+	// "__overflow__". Overflow edges are limited to MaxEdges as well. If
+	// there are more destinations and transports than that, the rest share
+	// one edge for each direction and RPC type, with the destination and
+	// transport set to "__overflow__" too. Edges that already exist are not
+	// affected. YARPC logs once when this happens. Logs of overflowed calls
+	// still describe the real request.
 	//
 	// The number of edges of a service can be found by counting the series of
 	// its "calls" metric. Zero, the default, means no limit.

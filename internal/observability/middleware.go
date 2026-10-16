@@ -103,8 +103,9 @@ type Config struct {
 
 	// MaxEdges is the maximum number of edges, that is, of distinct
 	// combinations of the tags of metrics, that the middleware creates metrics
-	// for. Calls on further edges are recorded together on a shared edge whose
-	// tags are all "__overflow__". Zero means no limit.
+	// for. Calls on further edges are recorded together, by destination and
+	// transport, on shared edges whose other tags are "__overflow__". Zero
+	// means no limit.
 	//
 	// Every edge keeps its metrics registered, and so costs memory and CPU
 	// every time metrics are pushed, for the lifetime of the process.
@@ -164,7 +165,7 @@ type DirectionalLevelsConfig struct {
 // configuration.
 func NewMiddleware(cfg Config) *Middleware {
 	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor, cfg.MetricTagsBlocklist, cfg.DisabledMetrics)}
-	m.graph.edges.max = cfg.MaxEdges
+	m.graph.setMaxEdges(cfg.MaxEdges)
 
 	// Apply the default levels
 	applyLogLevelsConfig(&m.graph.inboundLevels, &cfg.Levels.Default)

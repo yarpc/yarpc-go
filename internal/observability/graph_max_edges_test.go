@@ -46,11 +46,11 @@ func procedureRequest(procedure string) *transport.Request {
 	}
 }
 
-func overflowTags(direction, rpcType string) metrics.Tags {
+func overflowTags(dest, transport, direction, rpcType string) metrics.Tags {
 	return metrics.Tags{
 		_source:          _overflowTagValue,
-		_dest:            _overflowTagValue,
-		_transport:       _overflowTagValue,
+		_dest:            dest,
+		_transport:       transport,
 		_encoding:        _overflowTagValue,
 		_procedure:       _overflowTagValue,
 		_routingKey:      _overflowTagValue,
@@ -76,7 +76,7 @@ func TestMaxEdgesOverflow(t *testing.T) {
 	root := metrics.New()
 	core, logs := observer.New(zap.WarnLevel)
 	g := newGraph(root.Scope(), zap.New(core), NewNopContextExtractor(), nil, nil)
-	g.edges.max = 2
+	g.setMaxEdges(2)
 
 	call := func(procedure string) {
 		c := g.begin(context.Background(), transport.Unary, _directionInbound, procedureRequest(procedure))
@@ -100,7 +100,8 @@ func TestMaxEdgesOverflow(t *testing.T) {
 		"p2":              1,
 		_overflowTagValue: 3,
 	}, callsByProcedure(root))
-	assert.Equal(t, 2, g.edges.len(), "the overflow edge does not count toward the limit")
+	assert.Equal(t, 2, g.edges.len(), "overflow edges do not count toward the limit")
+	assert.Equal(t, 1, g.overflow.len())
 
 	var tags []metrics.Tags
 	for _, c := range root.Snapshot().Counters {
@@ -108,8 +109,8 @@ func TestMaxEdgesOverflow(t *testing.T) {
 			tags = append(tags, c.Tags)
 		}
 	}
-	assert.Equal(t, []metrics.Tags{overflowTags("inbound", "Unary")}, tags,
-		"direction and RPC type are kept, everything else is replaced")
+	assert.Equal(t, []metrics.Tags{overflowTags("service", "unknown", "inbound", "Unary")}, tags,
+		"destination, transport, direction and RPC type are kept, everything else is replaced")
 
 	require.Equal(t, 1, logs.Len(), "must warn once, not for every overflowed call")
 	entry := logs.All()[0]
@@ -121,7 +122,7 @@ func TestMaxEdgesOverflow(t *testing.T) {
 func TestMaxEdgesOverflowEdgesAreSeparateByDirectionAndRPCType(t *testing.T) {
 	root := metrics.New()
 	g := newGraph(root.Scope(), zap.NewNop(), NewNopContextExtractor(), nil, nil)
-	g.edges.max = 1
+	g.setMaxEdges(1)
 
 	g.begin(context.Background(), transport.Unary, _directionInbound, procedureRequest("owns-the-only-edge")).
 		endStats(time.Millisecond, callResult{})
@@ -161,7 +162,7 @@ func TestMaxEdgesOverflowEdgesAreSeparateByDirectionAndRPCType(t *testing.T) {
 func TestMaxEdgesOverflowStream(t *testing.T) {
 	root := metrics.New()
 	g := newGraph(root.Scope(), zap.NewNop(), NewNopContextExtractor(), nil, nil)
-	g.edges.max = 1
+	g.setMaxEdges(1)
 
 	g.begin(context.Background(), transport.Unary, _directionInbound, procedureRequest("owns-the-only-edge")).
 		endStats(time.Millisecond, callResult{})
@@ -261,7 +262,7 @@ func BenchmarkGraphCallOverflow(b *testing.B) {
 	const edges = 1024
 
 	g := newGraph(metrics.New().Scope(), zap.NewNop(), nil, nil, nil)
-	g.edges.max = 16
+	g.setMaxEdges(16)
 	reqs := make([]*transport.Request, edges)
 	for i := range reqs {
 		reqs[i] = benchGraphRequest()
@@ -280,4 +281,103 @@ func BenchmarkGraphCallOverflow(b *testing.B) {
 			c.endStats(3*time.Millisecond, res)
 		}
 	})
+}
+
+// Overflow edges are kept apart by destination and transport, which are few
+// and worth telling apart.
+func TestMaxEdgesOverflowIsPerDestinationAndTransport(t *testing.T) {
+	root := metrics.New()
+	g := newGraph(root.Scope(), zap.NewNop(), NewNopContextExtractor(), nil, nil)
+	g.setMaxEdges(100)
+
+	// Fill the limit with edges on an unrelated destination.
+	for i := 0; i < 100; i++ {
+		req := procedureRequest(fmt.Sprint("p", i))
+		req.Service = "filler"
+		g.begin(context.Background(), transport.Unary, _directionOutbound, req).endStats(time.Millisecond, callResult{})
+	}
+
+	for _, dest := range []string{"a", "b"} {
+		for _, tr := range []string{"tchannel", "http"} {
+			for i := 0; i < 3; i++ { // different procedures, same overflow edge
+				req := procedureRequest(fmt.Sprint("p", i))
+				req.Service, req.Transport = dest, tr
+				g.begin(context.Background(), transport.Unary, _directionOutbound, req).endStats(time.Millisecond, callResult{})
+			}
+		}
+	}
+
+	got := map[string]int64{}
+	for _, c := range root.Snapshot().Counters {
+		if c.Name == "calls" && c.Tags[_procedure] == _overflowTagValue {
+			assert.Equal(t, _overflowTagValue, c.Tags[_source])
+			assert.Equal(t, _overflowTagValue, c.Tags[_routingDelegate])
+			got[c.Tags[_dest]+"/"+c.Tags[_transport]] += c.Value
+		}
+	}
+	assert.Equal(t, map[string]int64{"a/tchannel": 3, "a/http": 3, "b/tchannel": 3, "b/http": 3}, got)
+	assert.Equal(t, 4, g.overflow.len())
+}
+
+// The overflow edges are limited too, so that a destination or transport with
+// many values cannot grow the edges without bound.
+func TestMaxEdgesOverflowEdgesAreLimited(t *testing.T) {
+	root := metrics.New()
+	g := newGraph(root.Scope(), zap.NewNop(), NewNopContextExtractor(), nil, nil)
+	g.setMaxEdges(2)
+
+	call := func(dest string) {
+		req := procedureRequest("p")
+		req.Service = dest
+		g.begin(context.Background(), transport.Unary, _directionOutbound, req).endStats(time.Millisecond, callResult{})
+	}
+
+	call("d1") // edge
+	call("d2") // edge
+	call("d3") // overflow edge
+	call("d4") // overflow edge
+	call("d5") // no room: collapsed
+	call("d6") // no room: collapsed
+	call("d3") // still its own overflow edge
+
+	got := map[string]int64{}
+	for _, c := range root.Snapshot().Counters {
+		if c.Name == "calls" {
+			got[c.Tags[_procedure]+"/"+c.Tags[_dest]] += c.Value
+		}
+	}
+	assert.Equal(t, map[string]int64{
+		"p/d1":                    1,
+		"p/d2":                    1,
+		_overflowTagValue + "/d3": 2,
+		_overflowTagValue + "/d4": 1,
+		_overflowTagValue + "/" + _overflowTagValue: 2,
+	}, got)
+	assert.Equal(t, 2, g.edges.len())
+	assert.Equal(t, 2, g.overflow.len())
+}
+
+// A blocklisted tag is not a reason to have more overflow edges, which would
+// only have the same metrics registered twice.
+func TestMaxEdgesOverflowHonoursTagsBlocklist(t *testing.T) {
+	root := metrics.New()
+	core, logs := observer.New(zap.ErrorLevel)
+	g := newGraph(root.Scope(), zap.New(core), NewNopContextExtractor(),
+		[]string{"dest", "transport", "direction", "rpc_type"}, nil)
+	g.setMaxEdges(1)
+
+	g.begin(context.Background(), transport.Unary, _directionInbound, procedureRequest("owns-the-only-edge")).
+		endStats(time.Millisecond, callResult{})
+
+	for _, dest := range []string{"a", "b", "c"} {
+		for _, direction := range []directionName{_directionInbound, _directionOutbound} {
+			req := procedureRequest("p")
+			req.Service = dest
+			g.begin(context.Background(), transport.Unary, direction, req).endStats(time.Millisecond, callResult{})
+		}
+	}
+
+	assert.Zero(t, logs.Len(), "no metric may be registered twice: %v", logs.All())
+	assert.Equal(t, 1, g.overflow.len(), "the blocklisted tags no longer tell calls apart")
+	assert.Equal(t, map[string]int64{"owns-the-only-edge": 1, _overflowTagValue: 6}, callsByProcedure(root))
 }

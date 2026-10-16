@@ -85,10 +85,16 @@ type graph struct {
 	edges edgeMap
 
 	// Calls on edges that do not fit in the edge limit are recorded on shared
-	// overflow edges instead, one for each direction and RPC type, since
-	// those have different sets of metrics. They are created lazily.
-	overflowMu   sync.Mutex
-	overflow     [2][_overflowRPCTypes]atomic.Pointer[edge]
+	// overflow edges instead: one for each destination, transport, direction
+	// and RPC type, since those are few and worth telling apart. The overflow
+	// edges are limited too, to the same number as the edges, so that they
+	// cannot grow without bound if those tags have many values. Calls beyond
+	// that share one collapsed edge for each direction and RPC type.
+	overflow edgeMap
+
+	collapsedMu sync.Mutex
+	collapsed   [2][_overflowRPCTypes]atomic.Pointer[edge]
+
 	overflowOnce sync.Once
 
 	inboundLevels, outboundLevels levels
@@ -334,7 +340,7 @@ func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction st
 		if e := g.edges.load(key); e != nil {
 			return e
 		}
-		return g.overflowEdge(direction, rpcType)
+		return g.overflowEdge(req, direction, rpcType)
 	}
 	return g.createEdge(key, req, direction, rpcType)
 }
@@ -349,14 +355,58 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string,
 		return newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, req, direction, rpcType)
 	})
 	if e == nil {
-		return g.overflowEdge(direction, rpcType)
+		return g.overflowEdge(req, direction, rpcType)
 	}
 	return e
 }
 
-// overflowEdge returns the edge that records the calls that do not fit in the
+// overflowEdge returns the edge that records a call that does not fit in the
 // edge limit.
-func (g *graph) overflowEdge(direction string, rpcType transport.Type) *edge {
+func (g *graph) overflowEdge(req *transport.Request, direction string, rpcType transport.Type) *edge {
+	// The key has the same parts as the tags of the edge, so that tags that are
+	// blocklisted do not split it into edges that have the same metrics.
+	d := digester.New()
+	if !g.ignoreMetricsTag.dest {
+		d.Add(req.Service)
+	}
+	if !g.ignoreMetricsTag.transport {
+		d.Add(req.Transport)
+	}
+	if !g.ignoreMetricsTag.direction {
+		d.Add(direction)
+	}
+	if !g.ignoreMetricsTag.rpcType {
+		d.Add(rpcType.String())
+	}
+	key := d.Digest()
+
+	e := g.overflow.load(key)
+	if e == nil && !g.overflow.isFull() {
+		e = g.overflow.loadOrCreate(key, func() *edge {
+			g.warnOverflow()
+			return g.newOverflowEdge(&transport.Request{
+				Caller:          _overflowTagValue,
+				Service:         req.Service,
+				Transport:       req.Transport,
+				Encoding:        _overflowTagValue,
+				Procedure:       _overflowTagValue,
+				RoutingKey:      _overflowTagValue,
+				RoutingDelegate: _overflowTagValue,
+			}, direction, rpcType)
+		})
+	}
+	d.Free()
+
+	if e == nil {
+		return g.collapsedEdge(direction, rpcType)
+	}
+	return e
+}
+
+// collapsedEdge returns the edge of last resort, which records the calls that
+// do not fit in the edge limit or in the limit of overflow edges. Every tag of
+// it, except direction and RPC type, is replaced.
+func (g *graph) collapsedEdge(direction string, rpcType transport.Type) *edge {
 	d, t := 0, int(rpcType)
 	if direction != string(_directionInbound) {
 		d = 1
@@ -365,24 +415,18 @@ func (g *graph) overflowEdge(direction string, rpcType transport.Type) *edge {
 		t = 0 // not a real RPC type, but it still gets an edge
 	}
 
-	if e := g.overflow[d][t].Load(); e != nil {
+	if e := g.collapsed[d][t].Load(); e != nil {
 		return e
 	}
 
-	g.overflowMu.Lock()
-	defer g.overflowMu.Unlock()
-	if e := g.overflow[d][t].Load(); e != nil {
+	g.collapsedMu.Lock()
+	defer g.collapsedMu.Unlock()
+	if e := g.collapsed[d][t].Load(); e != nil {
 		return e
 	}
 
-	g.overflowOnce.Do(func() {
-		g.logger.Warn("Reached the maximum number of YARPC metric edges. "+
-			"Calls on further edges are recorded together, with their metric tags set to "+_overflowTagValue+". "+
-			"Raise metrics.maxEdges or block high-cardinality tags with metrics.tagsBlocklist.",
-			zap.Int("maxEdges", g.edges.max))
-	})
-
-	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, &transport.Request{
+	g.warnOverflow()
+	e := g.newOverflowEdge(&transport.Request{
 		Caller:          _overflowTagValue,
 		Service:         _overflowTagValue,
 		Transport:       _overflowTagValue,
@@ -391,13 +435,35 @@ func (g *graph) overflowEdge(direction string, rpcType transport.Type) *edge {
 		RoutingKey:      _overflowTagValue,
 		RoutingDelegate: _overflowTagValue,
 	}, direction, rpcType)
+	g.collapsed[d][t].Store(e)
+	return e
+}
+
+func (g *graph) newOverflowEdge(req *transport.Request, direction string, rpcType transport.Type) *edge {
+	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, req, direction, rpcType)
 	// The edge is shared by unrelated requests, so a logger that describes the
 	// one that created it would mislead. Logs of its calls get the fields of
-	// their own request instead; see call.requestFields.
+	// their own request instead; see call.appendRequestFields.
 	e.overflow = true
 	e.logger = g.logger.With(zap.String("direction", direction))
-	g.overflow[d][t].Store(e)
 	return e
+}
+
+func (g *graph) warnOverflow() {
+	g.overflowOnce.Do(func() {
+		g.logger.Warn("Reached the maximum number of YARPC metric edges. "+
+			"Calls on further edges are recorded together by destination and transport, "+
+			"with their other metric tags set to "+_overflowTagValue+". "+
+			"Raise metrics.maxEdges or block high-cardinality tags with metrics.tagsBlocklist.",
+			zap.Int("maxEdges", g.edges.max))
+	})
+}
+
+// setMaxEdges limits the number of edges, and of overflow edges. It must be
+// called before the graph is used.
+func (g *graph) setMaxEdges(n int) {
+	g.edges.max = n
+	g.overflow.max = n
 }
 
 // An edge is a collection of RPC stats for a particular
