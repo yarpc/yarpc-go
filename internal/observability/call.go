@@ -96,6 +96,24 @@ type levels struct {
 	useApplicationErrorFailureLevels bool
 }
 
+// appendRequestFields adds the fields that identify the request to the fields
+// of a log. An edge's logger already has them, except for the overflow edge,
+// which is shared by calls that have nothing in common.
+func (c call) appendRequestFields(fields []zap.Field) []zap.Field {
+	if !c.edge.overflow {
+		return fields
+	}
+	return append(fields, requestFields(c.req)...)
+}
+
+// requestFieldsLen is how many fields appendRequestFields adds.
+func (c call) requestFieldsLen() int {
+	if !c.edge.overflow {
+		return 0
+	}
+	return len(requestFields(c.req))
+}
+
 func (c call) End(res callResult) {
 	c.endWithAppError(res)
 }
@@ -221,7 +239,8 @@ func (c call) endLogs(
 		return
 	}
 
-	fields := make([]zapcore.Field, 0, 10+len(extraLogFields))
+	fields := make([]zapcore.Field, 0, 10+len(extraLogFields)+c.requestFieldsLen())
+	fields = c.appendRequestFields(fields)
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
 	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
@@ -328,8 +347,10 @@ func (c call) endStats(
 ) {
 	c.edge.calls.Inc()
 
-	if deadlineTime, ok := c.ctx.Deadline(); ok {
-		c.edge.ttls.Observe(deadlineTime.Sub(c.started))
+	if c.edge.ttls != nil {
+		if deadlineTime, ok := c.ctx.Deadline(); ok {
+			c.edge.ttls.Observe(deadlineTime.Sub(c.started))
+		}
 	}
 
 	c.edge.requestPayloadSizes.IncBucket(int64(res.requestSize))
@@ -404,7 +425,7 @@ func (c call) endStatsFromFault(elapsed time.Duration, code yarpcerrors.Code, ap
 		); err == nil {
 			counter.Inc()
 		}
-		if code == yarpcerrors.CodeDeadlineExceeded {
+		if code == yarpcerrors.CodeDeadlineExceeded && c.edge.timeoutTtls != nil {
 			if deadlineTime, ok := c.ctx.Deadline(); ok {
 				c.edge.timeoutTtls.Observe(deadlineTime.Sub(c.started))
 			}
@@ -540,12 +561,14 @@ func (c call) logStreamEvent(err error, success bool, succMsg, errMsg string, ex
 		ce = c.edge.logger.Check(lvl, errMsg)
 	}
 
-	fields := []zap.Field{
+	fields := make([]zap.Field, 0, 4+len(extraFields)+c.requestFieldsLen())
+	fields = c.appendRequestFields(fields)
+	fields = append(fields,
 		zap.String("rpcType", c.rpcType.String()),
 		zap.Bool("successful", success),
 		c.extract(c.ctx),
 		zap.Error(err), // no-op if err == nil
-	}
+	)
 	fields = append(fields, extraFields...)
 
 	ce.Write(fields...)
