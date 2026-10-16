@@ -42,8 +42,8 @@ func TestNoopHelper(t *testing.T) {
 	t.Run("shutdown", func(t *testing.T) {
 		conn := &stubConn{}
 		assert.NotPanics(t, func() {
-			h.TrackConnection(conn)
-			h.TrackConnection(nil)
+			assert.Nil(t, h.TrackConnection(conn), "must not track")
+			assert.Nil(t, h.TrackConnection(nil), "must not track")
 			h.BeginShutdown()
 			h.ShutdownCallback()
 			h.BeginShutdown()
