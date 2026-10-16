@@ -56,7 +56,7 @@ type TrackedConn struct {
 	untracked bool // not HTTP/2 with prior knowledge, or not tracked
 	rscan     frameScanner
 
-	lmu     sync.Mutex // serializes tracking with Close; protects untrack
+	lmu     sync.Mutex // serializes the end of tracking with Close; protects untrack
 	untrack func()
 	tracked atomic.Bool
 
@@ -69,11 +69,12 @@ type TrackedConn struct {
 	closed       chan struct{}
 	closeOnce    sync.Once
 
-	wmu     sync.Mutex // serializes writes, so frames go between frames; protects the next fields
-	wscan   frameScanner
-	goAway  goAwayState
-	pending []byte // frames to write at the next frame boundary
-	split   int    // where Write writes pending frames ahead of a server GOAWAY, or -1
+	wmu         sync.Mutex // serializes writes, so frames go between frames; protects the next fields
+	wscan       frameScanner
+	prefaceSent bool // the server started its connection preface
+	goAway      goAwayState
+	pending     []byte // frames to write at the next frame boundary
+	split       int    // where Write writes pending frames ahead of a server GOAWAY, or -1
 }
 
 // newTrackedConn is the constructor for [TrackedConn].
@@ -87,33 +88,51 @@ func newTrackedConn(conn net.Conn, fn ConnectionTrackerFunc) net.Conn {
 }
 
 // track hands tc to trackFn, unless already closed, and reports whether
-// tc is tracked.
+// tc is tracked. trackFn may close tc to refuse it.
 func (tc *TrackedConn) track() bool {
-	tc.lmu.Lock()
-	defer tc.lmu.Unlock()
-	select {
-	case <-tc.closed:
+	if tc.trackFn == nil || tc.isClosed() {
 		return false
-	default:
 	}
-	if tc.trackFn != nil {
-		tc.untrack = tc.trackFn(tc)
+	// Tracked before trackFn returns, as it may shut tc down right away.
+	tc.tracked.Store(true)
+	untrack := tc.trackFn(tc)
+
+	tc.lmu.Lock()
+	closed := tc.isClosed()
+	if !closed {
+		tc.untrack = untrack
 	}
-	tc.tracked.Store(tc.untrack != nil)
-	return tc.untrack != nil
+	tc.lmu.Unlock()
+	if untrack == nil || closed {
+		tc.tracked.Store(false)
+		if untrack != nil {
+			untrack() // Closed meanwhile, with nothing to untrack yet.
+		}
+		return false
+	}
+	return true
 }
 
-// shutdown starts the two-phase graceful shutdown of a tracked connection in
-// the background; see [TrackedConn.drain]. Only the first call has an effect.
-func (tc *TrackedConn) shutdown() {
-	if tc.tracked.Load() && tc.shuttingDown.CompareAndSwap(false, true) {
-		go tc.drain()
-	}
+// startShutdown marks a tracked connection as shutting down, so that Close
+// writes the GOAWAY frames still owed, and reports whether the caller must
+// now run [TrackedConn.drain]: only the first call does.
+func (tc *TrackedConn) startShutdown() bool {
+	return tc.tracked.Load() && tc.shuttingDown.CompareAndSwap(false, true)
 }
 
 // done returns a channel that is closed once tc is closed.
 func (tc *TrackedConn) done() <-chan struct{} {
 	return tc.closed
+}
+
+// isClosed reports whether tc is closed.
+func (tc *TrackedConn) isClosed() bool {
+	select {
+	case <-tc.closed:
+		return true
+	default:
+		return false
+	}
 }
 
 // Read implements the [net.Conn] interface for [TrackedConn].
@@ -140,6 +159,10 @@ func (tc *TrackedConn) Read(b []byte) (n int, err error) {
 		// Track the connection only once it has been confirmed as HTTP/2
 		if !tc.track() {
 			tc.untracked = true
+			if tc.isClosed() {
+				// Refused, or closed meanwhile: nothing read must be served.
+				return 0, net.ErrClosed
+			}
 			return n, err
 		}
 	}
@@ -165,7 +188,7 @@ func (tc *TrackedConn) Write(b []byte) (n int, err error) {
 	}
 
 	n, err = tc.conn.Write(b[:split])
-	if err == nil && (split < len(b) || tc.wscan.atBoundary()) {
+	if err == nil && (split < len(b) || tc.atBoundaryLocked()) {
 		err = tc.flushLocked()
 	}
 	if err == nil && split < len(b) {

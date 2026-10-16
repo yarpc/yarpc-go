@@ -135,15 +135,37 @@ func newTestConn(conn net.Conn) *TrackedConn {
 }
 
 // newTrackedFakeConn returns a [TrackedConn] that the helper tracks, once it
-// read the client preface followed by frames.
+// read the client preface followed by frames, and wrote the server preface.
 func newTrackedFakeConn(t *testing.T, helper *recordingHelper, frames ...[]byte) (*TrackedConn, *fakeConn) {
+	tc, conn := newTrackedFakeConnNoPreface(t, helper, frames...)
+	_, err := tc.Write(settingsFrame())
+	require.NoError(t, err)
+	conn.written.Reset()
+	conn.calls, conn.writes = nil, 0
+	return tc, conn
+}
+
+// newTrackedFakeConnNoPreface is newTrackedFakeConn, before the server
+// writes its preface.
+func newTrackedFakeConnNoPreface(t *testing.T, helper *recordingHelper, frames ...[]byte) (*TrackedConn, *fakeConn) {
+	return newFakeConnTrackedBy(t, helper.TrackConnection, frames...)
+}
+
+// newFakeConnTrackedBy returns a [TrackedConn] that fn tracks, once it read
+// the client preface followed by frames.
+func newFakeConnTrackedBy(t *testing.T, fn ConnectionTrackerFunc, frames ...[]byte) (*TrackedConn, *fakeConn) {
 	conn := &fakeConn{reads: [][]byte{append([]byte(xhttp2.ClientPreface), bytes.Join(frames, nil)...)}}
-	tc := newTrackedConn(conn, helper.TrackConnection).(*TrackedConn)
+	tc := newTrackedConn(conn, fn).(*TrackedConn)
 	_, err := tc.Read(make([]byte, 1024))
 	require.NoError(t, err)
 	require.True(t, tc.tracked.Load(), "must be tracked")
 	conn.calls = nil
 	return tc, conn
+}
+
+// settingsFrame is an empty SETTINGS frame: the shortest server preface.
+func settingsFrame() []byte {
+	return rawFrame(xhttp2.FrameSettings, 0, 0, nil)
 }
 
 func headersFrame(streamID uint32) []byte {
@@ -442,17 +464,54 @@ func TestTrackedConnTrackAfterClose(t *testing.T) {
 	tc := newTrackedConn(conn, helper.TrackConnection).(*TrackedConn)
 
 	require.NoError(t, tc.Close())
-	_, err := tc.Read(make([]byte, 64))
-	require.NoError(t, err)
+	n, err := tc.Read(make([]byte, 64))
+	assert.ErrorIs(t, err, net.ErrClosed)
+	assert.Zero(t, n, "must not serve what a closed connection read")
 	assert.Empty(t, helper.trackedConns(), "must not track a closed connection")
 	assert.False(t, tc.tracked.Load())
+}
+
+func TestTrackedConnRefusedByClosing(t *testing.T) {
+	preface := []byte(xhttp2.ClientPreface)
+
+	t.Run("not tracked", func(t *testing.T) {
+		conn := &fakeConn{reads: [][]byte{append(preface, headersFrame(1)...)}}
+		var tc *TrackedConn
+		tc = newTrackedConn(conn, func(c net.Conn) func() {
+			assert.True(t, tc.tracked.Load(), "must be tracked while trackFn runs")
+			require.NoError(t, c.Close(), "closing from trackFn must not deadlock")
+			return nil
+		}).(*TrackedConn)
+
+		n, err := tc.Read(make([]byte, 64))
+		assert.ErrorIs(t, err, net.ErrClosed, "the server must not serve a refused connection")
+		assert.Zero(t, n)
+		assert.False(t, tc.tracked.Load())
+		assert.True(t, isClosed(tc.done()))
+	})
+
+	t.Run("closed while tracked", func(t *testing.T) {
+		conn := &fakeConn{reads: [][]byte{preface}}
+		untracked := 0
+		tc := newTrackedConn(conn, func(c net.Conn) func() {
+			require.NoError(t, c.Close()) // as by another goroutine, before trackFn returns
+			return func() { untracked++ }
+		}).(*TrackedConn)
+
+		_, err := tc.Read(make([]byte, 64))
+		assert.ErrorIs(t, err, net.ErrClosed)
+		assert.Equal(t, 1, untracked, "must untrack what Close could not")
+		require.NoError(t, tc.Close())
+		assert.Equal(t, 1, untracked, "must untrack once")
+		assert.False(t, tc.tracked.Load())
+	})
 }
 
 func TestTrackedConnClose(t *testing.T) {
 	t.Run("untracked", func(t *testing.T) {
 		conn := &fakeConn{}
 		tc := newTestConn(conn)
-		tc.shutdown()
+		assert.False(t, tc.startShutdown(), "must not shut down an untracked connection")
 
 		require.NoError(t, tc.Close())
 		require.NoError(t, tc.Close(), "closing again must be a no-op")
@@ -667,6 +726,11 @@ func newH2Pipe(t *testing.T, frames ...[]byte) *h2Pipe {
 
 	p.send(t, append([][]byte{[]byte(xhttp2.ClientPreface)}, frames...)...)
 	require.Eventually(t, p.tc.tracked.Load, time.Second, time.Millisecond, "must track")
+
+	go func() { _, _ = p.tc.Write(settingsFrame()) }() // the server preface
+	f, err := p.fr.ReadFrame()
+	require.NoError(t, err)
+	require.IsType(t, &xhttp2.SettingsFrame{}, f)
 	return p
 }
 
@@ -700,13 +764,20 @@ func (p *h2Pipe) readEOF(t *testing.T) {
 	assert.ErrorIs(t, err, io.EOF, "the client must see the connection close")
 }
 
+// startDrain starts the graceful shutdown of tc, as its helper does.
+func startDrain(t *testing.T, tc *TrackedConn) {
+	require.True(t, tc.startShutdown(), "must start shutting down")
+	assert.True(t, tc.shuttingDown.Load())
+	go tc.drain()
+}
+
 func TestTrackedConnShutdown(t *testing.T) {
 	pingAck := rawFrame(xhttp2.FramePing, xhttp2.FlagPingAck, 0, pingData[:])
 
 	t.Run("untracked", func(t *testing.T) {
 		conn := &fakeConn{}
 		tc := newTestConn(conn)
-		tc.shutdown()
+		assert.False(t, tc.startShutdown(), "must not shut down an untracked connection")
 		assert.False(t, tc.shuttingDown.Load(), "must not shut down an untracked connection")
 		assert.Empty(t, conn.calls)
 	})
@@ -714,8 +785,8 @@ func TestTrackedConnShutdown(t *testing.T) {
 	t.Run("client acknowledges", func(t *testing.T) {
 		p := newH2Pipe(t, headersFrame(1), headersFrame(3))
 
-		p.tc.shutdown()
-		p.tc.shutdown() // no-op
+		startDrain(t, p.tc)
+		assert.False(t, p.tc.startShutdown(), "only the first call must start draining")
 		assert.Equal(t, uint32(maxStreamID), p.readGoAway(t))
 		p.readPing(t)
 
@@ -733,7 +804,7 @@ func TestTrackedConnShutdown(t *testing.T) {
 		p := newH2Pipe(t, headersFrame(1))
 
 		start := time.Now()
-		p.tc.shutdown()
+		startDrain(t, p.tc)
 		assert.Equal(t, uint32(maxStreamID), p.readGoAway(t))
 		p.readPing(t)
 		assert.Equal(t, uint32(1), p.readGoAway(t))
@@ -743,7 +814,7 @@ func TestTrackedConnShutdown(t *testing.T) {
 	t.Run("closed before the PING ACK", func(t *testing.T) {
 		p := newH2Pipe(t, headersFrame(3))
 
-		p.tc.shutdown()
+		startDrain(t, p.tc)
 		assert.Equal(t, uint32(maxStreamID), p.readGoAway(t))
 		p.readPing(t)
 
@@ -761,5 +832,28 @@ func TestTrackedConnShutdown(t *testing.T) {
 		assert.Equal(t, uint32(3), p.readGoAway(t), "Close must write the second GOAWAY")
 		p.readEOF(t)
 		require.NoError(t, <-closed)
+	})
+}
+
+func TestTrackedConnServerPreface(t *testing.T) {
+	t.Run("GOAWAY frames wait for it", func(t *testing.T) {
+		tc, conn := newTrackedFakeConnNoPreface(t, &recordingHelper{}, headersFrame(1))
+		require.NoError(t, tc.advance(goAwayFirst))
+		_, err := tc.Write(nil)
+		require.NoError(t, err)
+		assert.Empty(t, conn.written.Bytes(), "must not write ahead of the server SETTINGS")
+
+		_, err = tc.Write(settingsFrame())
+		require.NoError(t, err)
+		assert.Equal(t, append(settingsFrame(), firstGoAway()...), conn.written.Bytes(),
+			"must write right after the server SETTINGS")
+	})
+
+	t.Run("closed before it", func(t *testing.T) {
+		tc, conn := newTrackedFakeConnNoPreface(t, &recordingHelper{}, headersFrame(1))
+		tc.shuttingDown.Store(true)
+
+		require.NoError(t, tc.Close())
+		assert.Equal(t, []string{"SetWriteDeadline", "Close"}, conn.calls, "must not write GOAWAY frames without it")
 	})
 }
