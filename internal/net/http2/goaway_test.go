@@ -236,6 +236,7 @@ func TestTrackedConnWriteLocked(t *testing.T) {
 	t.Run("at frame boundary", func(t *testing.T) {
 		conn := &bufferConn{}
 		tc := newTestConn(conn)
+		tc.prefaceSent = true
 		tc.wmu.Lock()
 		defer tc.wmu.Unlock()
 
@@ -247,6 +248,7 @@ func TestTrackedConnWriteLocked(t *testing.T) {
 	t.Run("within a frame", func(t *testing.T) {
 		conn := &bufferConn{}
 		tc := newTestConn(conn)
+		tc.prefaceSent = true
 		tc.wmu.Lock()
 		defer tc.wmu.Unlock()
 
@@ -265,9 +267,21 @@ func TestTrackedConnWriteLocked(t *testing.T) {
 		assert.Empty(t, tc.pending)
 	})
 
+	t.Run("before the server preface", func(t *testing.T) {
+		conn := &bufferConn{}
+		tc := newTestConn(conn)
+		tc.wmu.Lock()
+		defer tc.wmu.Unlock()
+
+		require.NoError(t, tc.writeLocked(goAwayFrame(1)))
+		assert.Empty(t, conn.calls, "must not write ahead of the server SETTINGS")
+		assert.Equal(t, goAwayFrame(1), tc.pending)
+	})
+
 	t.Run("nothing pending", func(t *testing.T) {
 		conn := &bufferConn{}
 		tc := newTestConn(conn)
+		tc.prefaceSent = true
 		tc.wmu.Lock()
 		defer tc.wmu.Unlock()
 
@@ -280,6 +294,7 @@ func TestTrackedConnWriteLocked(t *testing.T) {
 		wantErr := errors.New("great sadness")
 		conn := &bufferConn{stubConn: stubConn{err: wantErr}}
 		tc := newTestConn(conn)
+		tc.prefaceSent = true
 		tc.wmu.Lock()
 		defer tc.wmu.Unlock()
 
