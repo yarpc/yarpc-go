@@ -133,12 +133,14 @@ func (tc *TrackedConn) frameRead(_ int, frame []byte) {
 	}
 }
 
-// frameWrite handles an HTTP/2 frame about to be written.
+// frameWrite handles an HTTP/2 frame about to be written, the first of which
+// starts the server's connection preface.
 // A GOAWAY frame of the server's own takes the place of the second GOAWAY,
 // whether shutting down or not: the server may start its own shutdown first.
 // So it sets where Write splits to write the first GOAWAY ahead of it.
 // Note: only thread-safe if tc.wmu is held.
 func (tc *TrackedConn) frameWrite(start int, frame []byte) {
+	tc.prefaceSent = true
 	if xhttp2.FrameType(frame[3]) != xhttp2.FrameGoAway || tc.split >= 0 {
 		return
 	}
@@ -206,11 +208,19 @@ func (tc *TrackedConn) goAwayFramesLocked(target goAwayState) []byte {
 	return frames
 }
 
+// atBoundaryLocked reports whether frames can be written now: between two
+// frames, once the server started its connection preface, as its SETTINGS
+// frame MUST come first (RFC 9113 §3.4).
+// Note: only thread-safe if tc.wmu is held.
+func (tc *TrackedConn) atBoundaryLocked() bool {
+	return tc.prefaceSent && tc.wscan.atBoundary()
+}
+
 // writeLocked writes frames now if between two frames, or at the next frame
 // boundary otherwise.
 func (tc *TrackedConn) writeLocked(frames []byte) error {
 	tc.pending = append(tc.pending, frames...)
-	if !tc.wscan.atBoundary() {
+	if !tc.atBoundaryLocked() {
 		return nil
 	}
 	return tc.flushLocked()
