@@ -166,3 +166,84 @@ func BenchmarkEdgeMapLoad(b *testing.B) {
 		}
 	})
 }
+
+func TestEdgeMapMax(t *testing.T) {
+	m := edgeMap{max: 2}
+	create := func() *edge { return &edge{} }
+
+	a := m.loadOrCreate([]byte("a"), create)
+	b := m.loadOrCreate([]byte("b"), create)
+	require.NotNil(t, a)
+	require.NotNil(t, b)
+	assert.False(t, m.isFull(), "at the limit, but nothing has been refused yet")
+
+	assert.Nil(t, m.loadOrCreate([]byte("c"), func() *edge {
+		t.Fatal("create must not run at the limit")
+		return nil
+	}))
+	assert.True(t, m.isFull())
+	assert.Equal(t, 2, m.len())
+
+	// Once full, the snapshot is complete, so loads are conclusive.
+	assert.Same(t, a, m.load([]byte("a")))
+	assert.Same(t, b, m.load([]byte("b")))
+	assert.Nil(t, m.load([]byte("c")))
+
+	// Existing edges keep being found, and the refusal is repeatable.
+	assert.Same(t, a, m.loadOrCreate([]byte("a"), create))
+	assert.Nil(t, m.loadOrCreate([]byte("d"), create))
+	assert.Equal(t, 2, m.len())
+}
+
+func TestEdgeMapNoMaxIsUnlimited(t *testing.T) {
+	var m edgeMap
+	for i := 0; i < 1000; i++ {
+		require.NotNil(t, m.loadOrCreate([]byte(fmt.Sprint(i)), func() *edge { return &edge{} }))
+	}
+	assert.False(t, m.isFull())
+	assert.Equal(t, 1000, m.len())
+}
+
+func TestEdgeMapMaxConcurrent(t *testing.T) {
+	const (
+		max        = 50
+		keys       = 200
+		goroutines = 16
+	)
+
+	m := edgeMap{max: max}
+	var (
+		creates atomic.Int64
+		wg      sync.WaitGroup
+	)
+	for g := 0; g < goroutines; g++ {
+		wg.Add(1)
+		go func(g int) {
+			defer wg.Done()
+			for i := 0; i < keys; i++ {
+				key := []byte(fmt.Sprintf("key-%d", (i+g*13)%keys))
+				if m.load(key) != nil {
+					continue
+				}
+				m.loadOrCreate(key, func() *edge {
+					creates.Add(1)
+					return &edge{}
+				})
+			}
+		}(g)
+	}
+	wg.Wait()
+
+	assert.EqualValues(t, max, creates.Load(), "exactly the limit is created, however many callers race")
+	assert.Equal(t, max, m.len())
+	assert.True(t, m.isFull())
+
+	// The snapshot is complete once full: every edge is loadable lock-free.
+	found := 0
+	for i := 0; i < keys; i++ {
+		if m.load([]byte(fmt.Sprintf("key-%d", i))) != nil {
+			found++
+		}
+	}
+	assert.Equal(t, max, found)
+}

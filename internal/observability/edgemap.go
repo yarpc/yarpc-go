@@ -40,8 +40,17 @@ import (
 // copied into a fresh snapshot. This is the same amortisation sync.Map uses.
 // Copying is O(n), so insertion stays O(1) amortised.
 //
-// The zero value is ready to use. It must not be copied after first use.
+// The map can optionally be capped. Once it holds max edges it refuses to
+// create more, and from then on its snapshot is always complete, so a failed
+// load is conclusive and callers can stop taking the lock altogether.
+//
+// The zero value is ready to use, and unlimited. It must not be copied after
+// first use.
 type edgeMap struct {
+	// max is the most edges the map will hold, or 0 for no limit. It must be
+	// set before the map is used.
+	max int
+
 	// read is an immutable snapshot of a subset of dirty. The map it points to
 	// is never modified after being published.
 	read atomic.Pointer[map[string]*edge]
@@ -52,6 +61,10 @@ type edgeMap struct {
 	// misses counts lookups that missed read but hit dirty since read was last
 	// replaced.
 	misses int
+
+	// full is set, under mu, once the map has max edges and has been asked for
+	// one more. From then on read holds every edge and dirty never changes.
+	full atomic.Bool
 }
 
 // load returns the edge for key from the snapshot, or nil. It never blocks and
@@ -76,9 +89,17 @@ func (m *edgeMap) get(key []byte) *edge {
 	return m.dirty[string(key)]
 }
 
+// isFull reports whether the map has reached its limit and refused an edge.
+// Once it does, a nil result from load is conclusive: there is no such edge,
+// and there never will be.
+func (m *edgeMap) isFull() bool {
+	return m.full.Load()
+}
+
 // loadOrCreate returns the edge for key, calling create to make it if there is
 // none. create runs with the map locked, so it must not call back into the
-// map, and only runs once per key.
+// map, and only runs once per key. It returns nil if the edge does not exist
+// and the map is at its limit.
 func (m *edgeMap) loadOrCreate(key []byte, create func() *edge) *edge {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -90,6 +111,14 @@ func (m *edgeMap) loadOrCreate(key []byte, create func() *edge) *edge {
 			m.promoteLocked()
 		}
 		return e
+	}
+
+	if m.max > 0 && len(m.dirty) >= m.max {
+		// Publish everything, so that readers can tell that edges they
+		// cannot load do not exist.
+		m.promoteLocked()
+		m.full.Store(true)
+		return nil
 	}
 
 	e := create()

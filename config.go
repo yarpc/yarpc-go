@@ -174,6 +174,24 @@ type MetricsConfig struct {
 	// Anything that reads a disabled histogram, such as a dashboard or alert,
 	// will stop receiving data.
 	DisabledMetrics []string
+	// MaxEdges is the maximum number of edges that YARPC emits metrics for.
+	// An edge is one distinct combination of the metric tags: source, dest,
+	// transport, encoding, procedure, routing key, routing delegate,
+	// direction and RPC type. All of an edge's metrics stay registered for
+	// the life of the process, so a tag with many values, such as a routing
+	// key or routing delegate per city, grows the memory and CPU spent on
+	// metrics without bound. It is best to remove such tags with
+	// TagsBlocklist, and use MaxEdges as a safety net.
+	//
+	// When the limit is reached, calls on edges that do not have metrics yet
+	// are recorded together, one overflow edge for each direction and RPC
+	// type, with all tags except direction and RPC type set to "__overflow__".
+	// Edges that already exist are not affected. YARPC logs once when this
+	// happens. Logs of overflowed calls still describe the real request.
+	//
+	// The number of edges of a service can be found by counting the series of
+	// its "calls" metric. Zero, the default, means no limit.
+	MaxEdges int
 }
 
 func (c MetricsConfig) scope(name string, logger *zap.Logger) (*metrics.Scope, context.CancelFunc) {

@@ -22,6 +22,8 @@ package observability
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/net/metrics"
@@ -43,6 +45,9 @@ var (
 	_bucketsBytes = append([]int64{0}, bucket.NewExponential(1, 2, 29)...)
 )
 
+// _overflowRPCTypes is the size of an array indexed by transport.Type.
+const _overflowRPCTypes = int(transport.Streaming) + 1
+
 type directionName string
 
 const (
@@ -52,6 +57,10 @@ const (
 	// _droppedTagValue represents the value of a metric tag when the tag
 	// is being blocked.
 	_droppedTagValue = "__dropped__"
+
+	// _overflowTagValue is the value of the tags of the metrics of calls that
+	// do not fit in the maximum number of edges.
+	_overflowTagValue = "__overflow__"
 
 	_source          = "source"
 	_dest            = "dest"
@@ -74,6 +83,13 @@ type graph struct {
 	disabledMetrics  *metricsDisabled
 
 	edges edgeMap
+
+	// Calls on edges that do not fit in the edge limit are recorded on shared
+	// overflow edges instead, one for each direction and RPC type, since
+	// those have different sets of metrics. They are created lazily.
+	overflowMu   sync.Mutex
+	overflow     [2][_overflowRPCTypes]atomic.Pointer[edge]
+	overflowOnce sync.Once
 
 	inboundLevels, outboundLevels levels
 }
@@ -312,6 +328,14 @@ func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction st
 	if e := g.edges.load(key); e != nil {
 		return e
 	}
+	if g.edges.isFull() {
+		// Every edge there will ever be is in the snapshot. Look again, since
+		// it may have been published since the first load.
+		if e := g.edges.load(key); e != nil {
+			return e
+		}
+		return g.overflowEdge(direction, rpcType)
+	}
 	return g.createEdge(key, req, direction, rpcType)
 }
 
@@ -321,15 +345,70 @@ func (g *graph) getEdge(key []byte) *edge {
 
 func (g *graph) createEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	// Since we'll rarely hit this code path, the overhead of the lock is acceptable.
-	return g.edges.loadOrCreate(key, func() *edge {
+	e := g.edges.loadOrCreate(key, func() *edge {
 		return newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, req, direction, rpcType)
 	})
+	if e == nil {
+		return g.overflowEdge(direction, rpcType)
+	}
+	return e
+}
+
+// overflowEdge returns the edge that records the calls that do not fit in the
+// edge limit.
+func (g *graph) overflowEdge(direction string, rpcType transport.Type) *edge {
+	d, t := 0, int(rpcType)
+	if direction != string(_directionInbound) {
+		d = 1
+	}
+	if t < 0 || t >= _overflowRPCTypes {
+		t = 0 // not a real RPC type, but it still gets an edge
+	}
+
+	if e := g.overflow[d][t].Load(); e != nil {
+		return e
+	}
+
+	g.overflowMu.Lock()
+	defer g.overflowMu.Unlock()
+	if e := g.overflow[d][t].Load(); e != nil {
+		return e
+	}
+
+	g.overflowOnce.Do(func() {
+		g.logger.Warn("Reached the maximum number of YARPC metric edges. "+
+			"Calls on further edges are recorded together, with their metric tags set to "+_overflowTagValue+". "+
+			"Raise metrics.maxEdges or block high-cardinality tags with metrics.tagsBlocklist.",
+			zap.Int("maxEdges", g.edges.max))
+	})
+
+	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, &transport.Request{
+		Caller:          _overflowTagValue,
+		Service:         _overflowTagValue,
+		Transport:       _overflowTagValue,
+		Encoding:        _overflowTagValue,
+		Procedure:       _overflowTagValue,
+		RoutingKey:      _overflowTagValue,
+		RoutingDelegate: _overflowTagValue,
+	}, direction, rpcType)
+	// The edge is shared by unrelated requests, so a logger that describes the
+	// one that created it would mislead. Logs of its calls get the fields of
+	// their own request instead; see call.requestFields.
+	e.overflow = true
+	e.logger = g.logger.With(zap.String("direction", direction))
+	g.overflow[d][t].Store(e)
+	return e
 }
 
 // An edge is a collection of RPC stats for a particular
 // caller-callee-encoding-procedure-sk-rd-rk edge in the service graph.
 type edge struct {
 	logger *zap.Logger
+
+	// overflow is set on the edge that records the calls that do not fit in the
+	// edge limit. Its logger does not describe the request, so logs must add
+	// the fields of the request being logged.
+	overflow bool
 
 	calls          *metrics.Counter
 	successes      *metrics.Counter
@@ -646,18 +725,8 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 		}
 	}
 
-	logger = logger.With(
-		zap.String("source", req.Caller),
-		zap.String("dest", req.Service),
-		zap.String("transport", unknownIfEmpty(req.Transport)),
-		zap.String("procedure", req.Procedure),
-		zap.String("encoding", string(req.Encoding)),
-		zap.String("routingKey", req.RoutingKey),
-		zap.String("routingDelegate", req.RoutingDelegate),
-		zap.String("direction", direction),
-	)
 	return &edge{
-		logger:               logger,
+		logger:               edgeLogger(logger, req, direction),
 		calls:                calls,
 		successes:            successes,
 		panics:               panics,
@@ -671,6 +740,24 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 		ttls:                 ttls,
 		timeoutTtls:          timeoutTtls,
 		streaming:            streaming,
+	}
+}
+
+// edgeLogger returns a logger that describes the request.
+func edgeLogger(logger *zap.Logger, req *transport.Request, direction string) *zap.Logger {
+	return logger.With(append(requestFields(req), zap.String("direction", direction))...)
+}
+
+// requestFields returns the log fields that identify the edge of a request.
+func requestFields(req *transport.Request) []zap.Field {
+	return []zap.Field{
+		zap.String("source", req.Caller),
+		zap.String("dest", req.Service),
+		zap.String("transport", unknownIfEmpty(req.Transport)),
+		zap.String("procedure", req.Procedure),
+		zap.String("encoding", string(req.Encoding)),
+		zap.String("routingKey", req.RoutingKey),
+		zap.String("routingDelegate", req.RoutingDelegate),
 	}
 }
 

@@ -101,6 +101,15 @@ type Config struct {
 	// and ignored.
 	DisabledMetrics []string
 
+	// MaxEdges is the maximum number of edges, that is, of distinct
+	// combinations of the tags of metrics, that the middleware creates metrics
+	// for. Calls on further edges are recorded together on a shared edge whose
+	// tags are all "__overflow__". Zero means no limit.
+	//
+	// Every edge keeps its metrics registered, and so costs memory and CPU
+	// every time metrics are pushed, for the lifetime of the process.
+	MaxEdges int
+
 	// ContextExtractor Extracts request-scoped information from the context for logging.
 	ContextExtractor ContextExtractor
 
@@ -155,6 +164,7 @@ type DirectionalLevelsConfig struct {
 // configuration.
 func NewMiddleware(cfg Config) *Middleware {
 	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor, cfg.MetricTagsBlocklist, cfg.DisabledMetrics)}
+	m.graph.edges.max = cfg.MaxEdges
 
 	// Apply the default levels
 	applyLogLevelsConfig(&m.graph.inboundLevels, &cfg.Levels.Default)
