@@ -21,9 +21,12 @@
 package yarpc
 
 import (
+	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -31,6 +34,7 @@ import (
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -281,4 +285,53 @@ func TestRegister_thriftMultipleUnannotatedExceptionsWarnEach(t *testing.T) {
 	}
 	assert.Contains(t, got, "AErr")
 	assert.Contains(t, got, "BErr")
+}
+
+func TestMetricsConfigReachesObservabilityMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	root := metrics.New()
+	cfg := addObservingMiddleware(
+		Config{
+			Name: "mysvc",
+			Metrics: MetricsConfig{
+				TagsBlocklist:   []string{"routing_delegate"},
+				DisabledMetrics: []string{"ttl_ms", "request_payload_size_bytes"},
+			},
+		},
+		root.Scope(), zap.NewNop(), observability.NewNopContextExtractor())
+
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
+	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	for _, rd := range []string{"rd1", "rd2"} {
+		err := cfg.InboundMiddleware.Unary.Handle(ctx, &transport.Request{
+			Caller:          "caller",
+			Service:         "mysvc",
+			Procedure:       "p",
+			Encoding:        "raw",
+			RoutingDelegate: rd,
+			Body:            strings.NewReader("body"),
+		}, &transporttest.FakeResponseWriter{}, h)
+		require.NoError(t, err)
+	}
+
+	var histograms []string
+	for _, hist := range root.Snapshot().Histograms {
+		histograms = append(histograms, hist.Name)
+	}
+	assert.Contains(t, histograms, "success_latency_ms")
+	assert.Contains(t, histograms, "response_payload_size_bytes")
+	assert.NotContains(t, histograms, "ttl_ms", "disabled in the config")
+	assert.NotContains(t, histograms, "request_payload_size_bytes", "disabled in the config")
+
+	// Both calls share one edge because of the blocklist.
+	counters := map[string]int64{}
+	for _, c := range root.Snapshot().Counters {
+		counters[c.Name] += c.Value
+		assert.Equal(t, "__dropped__", c.Tags["routing_delegate"])
+	}
+	assert.Equal(t, map[string]int64{"calls": 2, "successes": 2, "panics": 0}, counters)
 }
