@@ -23,6 +23,7 @@ package yarpc
 import (
 	"context"
 	"errors"
+	"math"
 	"strings"
 	"sync"
 	"testing"
@@ -299,6 +300,9 @@ func TestMetricsConfigReachesObservabilityMiddleware(t *testing.T) {
 				TagsBlocklist:   []string{"routing_delegate"},
 				DisabledMetrics: []string{"ttl_ms", "request_payload_size_bytes"},
 				MaxEdges:        1,
+
+				LatencyBucketsMs:        []int64{10, 100},
+				PayloadSizeBucketsBytes: []int64{2, 100},
 			},
 		},
 		root.Scope(), zap.NewNop(), observability.NewNopContextExtractor())
@@ -327,6 +331,23 @@ func TestMetricsConfigReachesObservabilityMiddleware(t *testing.T) {
 	assert.Contains(t, histograms, "response_payload_size_bytes")
 	assert.NotContains(t, histograms, "ttl_ms", "disabled in the config")
 	assert.NotContains(t, histograms, "request_payload_size_bytes", "disabled in the config")
+
+	// The histograms that are left use the buckets of the config.
+	for _, hist := range root.Snapshot().Histograms {
+		allowed := []int64{math.MaxInt64}
+		switch hist.Name {
+		case "success_latency_ms":
+			allowed = append(allowed, 10, 100)
+		case "response_payload_size_bytes":
+			allowed = append(allowed, 2, 100)
+		default:
+			continue
+		}
+		require.NotEmpty(t, hist.Values, hist.Name)
+		for _, v := range hist.Values {
+			assert.Contains(t, allowed, v, "%s: bucket not from the config", hist.Name)
+		}
+	}
 
 	// Both calls share one edge because of the blocklist.
 	counters := map[string]int64{}

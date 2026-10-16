@@ -22,6 +22,7 @@ package observability
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,11 +38,12 @@ import (
 var (
 	_timeNow          = time.Now // for tests
 	_defaultGraphSize = 128
-	// Latency buckets for histograms. At some point, we may want to make these
-	// configurable.
+	// Default latency buckets for histograms, in milliseconds. They can be
+	// replaced with Config.LatencyBucketsMs.
 	_bucketsMs = bucket.NewRPCLatency()
-	// Bytes buckets for payload size histograms, containing exponential buckets
-	// in range of 0B, 1B, 2B, ... 256MB.
+	// Default bytes buckets for payload size histograms, containing exponential
+	// buckets in range of 0B, 1B, 2B, ... 256MB. They can be replaced with
+	// Config.PayloadSizeBucketsBytes.
 	_bucketsBytes = append([]int64{0}, bucket.NewExponential(1, 2, 29)...)
 )
 
@@ -81,6 +83,7 @@ type graph struct {
 	extract          ContextExtractor
 	ignoreMetricsTag *metricsTagIgnore
 	disabledMetrics  *metricsDisabled
+	buckets          histogramBuckets
 
 	edges edgeMap
 
@@ -254,6 +257,53 @@ func newMetricsDisabled(names []string, logger *zap.Logger) *metricsDisabled {
 	return r
 }
 
+// histogramBuckets are the upper bounds (inclusive) of the buckets of the
+// histograms. All the edges of a graph use the same ones.
+type histogramBuckets struct {
+	// latencyMs is used by the histograms of durations: latencies, ttls and
+	// stream durations.
+	latencyMs []int64
+	// payloadBytes is used by the histograms of payload sizes.
+	payloadBytes []int64
+}
+
+// validateBuckets checks the requirements that go.uber.org/net/metrics has of
+// the buckets of a histogram, and that they are not negative. A histogram it
+// cannot create has no metrics at all, so this is checked once up front.
+func validateBuckets(buckets []int64) error {
+	prev := int64(-1)
+	for _, upper := range buckets {
+		if upper < 0 {
+			return fmt.Errorf("bucket upper bound %d is negative", upper)
+		}
+		if upper <= prev {
+			return fmt.Errorf("bucket upper bound %d does not come after %d: bounds must be in increasing order", upper, prev)
+		}
+		prev = upper
+	}
+	return nil
+}
+
+// setBuckets replaces the default buckets of the latency and payload size
+// histograms. An empty list keeps the default. A list that is not valid is
+// logged and ignored, so that a mistake cannot stop a service from starting or
+// leave it without the metrics. It must be called before the graph is used.
+func (g *graph) setBuckets(latencyMs, payloadBytes []int64) {
+	pick := func(name string, buckets, def []int64) []int64 {
+		if len(buckets) == 0 {
+			return def
+		}
+		if err := validateBuckets(buckets); err != nil {
+			g.logger.Warn("Ignoring invalid histogram buckets for YARPC metrics. Using the defaults.",
+				zap.String("config", name), zap.Error(err))
+			return def
+		}
+		return append([]int64(nil), buckets...)
+	}
+	g.buckets.latencyMs = pick("latencyBucketsMs", latencyMs, g.buckets.latencyMs)
+	g.buckets.payloadBytes = pick("payloadSizeBucketsBytes", payloadBytes, g.buckets.payloadBytes)
+}
+
 func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string, disabledMetrics []string) graph {
 	return graph{
 		meter:            meter,
@@ -261,6 +311,7 @@ func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor
 		extract:          extract,
 		ignoreMetricsTag: newMetricsTagIgnore(metricTagsIgnore),
 		disabledMetrics:  newMetricsDisabled(disabledMetrics, logger),
+		buckets:          histogramBuckets{latencyMs: _bucketsMs, payloadBytes: _bucketsBytes},
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -352,7 +403,7 @@ func (g *graph) getEdge(key []byte) *edge {
 func (g *graph) createEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	// Since we'll rarely hit this code path, the overhead of the lock is acceptable.
 	e := g.edges.loadOrCreate(key, func() *edge {
-		return newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, req, direction, rpcType)
+		return newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, &g.buckets, req, direction, rpcType)
 	})
 	if e == nil {
 		return g.overflowEdge(req, direction, rpcType)
@@ -440,7 +491,7 @@ func (g *graph) collapsedEdge(direction string, rpcType transport.Type) *edge {
 }
 
 func (g *graph) newOverflowEdge(req *transport.Request, direction string, rpcType transport.Type) *edge {
-	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, req, direction, rpcType)
+	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, &g.buckets, req, direction, rpcType)
 	// The edge is shared by unrelated requests, so a logger that describes the
 	// one that created it would mislead. Logs of its calls get the fields of
 	// their own request instead; see call.appendRequestFields.
@@ -511,7 +562,7 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, disabled *metricsDisabled, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, disabled *metricsDisabled, buckets *histogramBuckets, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := tagToIgnore.tags(req, direction, rpcType)
 
 	// metrics for all RPCs
@@ -570,7 +621,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond,
-				Buckets: _bucketsMs,
+				Buckets: buckets.latencyMs,
 			})
 			if err != nil {
 				logger.Error("Failed to create success latency distribution.", zap.Error(err))
@@ -584,7 +635,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond,
-				Buckets: _bucketsMs,
+				Buckets: buckets.latencyMs,
 			})
 			if err != nil {
 				logger.Error("Failed to create caller failure latency distribution.", zap.Error(err))
@@ -598,7 +649,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond,
-				Buckets: _bucketsMs,
+				Buckets: buckets.latencyMs,
 			})
 			if err != nil {
 				logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
@@ -612,7 +663,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond,
-				Buckets: _bucketsMs,
+				Buckets: buckets.latencyMs,
 			})
 			if err != nil {
 				logger.Error("Failed to create ttl distribution.", zap.Error(err))
@@ -626,7 +677,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond,
-				Buckets: _bucketsMs,
+				Buckets: buckets.latencyMs,
 			})
 			if err != nil {
 				logger.Error("Failed to create timeout ttl distribution.", zap.Error(err))
@@ -640,7 +691,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond, // Unit is relevent for this histogram
-				Buckets: _bucketsBytes,
+				Buckets: buckets.payloadBytes,
 			})
 			if err != nil {
 				logger.Error("Failed to create request payload size histogram.", zap.Error(err))
@@ -654,7 +705,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond, // Unit is relevent for this histogram
-				Buckets: _bucketsBytes,
+				Buckets: buckets.payloadBytes,
 			})
 			if err != nil {
 				logger.Error("Failed to create response payload size histogram.", zap.Error(err))
@@ -729,7 +780,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond,
-				Buckets: _bucketsMs,
+				Buckets: buckets.latencyMs,
 			})
 			if err != nil {
 				logger.DPanic("Failed to create stream duration histogram.", zap.Error(err))
@@ -744,7 +795,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond,
-				Buckets: _bucketsBytes,
+				Buckets: buckets.payloadBytes,
 			})
 			if err != nil {
 				logger.DPanic("Failed to create stream request payload size histogram", zap.Error(err))
@@ -759,7 +810,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 					ConstTags: tags,
 				},
 				Unit:    time.Millisecond,
-				Buckets: _bucketsBytes,
+				Buckets: buckets.payloadBytes,
 			})
 			if err != nil {
 				logger.DPanic("Failed to create stream response payload size histogram", zap.Error(err))

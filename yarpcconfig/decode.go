@@ -43,6 +43,9 @@ type metrics struct {
 	TagsBlocklist []string `config:"tagsBlocklist"`
 	Disabled      []string `config:"disabled"`
 	MaxEdges      int      `config:"maxEdges"`
+
+	LatencyBucketsMs        []int64 `config:"latencyBucketsMs"`
+	PayloadSizeBucketsBytes []int64 `config:"payloadSizeBucketsBytes"`
 }
 
 // Fills values from this object into the provided YARPC config.
@@ -50,6 +53,8 @@ func (m *metrics) fill(cfg *yarpc.Config) {
 	cfg.Metrics.TagsBlocklist = m.TagsBlocklist
 	cfg.Metrics.DisabledMetrics = m.Disabled
 	cfg.Metrics.MaxEdges = m.MaxEdges
+	cfg.Metrics.LatencyBucketsMs = m.LatencyBucketsMs
+	cfg.Metrics.PayloadSizeBucketsBytes = m.PayloadSizeBucketsBytes
 }
 
 // logging allows configuring the log levels from YAML.

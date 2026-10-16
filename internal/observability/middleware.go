@@ -101,6 +101,18 @@ type Config struct {
 	// and ignored.
 	DisabledMetrics []string
 
+	// LatencyBucketsMs replaces the buckets of the histograms of durations
+	// (latencies, ttls and stream durations): their upper bounds (inclusive),
+	// in milliseconds. They must not be negative and must be in increasing
+	// order. Observations above the last bound go in an extra bucket. Empty
+	// keeps the defaults; an invalid list is logged and ignored.
+	LatencyBucketsMs []int64
+
+	// PayloadSizeBucketsBytes replaces the buckets of the histograms of
+	// payload sizes: their upper bounds (inclusive), in bytes. The same rules
+	// as for LatencyBucketsMs apply.
+	PayloadSizeBucketsBytes []int64
+
 	// MaxEdges is the maximum number of edges, that is, of distinct
 	// combinations of the tags of metrics, that the middleware creates metrics
 	// for. Calls on further edges are recorded together, by destination and
@@ -166,6 +178,7 @@ type DirectionalLevelsConfig struct {
 func NewMiddleware(cfg Config) *Middleware {
 	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor, cfg.MetricTagsBlocklist, cfg.DisabledMetrics)}
 	m.graph.setMaxEdges(cfg.MaxEdges)
+	m.graph.setBuckets(cfg.LatencyBucketsMs, cfg.PayloadSizeBucketsBytes)
 
 	// Apply the default levels
 	applyLogLevelsConfig(&m.graph.inboundLevels, &cfg.Levels.Default)
