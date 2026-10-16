@@ -22,7 +22,6 @@ package observability
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.uber.org/net/metrics"
@@ -73,8 +72,7 @@ type graph struct {
 	extract          ContextExtractor
 	ignoreMetricsTag *metricsTagIgnore
 
-	edgesMu sync.RWMutex
-	edges   map[string]*edge
+	edges edgeMap
 
 	inboundLevels, outboundLevels levels
 }
@@ -166,7 +164,6 @@ func (m *metricsTagIgnore) tags(req *transport.Request, direction string, rpcTyp
 
 func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string) graph {
 	return graph{
-		edges:            make(map[string]*edge, _defaultGraphSize),
 		meter:            meter,
 		logger:           logger,
 		extract:          extract,
@@ -241,32 +238,21 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 }
 
 func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
-	if e := g.getEdge(key); e != nil {
+	if e := g.edges.load(key); e != nil {
 		return e
 	}
 	return g.createEdge(key, req, direction, rpcType)
 }
 
 func (g *graph) getEdge(key []byte) *edge {
-	g.edgesMu.RLock()
-	e := g.edges[string(key)]
-	g.edgesMu.RUnlock()
-	return e
+	return g.edges.get(key)
 }
 
 func (g *graph) createEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
-	g.edgesMu.Lock()
-	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
-	defer g.edgesMu.Unlock()
-
-	if e, ok := g.edges[string(key)]; ok {
-		// Someone beat us to the punch.
-		return e
-	}
-
-	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, req, direction, rpcType)
-	g.edges[string(key)] = e
-	return e
+	// Since we'll rarely hit this code path, the overhead of the lock is acceptable.
+	return g.edges.loadOrCreate(key, func() *edge {
+		return newEdge(g.logger, g.meter, g.ignoreMetricsTag, req, direction, rpcType)
+	})
 }
 
 // An edge is a collection of RPC stats for a particular
