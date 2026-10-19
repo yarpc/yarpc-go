@@ -615,6 +615,52 @@ func TestResponseWriter(t *testing.T) {
 	assert.Equal(t, strconv.Itoa(int(appErrCode)), recorder.Header().Get(_applicationErrorCodeHeader))
 }
 
+func TestResponseWriterContentLength(t *testing.T) {
+	tests := []struct {
+		name string
+		body []byte
+		want string
+	}{
+		{name: "no body", want: ""},
+		{name: "empty body", body: []byte{}, want: "0"},
+		{name: "small body", body: []byte("hello"), want: "5"},
+		// Larger than the 4 KiB write buffer of the HTTP/2 server.
+		{name: "large body", body: bytes.Repeat([]byte("a"), 64<<10), want: strconv.Itoa(64 << 10)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			writer := newResponseWriter(recorder)
+			if tt.body != nil {
+				_, err := writer.Write(tt.body)
+				require.NoError(t, err)
+			}
+			writer.Close(http.StatusOK)
+
+			assert.Equal(t, tt.want, recorder.Header().Get("Content-Length"))
+			assert.Equal(t, len(tt.body), recorder.Body.Len())
+		})
+	}
+}
+
+func TestResponseWriterContentLengthAfterReset(t *testing.T) {
+	// Error responses replace the body. The declared length must match the
+	// body that is sent.
+	recorder := httptest.NewRecorder()
+	writer := newResponseWriter(recorder)
+
+	_, err := writer.Write([]byte("partial response"))
+	require.NoError(t, err)
+	writer.ResetBuffer()
+	_, err = writer.Write([]byte("error"))
+	require.NoError(t, err)
+	writer.Close(http.StatusInternalServerError)
+
+	assert.Equal(t, "5", recorder.Header().Get("Content-Length"))
+	assert.Equal(t, "error", recorder.Body.String())
+}
+
 func TestResponseWriterUnannotatedApplicationError(t *testing.T) {
 	// Thrift exceptions without an rpc.code annotation reach the transport as
 	// an application error whose meta has a nil Code. HTTP must still emit the
