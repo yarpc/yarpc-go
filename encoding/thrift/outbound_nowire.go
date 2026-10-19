@@ -21,9 +21,11 @@
 package thrift
 
 import (
-	"bytes"
+	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"sync"
 
 	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/protocol/stream"
@@ -32,10 +34,19 @@ import (
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/pkg/encoding"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
 )
+
+const _responseReadBufferSize = 32 << 10
+
+var _responseReaderPool = sync.Pool{
+	New: func() interface{} {
+		return bufio.NewReaderSize(nil, _responseReadBufferSize)
+	},
+}
 
 // NoWireClient is a generic Thrift client for encoding/decoding using
 // ThriftRW's "streaming" mechanisms. The body of the provided request
@@ -159,7 +170,23 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 		return err
 	}
 
-	sr := proto.Reader(tres.Body)
+	var responseReader io.Reader = tres.Body
+	// Memory-backed responses such as pooled TChannel bodies support seeking.
+	// Preserve that capability so the protocol can skip fields without copying.
+	if _, ok := responseReader.(io.Seeker); !ok {
+		// Stream protocols make many small reads. Batch those reads before they
+		// reach the transport, avoiding HTTP/2 locks and flow-control flushes on
+		// each field. The buffer belongs to this decode, not to the transport.
+		buffered := _responseReaderPool.Get().(*bufio.Reader)
+		buffered.Reset(responseReader)
+		defer func() {
+			buffered.Reset(nil)
+			_responseReaderPool.Put(buffered)
+		}()
+		responseReader = buffered
+	}
+
+	sr := proto.Reader(responseReader)
 	defer sr.Close()
 
 	envelope, err := sr.ReadEnvelopeBegin()
@@ -237,8 +264,39 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		)
 	}
 
-	var buffer bytes.Buffer
-	sw := proto.Writer(&buffer)
+	// encode writes the whole request into a buffer from the pool. It runs
+	// once here. It runs again for each retry that pooledBody.GetBody requests.
+	encode := func() (*bufferpool.Buffer, error) {
+		buffer := bufferpool.Get()
+		if err := encodeEnvelopedRequest(proto, buffer, reqBody, envType); err != nil {
+			bufferpool.Put(buffer)
+			return nil, err
+		}
+		return buffer, nil
+	}
+
+	buffer, err := encode()
+	if err != nil {
+		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+	}
+
+	treq.Body = newPooledBody(buffer, encode)
+	treq.BodySize = buffer.Len()
+	return &treq, proto, nil
+}
+
+// encodeEnvelopedRequest writes one complete Thrift envelope into buffer.
+//
+// pooledBody.GetBody retries a request by running it again. For the same
+// reqBody, each run gives the same length, because the transport declares that
+// length as the Content-Length.
+func encodeEnvelopedRequest(
+	proto stream.Protocol,
+	buffer *bufferpool.Buffer,
+	reqBody stream.Enveloper,
+	envType wire.EnvelopeType,
+) error {
+	sw := proto.Writer(buffer)
 	defer sw.Close()
 
 	if err := sw.WriteEnvelopeBegin(stream.EnvelopeHeader{
@@ -246,18 +304,12 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		Type:  envType,
 		SeqID: 1, // don't care
 	}); err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return err
 	}
 
 	if err := reqBody.Encode(sw); err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return err
 	}
 
-	if err := sw.WriteEnvelopeEnd(); err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
-	}
-
-	treq.Body = &buffer
-	treq.BodySize = buffer.Len()
-	return &treq, proto, nil
+	return sw.WriteEnvelopeEnd()
 }
