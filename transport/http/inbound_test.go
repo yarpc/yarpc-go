@@ -25,10 +25,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -38,11 +40,13 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/http2test"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/yarpctest"
@@ -713,4 +717,295 @@ func httpGet(t *testing.T, url string) (*http.Response, string, error) {
 	}
 
 	return resp, string(body), nil
+}
+
+// TestInboundH2CGracefulShutdown stops an inbound with a call in flight on an
+// HTTP/2 cleartext (h2c) connection, then drops every server-side connection
+// the moment Stop returns, as the process exiting would.
+//
+// Stop must hold the contract grpc.Server.GracefulStop provides gRPC
+// inbounds: deliver a GOAWAY and let in-flight calls complete before it
+// returns, since nothing still owed to the client survives the exit.
+//
+// The GOAWAY must follow the two-phase graceful shutdown of RFC 9113 §6.8: a
+// first GOAWAY reserving the whole stream ID space, then, after at least one
+// round trip, a second one carrying the last stream actually processed.
+func TestInboundH2CGracefulShutdown(t *testing.T) {
+	conns := &serverConns{}
+	inbound, h := startBlockingInbound(t, conns.record(), EnableHTTP2ShutdownHelper(true))
+	addr := inbound.Addr().String()
+
+	c := http2test.DialRawH2C(t, addr)
+	c.OpenStream(t, 1, "/", h2cRequestHeaders("block"), []byte("payload"))
+	h.awaitEntered(t)
+
+	var seq, stopSeq atomic.Int64
+	stopErr := make(chan error, 1)
+	go func() {
+		err := inbound.Stop()
+		stopSeq.Store(seq.Inc())
+		stopErr <- err
+	}()
+
+	frames := c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)
+	first := frames[len(frames)-1]
+	assert.Equal(t, http2.ErrCodeNo, first.ErrCode, "graceful shutdown must use NO_ERROR")
+	assert.Equal(t, uint32(math.MaxInt32), first.LastStreamID,
+		"first GOAWAY must reserve the whole stream ID space")
+
+	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)...)
+	goAwaySeq := seq.Inc()
+	second := frames[len(frames)-1]
+	assert.Equal(t, http2.ErrCodeNo, second.ErrCode, "graceful shutdown must use NO_ERROR")
+	assert.Equal(t, uint32(1), second.LastStreamID, "second GOAWAY must carry the last processed stream")
+
+	releaseSeq := seq.Inc()
+	h.releaseAll()
+	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.StreamDone(1))...)
+	res := http2test.ResponseOn(frames, 1)
+	require.False(t, res.Reset, "in-flight stream 1 was reset with %v instead of completing", res.ResetCode)
+	assert.Equal(t, "200", res.Headers[":status"], "unexpected status for in-flight stream 1")
+	assert.Equal(t, "payload", string(res.Body), "unexpected body for in-flight stream 1")
+
+	// The client is done: closing its side lets the server tear down the
+	// connection without waiting out its post-GOAWAY grace period.
+	require.NoError(t, c.Close())
+
+	select {
+	case err := <-stopErr:
+		require.NoError(t, err, "Stop must succeed once connections have drained")
+	case <-time.After(5 * testtime.Second):
+		require.FailNow(t, "Stop did not return after the connection drained")
+	}
+	conns.closeAll()
+	assert.Less(t, goAwaySeq, stopSeq.Load(),
+		"Stop returned before the client observed a GOAWAY, which exiting the process would lose")
+	assert.Less(t, releaseSeq, stopSeq.Load(),
+		"Stop returned with stream 1 still in flight, which exiting the process would lose")
+
+	_, err := net.Dial("tcp", addr)
+	assert.Error(t, err, "new connections must be refused once Stop returns")
+}
+
+// TestInboundH2CStopWithWedgedHandler stops an inbound whose h2c connection
+// has a call that never completes: Stop must still complete both phases of
+// the RFC 9113 §6.8 graceful shutdown, neither give up on the call before
+// ShutdownTimeout nor wait past it, and close the connection rather than leave
+// it behind.
+func TestInboundH2CStopWithWedgedHandler(t *testing.T) {
+	timeout := 200 * testtime.Millisecond
+	inbound, h := startBlockingInbound(t, ShutdownTimeout(timeout), EnableHTTP2ShutdownHelper(true))
+
+	c := http2test.DialRawH2C(t, inbound.Addr().String())
+	c.OpenStream(t, 1, "/", h2cRequestHeaders("block"), []byte("payload"))
+	h.awaitEntered(t)
+
+	start := time.Now()
+	stopErr := make(chan error, 1)
+	go func() { stopErr <- inbound.Stop() }()
+
+	frames := c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)
+	first := frames[len(frames)-1]
+	assert.Equal(t, http2.ErrCodeNo, first.ErrCode, "graceful shutdown must use NO_ERROR")
+	assert.Equal(t, uint32(math.MaxInt32), first.LastStreamID,
+		"first GOAWAY must reserve the whole stream ID space")
+
+	// The second GOAWAY does not wait for in-flight calls: it only waits for
+	// the client to acknowledge the first, so a wedged call cannot hold it.
+	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)...)
+	second := frames[len(frames)-1]
+	assert.Equal(t, http2.ErrCodeNo, second.ErrCode, "graceful shutdown must use NO_ERROR")
+	assert.Equal(t, uint32(1), second.LastStreamID, "second GOAWAY must carry the last processed stream")
+
+	select {
+	case err := <-stopErr:
+		assert.ErrorIs(t, err, context.DeadlineExceeded, "Stop must report that the drain timed out")
+	case <-time.After(timeout + 5*testtime.Second):
+		require.FailNow(t, "Stop hung past ShutdownTimeout")
+	}
+	assert.GreaterOrEqual(t, time.Since(start), timeout,
+		"Stop gave up on the in-flight call before ShutdownTimeout")
+
+	frames = append(frames, c.ReadUntilClosed(t, 5*testtime.Second)...)
+	assert.False(t, http2test.ResponseOn(frames, 1).Complete,
+		"stream 1 completed although its handler never returned")
+}
+
+// TestInboundStopWithoutConnections guards against Stop blocking on HTTP/2
+// connection bookkeeping when no connection was ever opened.
+func TestInboundStopWithoutConnections(t *testing.T) {
+	for _, disableHTTP2 := range []bool{false, true} {
+		t.Run(fmt.Sprintf("DisableHTTP2=%v", disableHTTP2), func(t *testing.T) {
+			inbound, _ := startBlockingInbound(t, DisableHTTP2(disableHTTP2))
+
+			stopErr := make(chan error, 1)
+			go func() { stopErr <- inbound.Stop() }()
+			select {
+			case err := <-stopErr:
+				assert.NoError(t, err)
+			case <-time.After(testtime.Second):
+				require.FailNow(t, "Stop must return promptly with no open connections")
+			}
+			assert.NoError(t, inbound.Stop(), "Stop must be idempotent")
+		})
+	}
+}
+
+// TestInboundHTTP1GracefulShutdown pins the HTTP/1.1 shutdown behavior, which
+// net/http already gets right, so that HTTP/2 changes cannot regress it.
+func TestInboundHTTP1GracefulShutdown(t *testing.T) {
+	for _, disableHTTP2 := range []bool{false, true} {
+		t.Run(fmt.Sprintf("DisableHTTP2=%v", disableHTTP2), func(t *testing.T) {
+			inbound, h := startBlockingInbound(t, DisableHTTP2(disableHTTP2))
+			addr := inbound.Addr().String()
+
+			client := &http.Client{Transport: &http.Transport{}}
+			t.Cleanup(client.CloseIdleConnections)
+			type result struct {
+				status int
+				body   string
+				err    error
+			}
+			resCh := make(chan result, 1)
+			go func() {
+				req, err := http.NewRequest(http.MethodPost, "http://"+addr, strings.NewReader("payload"))
+				if err != nil {
+					resCh <- result{err: err}
+					return
+				}
+				for k, v := range h2cRequestHeaders("block") {
+					req.Header.Set(k, v)
+				}
+				res, err := client.Do(req)
+				if err != nil {
+					resCh <- result{err: err}
+					return
+				}
+				defer res.Body.Close()
+				body, err := io.ReadAll(res.Body)
+				resCh <- result{status: res.StatusCode, body: string(body), err: err}
+			}()
+			h.awaitEntered(t)
+
+			var seq, stopSeq atomic.Int64
+			stopErr := make(chan error, 1)
+			go func() {
+				err := inbound.Stop()
+				stopSeq.Store(seq.Inc())
+				stopErr <- err
+			}()
+
+			// Shutdown closes the listener before draining, so a refused
+			// dial is the signal that Stop is now waiting on the request.
+			require.Eventually(t, func() bool {
+				conn, err := net.Dial("tcp", addr)
+				if err == nil {
+					conn.Close()
+				}
+				return err != nil
+			}, testtime.Second, testtime.Millisecond, "Stop must close the listener")
+
+			releaseSeq := seq.Inc()
+			h.releaseAll()
+			res := <-resCh
+			require.NoError(t, res.err, "in-flight request must complete")
+			assert.Equal(t, http.StatusOK, res.status)
+			assert.Equal(t, "payload", res.body)
+
+			select {
+			case err := <-stopErr:
+				assert.NoError(t, err)
+			case <-time.After(5 * testtime.Second):
+				require.FailNow(t, "Stop did not return after the request drained")
+			}
+			assert.Less(t, releaseSeq, stopSeq.Load(), "Stop returned while the request was still in flight")
+		})
+	}
+}
+
+// blockingHandler is a unary handler that blocks every call until released,
+// then echoes the request body back.
+type blockingHandler struct {
+	entered     chan struct{}
+	release     chan struct{}
+	releaseOnce sync.Once
+}
+
+func newBlockingHandler() *blockingHandler {
+	return &blockingHandler{
+		entered: make(chan struct{}, 1),
+		release: make(chan struct{}),
+	}
+}
+
+func (h *blockingHandler) Handle(_ context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+	h.entered <- struct{}{}
+	<-h.release
+	_, err := io.Copy(resw, req.Body)
+	return err
+}
+
+func (h *blockingHandler) releaseAll() { h.releaseOnce.Do(func() { close(h.release) }) }
+
+func (h *blockingHandler) awaitEntered(t *testing.T) {
+	t.Helper()
+	select {
+	case <-h.entered:
+	case <-time.After(5 * testtime.Second):
+		require.FailNow(t, "handler was not called")
+	}
+}
+
+// startBlockingInbound starts an inbound on a random local port, serving a
+// "block" procedure backed by the returned handler.
+func startBlockingInbound(t *testing.T, opts ...InboundOption) (*Inbound, *blockingHandler) {
+	h := newBlockingHandler()
+	inbound := NewTransport().NewInbound("127.0.0.1:0", opts...)
+	inbound.SetRouter(newTestRouter([]transport.Procedure{{
+		Name:        "block",
+		HandlerSpec: transport.NewUnaryHandlerSpec(h),
+	}}))
+	require.NoError(t, inbound.Start())
+	t.Cleanup(func() { _ = inbound.Stop() })
+	// Registered after Stop so it runs first: a pending call must not hold
+	// Stop for the whole ShutdownTimeout when a test fails midway.
+	t.Cleanup(h.releaseAll)
+	return inbound, h
+}
+
+// serverConns records the connections an inbound accepts, so that a test can
+// drop them all at once, the way exiting the process would.
+type serverConns struct {
+	mu    sync.Mutex
+	conns []net.Conn
+}
+
+func (s *serverConns) record() InboundOption {
+	return func(i *Inbound) {
+		i.server.ConnState = func(c net.Conn, state http.ConnState) {
+			if state == http.StateNew {
+				s.mu.Lock()
+				s.conns = append(s.conns, c)
+				s.mu.Unlock()
+			}
+		}
+	}
+}
+
+func (s *serverConns) closeAll() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, c := range s.conns {
+		_ = c.Close()
+	}
+}
+
+func h2cRequestHeaders(procedure string) map[string]string {
+	return map[string]string{
+		"rpc-caller":     "caller",
+		"rpc-service":    "service",
+		"rpc-procedure":  procedure,
+		"rpc-encoding":   string(raw.Encoding),
+		"context-ttl-ms": "10000",
+	}
 }
