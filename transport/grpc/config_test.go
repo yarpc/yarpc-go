@@ -297,7 +297,7 @@ func TestTransportSpec(t *testing.T) {
 		{
 			desc: "TLS enabled on an inbound with invalid config",
 			inboundCfg: attrs{
-				"address": "localhost:54713",
+				"address": "localhost:0",
 				"tls": attrs{
 					"enabled": true,
 				},
