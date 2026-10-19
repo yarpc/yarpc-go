@@ -71,6 +71,7 @@ type graph struct {
 	logger           *zap.Logger
 	extract          ContextExtractor
 	ignoreMetricsTag *metricsTagIgnore
+	disabledMetrics  *metricsDisabled
 
 	edges edgeMap
 
@@ -162,12 +163,82 @@ func (m *metricsTagIgnore) tags(req *transport.Request, direction string, rpcTyp
 	return tags
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string) graph {
+// metricsDisabled records which of the optional histograms are not emitted.
+// A disabled histogram is never created, so it costs nothing per call, per
+// push or in memory. Calls and failure counters cannot be disabled.
+//
+// The histograms of an edge are nil when disabled, and a nil *metrics.Histogram
+// is a no-op, so recording sites do not need to check.
+type metricsDisabled struct {
+	successLatency            bool
+	callerFailureLatency      bool
+	serverFailureLatency      bool
+	ttl                       bool
+	timeoutTTL                bool
+	requestPayloadSize        bool
+	responsePayloadSize       bool
+	streamDuration            bool
+	streamRequestPayloadSize  bool
+	streamResponsePayloadSize bool
+}
+
+// DisableableMetrics lists the names accepted by Config.DisabledMetrics.
+var DisableableMetrics = []string{
+	"success_latency_ms",
+	"caller_failure_latency_ms",
+	"server_failure_latency_ms",
+	"ttl_ms",
+	"timeout_ttl_ms",
+	"request_payload_size_bytes",
+	"response_payload_size_bytes",
+	"stream_duration_ms",
+	"stream_request_payload_size_bytes",
+	"stream_response_payload_size_bytes",
+}
+
+// newMetricsDisabled returns the set of disabled histograms for the given
+// metric names. Unknown names are logged and ignored, so that a typo does not
+// stop a service from starting.
+func newMetricsDisabled(names []string, logger *zap.Logger) *metricsDisabled {
+	r := new(metricsDisabled)
+	for _, name := range names {
+		switch name {
+		case "success_latency_ms":
+			r.successLatency = true
+		case "caller_failure_latency_ms":
+			r.callerFailureLatency = true
+		case "server_failure_latency_ms":
+			r.serverFailureLatency = true
+		case "ttl_ms":
+			r.ttl = true
+		case "timeout_ttl_ms":
+			r.timeoutTTL = true
+		case "request_payload_size_bytes":
+			r.requestPayloadSize = true
+		case "response_payload_size_bytes":
+			r.responsePayloadSize = true
+		case "stream_duration_ms":
+			r.streamDuration = true
+		case "stream_request_payload_size_bytes":
+			r.streamRequestPayloadSize = true
+		case "stream_response_payload_size_bytes":
+			r.streamResponsePayloadSize = true
+		default:
+			logger.Warn("Ignoring unknown metric in the list of disabled YARPC metrics.",
+				zap.String("metric", name),
+				zap.Strings("supported", DisableableMetrics))
+		}
+	}
+	return r
+}
+
+func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string, disabledMetrics []string) graph {
 	return graph{
 		meter:            meter,
 		logger:           logger,
 		extract:          extract,
 		ignoreMetricsTag: newMetricsTagIgnore(metricTagsIgnore),
+		disabledMetrics:  newMetricsDisabled(disabledMetrics, logger),
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -251,7 +322,7 @@ func (g *graph) getEdge(key []byte) *edge {
 func (g *graph) createEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	// Since we'll rarely hit this code path, the overhead of the lock is acceptable.
 	return g.edges.loadOrCreate(key, func() *edge {
-		return newEdge(g.logger, g.meter, g.ignoreMetricsTag, req, direction, rpcType)
+		return newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.disabledMetrics, req, direction, rpcType)
 	})
 }
 
@@ -295,7 +366,7 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, disabled *metricsDisabled, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := tagToIgnore.tags(req, direction, rpcType)
 
 	// metrics for all RPCs
@@ -346,89 +417,103 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 	var latencies, callerErrLatencies, serverErrLatencies, ttls, timeoutTtls,
 		requestPayloadSizes, responsePayloadSizes *metrics.Histogram
 	if rpcType == transport.Unary || rpcType == transport.Oneway {
-		latencies, err = meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "success_latency_ms",
-				Help:      "Latency distribution of successful RPCs.",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
-		})
-		if err != nil {
-			logger.Error("Failed to create success latency distribution.", zap.Error(err))
+		if !disabled.successLatency {
+			latencies, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "success_latency_ms",
+					Help:      "Latency distribution of successful RPCs.",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond,
+				Buckets: _bucketsMs,
+			})
+			if err != nil {
+				logger.Error("Failed to create success latency distribution.", zap.Error(err))
+			}
 		}
-		callerErrLatencies, err = meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "caller_failure_latency_ms",
-				Help:      "Latency distribution of RPCs failed because of caller error.",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
-		})
-		if err != nil {
-			logger.Error("Failed to create caller failure latency distribution.", zap.Error(err))
+		if !disabled.callerFailureLatency {
+			callerErrLatencies, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "caller_failure_latency_ms",
+					Help:      "Latency distribution of RPCs failed because of caller error.",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond,
+				Buckets: _bucketsMs,
+			})
+			if err != nil {
+				logger.Error("Failed to create caller failure latency distribution.", zap.Error(err))
+			}
 		}
-		serverErrLatencies, err = meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "server_failure_latency_ms",
-				Help:      "Latency distribution of RPCs failed because of server error.",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
-		})
-		if err != nil {
-			logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
+		if !disabled.serverFailureLatency {
+			serverErrLatencies, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "server_failure_latency_ms",
+					Help:      "Latency distribution of RPCs failed because of server error.",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond,
+				Buckets: _bucketsMs,
+			})
+			if err != nil {
+				logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
+			}
 		}
-		ttls, err = meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "ttl_ms",
-				Help:      "TTL distribution of the RPCs passed by the caller",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
-		})
-		if err != nil {
-			logger.Error("Failed to create ttl distribution.", zap.Error(err))
+		if !disabled.ttl {
+			ttls, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "ttl_ms",
+					Help:      "TTL distribution of the RPCs passed by the caller",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond,
+				Buckets: _bucketsMs,
+			})
+			if err != nil {
+				logger.Error("Failed to create ttl distribution.", zap.Error(err))
+			}
 		}
-		timeoutTtls, err = meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "timeout_ttl_ms",
-				Help:      "TTL distribution of the RPCs passed by caller which failed due to timeout",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
-		})
-		if err != nil {
-			logger.Error("Failed to create timeout ttl distribution.", zap.Error(err))
+		if !disabled.timeoutTTL {
+			timeoutTtls, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "timeout_ttl_ms",
+					Help:      "TTL distribution of the RPCs passed by caller which failed due to timeout",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond,
+				Buckets: _bucketsMs,
+			})
+			if err != nil {
+				logger.Error("Failed to create timeout ttl distribution.", zap.Error(err))
+			}
 		}
-		requestPayloadSizes, err = meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "request_payload_size_bytes",
-				Help:      "Request payload size distribution of the RPCs in bytes",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond, // Unit is relevent for this histogram
-			Buckets: _bucketsBytes,
-		})
-		if err != nil {
-			logger.Error("Failed to create request payload size histogram.", zap.Error(err))
+		if !disabled.requestPayloadSize {
+			requestPayloadSizes, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "request_payload_size_bytes",
+					Help:      "Request payload size distribution of the RPCs in bytes",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond, // Unit is relevent for this histogram
+				Buckets: _bucketsBytes,
+			})
+			if err != nil {
+				logger.Error("Failed to create request payload size histogram.", zap.Error(err))
+			}
 		}
-		responsePayloadSizes, err = meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "response_payload_size_bytes",
-				Help:      "Response payload size distribution of the RPCs in bytes",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond, // Unit is relevent for this histogram
-			Buckets: _bucketsBytes,
-		})
-		if err != nil {
-			logger.Error("Failed to create response payload size histogram.", zap.Error(err))
+		if !disabled.responsePayloadSize {
+			responsePayloadSizes, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "response_payload_size_bytes",
+					Help:      "Response payload size distribution of the RPCs in bytes",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond, // Unit is relevent for this histogram
+				Buckets: _bucketsBytes,
+			})
+			if err != nil {
+				logger.Error("Failed to create response payload size histogram.", zap.Error(err))
+			}
 		}
 	}
 
@@ -490,43 +575,50 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 		}
 
 		// entire stream
-		streamDurations, err := meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "stream_duration_ms",
-				Help:      "Latency distribution of total stream duration.",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
-		})
-		if err != nil {
-			logger.DPanic("Failed to create stream duration histogram.", zap.Error(err))
+		var streamDurations, streamRequestPayloadSizes, streamResponsePayloadSizes *metrics.Histogram
+		if !disabled.streamDuration {
+			streamDurations, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "stream_duration_ms",
+					Help:      "Latency distribution of total stream duration.",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond,
+				Buckets: _bucketsMs,
+			})
+			if err != nil {
+				logger.DPanic("Failed to create stream duration histogram.", zap.Error(err))
+			}
 		}
 
-		streamRequestPayloadSizes, err := meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "stream_request_payload_size_bytes",
-				Help:      "Stream request payload size distribution",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond,
-			Buckets: _bucketsBytes,
-		})
-		if err != nil {
-			logger.DPanic("Failed to create stream request payload size histogram", zap.Error(err))
+		if !disabled.streamRequestPayloadSize {
+			streamRequestPayloadSizes, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "stream_request_payload_size_bytes",
+					Help:      "Stream request payload size distribution",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond,
+				Buckets: _bucketsBytes,
+			})
+			if err != nil {
+				logger.DPanic("Failed to create stream request payload size histogram", zap.Error(err))
+			}
 		}
 
-		streamResponsePayloadSizes, err := meter.Histogram(metrics.HistogramSpec{
-			Spec: metrics.Spec{
-				Name:      "stream_response_payload_size_bytes",
-				Help:      "Stream response payload size distribution",
-				ConstTags: tags,
-			},
-			Unit:    time.Millisecond,
-			Buckets: _bucketsBytes,
-		})
-		if err != nil {
-			logger.DPanic("Failed to create stream response payload size histogram", zap.Error(err))
+		if !disabled.streamResponsePayloadSize {
+			streamResponsePayloadSizes, err = meter.Histogram(metrics.HistogramSpec{
+				Spec: metrics.Spec{
+					Name:      "stream_response_payload_size_bytes",
+					Help:      "Stream response payload size distribution",
+					ConstTags: tags,
+				},
+				Unit:    time.Millisecond,
+				Buckets: _bucketsBytes,
+			})
+			if err != nil {
+				logger.DPanic("Failed to create stream response payload size histogram", zap.Error(err))
+			}
 		}
 
 		streamsActive, err := meter.Gauge(metrics.Spec{

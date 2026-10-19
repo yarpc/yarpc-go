@@ -362,6 +362,28 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "disabled metrics",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					metrics:
+						disabled:
+							- "ttl_ms"
+							- "request_payload_size_bytes"
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Metrics: yarpc.MetricsConfig{
+						DisabledMetrics: []string{
+							"ttl_ms",
+							"request_payload_size_bytes",
+						},
+					},
+				}
+				return
+			},
+		},
+		{
 			desc: "application error, invalid type",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				tt.give = whitespace.Expand(`
