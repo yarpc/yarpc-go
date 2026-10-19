@@ -472,6 +472,12 @@ func (rw *responseWriter) ResetBuffer() {
 }
 
 func (rw *responseWriter) Close(httpStatusCode int) {
+	if rw.buffer != nil {
+		// The whole body is in the buffer, so declare its length. Without it,
+		// the server sets Content-Length only for bodies that fit in its write
+		// buffer, and callers see an unknown size for large responses.
+		rw.w.Header().Set("Content-Length", strconv.Itoa(rw.buffer.Len()))
+	}
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?
