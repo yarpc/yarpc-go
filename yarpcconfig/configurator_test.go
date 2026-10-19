@@ -362,7 +362,7 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
-			desc: "disabled metrics",
+			desc: "disabled metrics and edge limit",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				tt.serviceName = "foo"
 				tt.give = whitespace.Expand(`
@@ -370,6 +370,7 @@ func TestConfigurator(t *testing.T) {
 						disabled:
 							- "ttl_ms"
 							- "request_payload_size_bytes"
+						maxEdges: 500
 				`)
 				tt.wantConfig = yarpc.Config{
 					Name: "foo",
@@ -378,6 +379,7 @@ func TestConfigurator(t *testing.T) {
 							"ttl_ms",
 							"request_payload_size_bytes",
 						},
+						MaxEdges: 500,
 					},
 				}
 				return

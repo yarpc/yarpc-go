@@ -298,12 +298,13 @@ func TestMetricsConfigReachesObservabilityMiddleware(t *testing.T) {
 			Metrics: MetricsConfig{
 				TagsBlocklist:   []string{"routing_delegate"},
 				DisabledMetrics: []string{"ttl_ms", "request_payload_size_bytes"},
+				MaxEdges:        1,
 			},
 		},
 		root.Scope(), zap.NewNop(), observability.NewNopContextExtractor())
 
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
-	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(3)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	for _, rd := range []string{"rd1", "rd2"} {
@@ -334,4 +335,21 @@ func TestMetricsConfigReachesObservabilityMiddleware(t *testing.T) {
 		assert.Equal(t, "__dropped__", c.Tags["routing_delegate"])
 	}
 	assert.Equal(t, map[string]int64{"calls": 2, "successes": 2, "panics": 0}, counters)
+
+	// The limit of one edge is full, so a different edge is recorded on the
+	// overflow edge.
+	require.NoError(t, cfg.InboundMiddleware.Unary.Handle(ctx, &transport.Request{
+		Caller:    "other-caller",
+		Service:   "mysvc",
+		Procedure: "other",
+		Encoding:  "raw",
+		Body:      strings.NewReader("body"),
+	}, &transporttest.FakeResponseWriter{}, h))
+	overflowed := map[string]int64{}
+	for _, c := range root.Snapshot().Counters {
+		if c.Tags["source"] == "__overflow__" {
+			overflowed[c.Name] += c.Value
+		}
+	}
+	assert.Equal(t, map[string]int64{"calls": 1, "successes": 1, "panics": 0}, overflowed)
 }
