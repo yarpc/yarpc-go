@@ -11,6 +11,18 @@
 # Inputs (environment):
 #   PR_NUMBER        pull request number; "false" or unset means not a PR build
 #   BASE_BRANCH      branch the PR targets
+# Tunables (environment, all optional):
+#   BENCH_COUNT, BENCH_TIME   passed to go test -count and -benchtime
+#   BENCH_PHASE_TIMEOUT       time limit for each of the two go test runs
+#                             (head, then base), default 18m. When hit, the
+#                             result says so instead of going missing.
+#   BENCHCOMPARE_FAIL_ON_REGRESSION
+#                             1 to exit 1 on a large regression, default 0
+#   BENCH_FAIL_THRESHOLD_PCT  how much worse counts as a large regression,
+#                             default 50 (percent), applied to sec/op, B/op
+#                             and allocs/op
+#   BENCH_FAIL_ALPHA          benchstat p-value a regression must be at or
+#                             below to count, default 0.01
 # For Buildkite, BUILDKITE_PULL_REQUEST and BUILDKITE_PULL_REQUEST_BASE_BRANCH
 # are used when the above are unset.
 #
@@ -31,6 +43,10 @@ cd "${DIR}"
 BENCHCOMPARE_OUT_DIR="${BENCHCOMPARE_OUT_DIR:-.benchcompare}"
 BENCH_COUNT="${BENCH_COUNT:-6}"
 BENCH_TIME="${BENCH_TIME:-1s}"
+BENCH_PHASE_TIMEOUT="${BENCH_PHASE_TIMEOUT:-18m}"
+BENCHCOMPARE_FAIL_ON_REGRESSION="${BENCHCOMPARE_FAIL_ON_REGRESSION:-0}"
+BENCH_FAIL_THRESHOLD_PCT="${BENCH_FAIL_THRESHOLD_PCT:-50}"
+BENCH_FAIL_ALPHA="${BENCH_FAIL_ALPHA:-0.01}"
 BASE_WORKTREE="$(mktemp -d -t benchcompare-base.XXXXXX)"
 BENCH_BASE_TXT="$(mktemp -t benchcompare-base-out.XXXXXX)"
 BENCH_HEAD_TXT="$(mktemp -t benchcompare-head-out.XXXXXX)"
@@ -62,6 +78,59 @@ not_run() {
 
 Reason: ${reason}"
   exit 0
+}
+
+# run_bench runs the benchmarks of CHANGED_PKGS from the directory given as
+# the first argument, bounded by BENCH_PHASE_TIMEOUT. It returns 124 on a
+# timeout. Where a timeout(1) binary is available it bounds the whole run;
+# otherwise go test's own per-package -timeout is the only bound.
+run_bench() {
+  local dir="${1}"
+  local timeout_cmd
+  timeout_cmd="$(command -v timeout || command -v gtimeout || true)"
+  if [ -n "${timeout_cmd}" ]; then
+    (cd "${dir}" && "${timeout_cmd}" "${BENCH_PHASE_TIMEOUT}" \
+      go test -timeout=0 -run='^$' -bench=. -benchmem -count="${BENCH_COUNT}" -benchtime="${BENCH_TIME}" ${CHANGED_PKGS})
+  else
+    (cd "${dir}" && \
+      go test -timeout="${BENCH_PHASE_TIMEOUT}" -run='^$' -bench=. -benchmem -count="${BENCH_COUNT}" -benchtime="${BENCH_TIME}" ${CHANGED_PKGS})
+  fi
+}
+
+# bench_failed annotates why a benchmark run failed, telling a timeout apart
+# from other failures. The first argument is the run's exit status, the second
+# the output file, the third a description of what ran.
+bench_failed() {
+  local status="${1}"
+  local out="${2}"
+  local what="${3}"
+  if [ "${status}" -eq 124 ] || grep -q 'panic: test timed out' "${out}" 2>/dev/null; then
+    not_run warning "benchmarks timed out after ${BENCH_PHASE_TIMEOUT} ${what} for:${CHANGED_PKGS}. The PR may touch packages with many or slow benchmarks. Raise \`BENCH_PHASE_TIMEOUT\` or lower \`BENCH_COUNT\` if this keeps happening."
+  fi
+  not_run warning "benchmarks failed to run ${what} for:${CHANGED_PKGS}. See the job log."
+}
+
+# find_regressions reads benchstat output on stdin and prints the rows that got
+# worse by at least BENCH_FAIL_THRESHOLD_PCT percent with a p-value at or
+# below BENCH_FAIL_ALPHA, prefixed with their unit. Rows without a numeric
+# delta ("~" for no significant change, "?" for a zero baseline or a changed
+# benchmark set) and the geomean summary are never counted.
+find_regressions() {
+  awk -v thr="${BENCH_FAIL_THRESHOLD_PCT}" -v alpha="${BENCH_FAIL_ALPHA}" '
+    /vs base/ { unit = $2; next }
+    $1 == "geomean" { next }
+    {
+      for (i = 2; i < NF; i++) {
+        if ($i ~ /^\+[0-9]+(\.[0-9]+)?%$/ && $(i + 1) ~ /^\(p=[0-9.]+$/) {
+          pct = substr($i, 2, length($i) - 2) + 0
+          p = substr($(i + 1), 4) + 0
+          if (pct >= thr && p <= alpha) {
+            printf "%s: %s %s %s)\n", unit, $1, $i, $(i + 1)
+          }
+          break
+        }
+      }
+    }'
 }
 
 PR_NUMBER="${PR_NUMBER:-${BUILDKITE_PULL_REQUEST:-false}}"
@@ -108,26 +177,55 @@ fi
 
 echo "benchcompare: comparing benchmarks for:${CHANGED_PKGS}"
 
-if ! go test -run='^$' -bench=. -benchmem -count="${BENCH_COUNT}" -benchtime="${BENCH_TIME}" ${CHANGED_PKGS} >"${BENCH_HEAD_TXT}"; then
-  not_run warning "benchmarks failed to run on the PR head for:${CHANGED_PKGS}. See the job log."
+run_bench "${DIR}" >"${BENCH_HEAD_TXT}"
+status=$?
+if [ "${status}" -ne 0 ]; then
+  bench_failed "${status}" "${BENCH_HEAD_TXT}" "on the PR head"
 fi
 
 if ! git worktree add --detach "${BASE_WORKTREE}" "${BASE_SHA}" >/dev/null; then
   not_run warning "could not check out the merge base ${BASE_SHA} for comparison."
 fi
 
-if ! (cd "${BASE_WORKTREE}" && go test -run='^$' -bench=. -benchmem -count="${BENCH_COUNT}" -benchtime="${BENCH_TIME}" ${CHANGED_PKGS}) >"${BENCH_BASE_TXT}"; then
-  not_run warning "benchmarks failed to run on \`${BASE_BRANCH}\` at ${BASE_SHA} for:${CHANGED_PKGS}. The benchmarks may be new in this PR. See the job log."
+run_bench "${BASE_WORKTREE}" >"${BENCH_BASE_TXT}"
+status=$?
+if [ "${status}" -ne 0 ]; then
+  bench_failed "${status}" "${BENCH_BASE_TXT}" "on \`${BASE_BRANCH}\` at ${BASE_SHA} (they may be new in this PR)"
 fi
 
 DIFF="$(benchstat "base=${BENCH_BASE_TXT}" "head=${BENCH_HEAD_TXT}")"
+REGRESSIONS="$(printf '%s\n' "${DIFF}" | find_regressions)"
+
 STYLE="info"
 if echo "${DIFF}" | grep -q '[+-][0-9].*%'; then
   STYLE="warning"
 fi
 
-annotate "${STYLE}" "### Benchmark comparison vs \`${BASE_BRANCH}\` (informational, does not block merge)
+FAILING=0
+if [ "${BENCHCOMPARE_FAIL_ON_REGRESSION}" = "1" ] && [ -n "${REGRESSIONS}" ]; then
+  FAILING=1
+  STYLE="error"
+  annotate "${STYLE}" "### Benchmark regression vs \`${BASE_BRANCH}\`: failing
+
+These benchmarks got at least ${BENCH_FAIL_THRESHOLD_PCT}% worse (p <= ${BENCH_FAIL_ALPHA}):
+
+\`\`\`
+${REGRESSIONS}
+\`\`\`
+
+Full comparison:
 
 \`\`\`
 ${DIFF}
 \`\`\`"
+else
+  annotate "${STYLE}" "### Benchmark comparison vs \`${BASE_BRANCH}\` (informational, does not block merge)
+
+\`\`\`
+${DIFF}
+\`\`\`"
+fi
+
+if [ "${FAILING}" -eq 1 ]; then
+  exit 1
+fi
