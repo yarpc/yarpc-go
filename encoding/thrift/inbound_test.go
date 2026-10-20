@@ -215,6 +215,8 @@ func TestDecodeRequestResponseError(t *testing.T) {
 
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "encode response error")
+		// A response encoding failure is a server fault, not a client one.
+		assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
 	}
 }
 

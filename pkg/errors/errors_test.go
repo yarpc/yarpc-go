@@ -71,12 +71,12 @@ func TestEncodeErrors(t *testing.T) {
 		},
 		{
 			errorFunc:     ResponseBodyEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "body", "encode"},
 		},
 		{
 			errorFunc:     ResponseHeadersEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "headers", "encode"},
 		},
 		{
