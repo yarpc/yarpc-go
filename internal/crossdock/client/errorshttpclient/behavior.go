@@ -283,7 +283,7 @@ func Run(t crossdock.T) {
 				"Context-TTL-MS": "100",
 			},
 			body:       "{}",
-			wantStatus: 400,
+			wantStatus: 500,
 			wantBodyContains: `failed to encode "json" response ` +
 				`body for procedure "bad-response" of service "yarpc-test" ` +
 				`from caller "yarpc-test":`,
