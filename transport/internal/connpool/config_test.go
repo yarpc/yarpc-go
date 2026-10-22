@@ -212,6 +212,82 @@ func TestConfigResolver(t *testing.T) {
 	})
 }
 
+func TestConfigResolverUnchangedOverlay(t *testing.T) {
+	startup := baseConfig()
+
+	t.Run("an unchanged overlay allocates nothing", func(t *testing.T) {
+		enabled := boolPtr(true)
+		r := NewConfigResolver(startup, func() Override {
+			return Override{MaxConnections: 9, DynamicScalingEnabled: enabled}
+		}, nil, "t", "peer")
+		require.Equal(t, 9, r.Get().MaxConnections)
+
+		allocs := testing.AllocsPerRun(100, func() { _ = r.Get() })
+		assert.Zero(t, allocs, "the per-RPC call must not allocate while the overlay is unchanged")
+	})
+
+	t.Run("a fresh pointer with the same value is the same overlay", func(t *testing.T) {
+		r := NewConfigResolver(startup, func() Override {
+			return Override{DynamicScalingEnabled: boolPtr(false)}
+		}, nil, "t", "peer")
+		require.False(t, r.Get().DynamicScalingEnabled)
+
+		before := r.last.Load()
+		for range 3 {
+			assert.False(t, r.Get().DynamicScalingEnabled)
+		}
+		assert.Same(t, before, r.last.Load(), "an equal overlay must not replace the resolved config")
+	})
+
+	t.Run("a changed flag is seen on the next call", func(t *testing.T) {
+		var enabled atomic.Bool
+		r := NewConfigResolver(startup, func() Override {
+			v := enabled.Load()
+			return Override{DynamicScalingEnabled: &v}
+		}, nil, "t", "peer")
+		assert.False(t, r.Get().DynamicScalingEnabled)
+		enabled.Store(true)
+		assert.True(t, r.Get().DynamicScalingEnabled)
+		enabled.Store(false)
+		assert.False(t, r.Get().DynamicScalingEnabled)
+	})
+
+	t.Run("the zero overlay is the startup config", func(t *testing.T) {
+		r := NewConfigResolver(startup, func() Override { return Override{} }, nil, "t", "peer")
+		assert.Equal(t, startup, r.Get())
+	})
+}
+
+func TestOverrideEqual(t *testing.T) {
+	base := Override{
+		DynamicScalingEnabled: boolPtr(true), MaxConcurrentStreams: 100,
+		ScaleUpThreshold: 0.7, ScaleDownGap: 0.1, MinConnections: 1,
+		MaxConnections: 10, IdleTimeout: time.Minute, ScalingMonitorInterval: time.Minute,
+	}
+	same := base
+	same.DynamicScalingEnabled = boolPtr(true)
+	assert.True(t, base.equal(same))
+
+	for name, mutate := range map[string]func(*Override){
+		"flag value":     func(o *Override) { o.DynamicScalingEnabled = boolPtr(false) },
+		"flag nil":       func(o *Override) { o.DynamicScalingEnabled = nil },
+		"streams":        func(o *Override) { o.MaxConcurrentStreams++ },
+		"threshold":      func(o *Override) { o.ScaleUpThreshold += 0.1 },
+		"gap":            func(o *Override) { o.ScaleDownGap += 0.1 },
+		"min":            func(o *Override) { o.MinConnections++ },
+		"max":            func(o *Override) { o.MaxConnections++ },
+		"idle timeout":   func(o *Override) { o.IdleTimeout++ },
+		"monitor period": func(o *Override) { o.ScalingMonitorInterval++ },
+	} {
+		t.Run(name, func(t *testing.T) {
+			other := base
+			other.DynamicScalingEnabled = boolPtr(true)
+			mutate(&other)
+			assert.False(t, base.equal(other))
+		})
+	}
+}
+
 func TestPool_StartMonitor(t *testing.T) {
 	t.Run("starts the monitor once, after Start", func(t *testing.T) {
 		cfg := baseConfig()
