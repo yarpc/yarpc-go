@@ -509,6 +509,11 @@ type Transport struct {
 	// the transport. They cannot be waited on inside releasePeer: it runs
 	// under a.lock, which other transport paths take.
 	releasedPoolWg sync.WaitGroup
+	// h2PoolsStopping is set, under lock, once Stop has snapshotted the peers
+	// whose pools it will stop itself. A peer released after that is in the
+	// snapshot, so releasePeer must not add to releasedPoolWg: that Add could
+	// run concurrently with Stop's Wait. Guarded by lock.
+	h2PoolsStopping bool
 	// h2PoolMetrics holds the shared, transport-wide connection-pool metric
 	// handles (active/draining/idle connection gauges, scale-event and
 	// dial-outcome counters). It is created once here and each peer's pool
@@ -553,6 +558,7 @@ func (a *Transport) Stop() error {
 // goroutines.
 func (a *Transport) stopPeerH2Pools() {
 	a.lock.Lock()
+	a.h2PoolsStopping = true
 	peers := make([]*httpPeer, 0, len(a.peers))
 	for _, p := range a.peers {
 		peers = append(peers, p)
@@ -649,8 +655,9 @@ func (a *Transport) releasePeer(pid peer.Identifier, connectionScope *connection
 		delete(a.peers, key)
 		p.Release()
 		// Release only asks the peer's HTTP/2 pool to stop. Track its
-		// teardown so Transport.Stop can wait for it.
-		if pool := p.loadH2Pool(); pool != nil {
+		// teardown so Transport.Stop can wait for it, unless Stop already
+		// took the peer into its own snapshot.
+		if pool := p.loadH2Pool(); pool != nil && !a.h2PoolsStopping {
 			a.releasedPoolWg.Add(1)
 			go func() {
 				defer a.releasedPoolWg.Done()
