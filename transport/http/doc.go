@@ -83,8 +83,8 @@
 // WithGlobalLiveConnectionPoolProvider. A pool is never shared between peers,
 // so use an isolated Dialer (above) when two outbounds to one address must
 // not share connections; an outbound with its own clientConnectionPool section
-// or live provider is isolated automatically, and installing
-// WithOutboundLiveConnectionPoolProvider isolates every YAML outbound. These behave
+// or a live provider from WithOutboundLiveConnectionPoolProvider is isolated
+// automatically. These behave
 // the same as the options of the same name in the gRPC transport.
 //
 // # Configuration
