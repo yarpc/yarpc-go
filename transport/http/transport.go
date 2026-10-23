@@ -509,10 +509,11 @@ type Transport struct {
 	// the transport. They cannot be waited on inside releasePeer: it runs
 	// under a.lock, which other transport paths take.
 	releasedPoolWg sync.WaitGroup
-	// h2PoolsStopping is set, under lock, once Stop has snapshotted the peers
-	// whose pools it will stop itself. A peer released after that is in the
-	// snapshot, so releasePeer must not add to releasedPoolWg: that Add could
-	// run concurrently with Stop's Wait. Guarded by lock.
+	// h2PoolsStopping freezes first-pool creation under lock before Stop
+	// snapshots the peers. h2Sender publishes pools under the same lock, so
+	// every pool is either in the snapshot or tracked by releasedPoolWg.
+	// Later releases must not add to that WaitGroup while Stop waits on it.
+	// Guarded by lock.
 	h2PoolsStopping bool
 	// h2PoolMetrics holds the shared, transport-wide connection-pool metric
 	// handles (active/draining/idle connection gauges, scale-event and
