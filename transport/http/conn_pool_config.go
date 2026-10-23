@@ -274,11 +274,10 @@ func WithGlobalLiveConnectionPoolProvider(p LiveConnectionPoolProvider) Transpor
 // outbound's Dialer and replaces the global hook for those peers. Return nil
 // to keep the global hook for that outbound.
 //
-// Installing f isolates every YAML-built HTTP outbound, whether or not f
-// returns a provider for it, so each one owns its peers and pool even when two
-// outbounds dial the same address (as with IsolateConnectionsPerOutbound(true)).
-// Otherwise a provider's settings would land on a peer shared with other
-// outbounds.
+// An outbound that gets a provider from f is isolated, so its settings do not
+// land on a peer shared with other outbounds to the same address. Outbounds
+// for which f returns nil keep the transport's peer sharing (unless
+// IsolateConnectionsPerOutbound is set).
 //
 // outbound is Kit.OutboundKey() (the yarpc.outbounds map key). yaml is the
 // outbound's clientConnectionPool block, or nil if omitted.

@@ -451,6 +451,7 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 	// DialOptions given to TransportSpec (so those win), then the live
 	// provider for this outbound.
 	var dialOpts []DialOption
+	hasLiveProvider := false
 	if oc.ClientConnectionPool != nil {
 		if err := validateClientConnectionPoolConfig(*oc.ClientConnectionPool); err != nil {
 			return nil, err
@@ -461,6 +462,7 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 	if f := x.h2OutboundPoolFactory; f != nil {
 		if p := f(k.OutboundKey(), oc.ClientConnectionPool); p != nil {
 			dialOpts = append(dialOpts, outboundLiveProvider(p))
+			hasLiveProvider = true
 		}
 	}
 	// Connection isolation stays opt-in (IsolateConnectionsPerOutbound). An
@@ -468,7 +470,7 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 	// regardless, otherwise its settings would land on a peer shared with
 	// other outbounds to the same address.
 	dialer := x.NewDialer(dialOpts...)
-	if x.isolateOutboundConnections || oc.ClientConnectionPool != nil || x.h2OutboundPoolFactory != nil {
+	if x.isolateOutboundConnections || oc.ClientConnectionPool != nil || hasLiveProvider {
 		dialer = dialer.WithConnectionIsolation()
 	}
 	if oc.ClientConnectionPool != nil {

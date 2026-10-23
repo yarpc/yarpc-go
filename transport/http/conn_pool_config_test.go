@@ -455,33 +455,36 @@ func TestOutboundLiveProviderFactory(t *testing.T) {
 			"url":                  "http://127.0.0.1:4040/yarpc",
 			"clientConnectionPool": m{"minConnections": 2},
 		}},
-		"without-hook": m{"http": m{"url": "http://127.0.0.1:4041/yarpc"}},
+		"without-hook":      m{"http": m{"url": "http://127.0.0.1:4041/yarpc"}},
+		"also-without-hook": m{"http": m{"url": "http://127.0.0.1:4041/yarpc"}},
 	}}, WithOutboundLiveConnectionPoolProvider(factory), WithGlobalLiveConnectionPoolProvider(global))
 	require.NoError(t, err)
 
 	// yarpcconfig builds a unary and a oneway Outbound for each http entry,
 	// and each build calls the factory.
-	require.Len(t, calls, 4, "the factory is called once per built outbound")
+	require.Len(t, calls, 6, "the factory is called once per built outbound")
 	byName := map[string]*ClientConnectionPoolConfig{}
 	counts := map[string]int{}
 	for _, c := range calls {
 		byName[c.outbound] = c.yaml
 		counts[c.outbound]++
 	}
-	assert.Equal(t, map[string]int{"with-hook": 2, "without-hook": 2}, counts)
+	assert.Equal(t, map[string]int{"with-hook": 2, "without-hook": 2, "also-without-hook": 2}, counts)
 	require.Contains(t, byName, "with-hook", "the factory receives Kit.OutboundKey()")
 	require.NotNil(t, byName["with-hook"])
 	assert.Equal(t, 2, byName["with-hook"].MinConnections, "and the outbound's own YAML block")
 	assert.Nil(t, byName["without-hook"], "nil when the outbound has no block")
 
-	a, b := outboundOf(t, cfg, "with-hook"), outboundOf(t, cfg, "without-hook")
+	a, b, c := outboundOf(t, cfg, "with-hook"), outboundOf(t, cfg, "without-hook"), outboundOf(t, cfg, "also-without-hook")
 	tr := a.transport
 	require.NoError(t, tr.Start())
 	require.NoError(t, a.Start())
 	require.NoError(t, b.Start())
+	require.NoError(t, c.Start())
 	defer func() {
 		assert.NoError(t, a.Stop())
 		assert.NoError(t, b.Stop())
+		assert.NoError(t, c.Stop())
 		assert.NoError(t, tr.Stop())
 	}()
 
@@ -491,6 +494,18 @@ func TestOutboundLiveProviderFactory(t *testing.T) {
 	}
 	assert.Equal(t, 22, maxByAddr["127.0.0.1:4040"], "the outbound hook replaces the global one")
 	assert.Equal(t, 11, maxByAddr["127.0.0.1:4041"], "a nil result keeps the global hook")
+
+	// Only the outbound the factory returned a provider for is isolated:
+	// installing the factory must not split outbounds that share a destination
+	// and have no provider of their own.
+	peersByAddr := map[string]int{}
+	for _, p := range tr.peers {
+		peersByAddr[p.addr]++
+	}
+	assert.Equal(t, map[string]int{
+		"127.0.0.1:4040": 1,
+		"127.0.0.1:4041": 1,
+	}, peersByAddr, "outbounds without their own provider should share a peer")
 }
 
 func TestTransportSpecAcceptsDialOptions(t *testing.T) {
