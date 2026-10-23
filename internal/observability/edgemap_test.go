@@ -30,14 +30,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEdgeMapZeroValue(t *testing.T) {
-	var m edgeMap
-	assert.Nil(t, m.load([]byte("a")), "load on an empty map")
-	assert.Nil(t, m.get([]byte("a")), "get on an empty map")
-	assert.Equal(t, 0, m.len())
+// lookup inspects existing edges in tests without creating or promoting them.
+func (m *edgeMap) lookup(key []byte) *edge {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.dirty[string(key)]
 }
 
-func TestEdgeMapLoadOrCreate(t *testing.T) {
+func TestEdgeMapGetOrCreate(t *testing.T) {
 	var m edgeMap
 	creates := 0
 	create := func() *edge {
@@ -45,48 +45,81 @@ func TestEdgeMapLoadOrCreate(t *testing.T) {
 		return &edge{}
 	}
 
-	first := m.loadOrCreate([]byte("a"), create)
+	first := m.getOrCreate([]byte("a"), create)
 	require.NotNil(t, first)
 	assert.Equal(t, 1, creates)
 
-	// A new edge is visible to get right away, but not to the lock-free load
-	// until the dirty map has been promoted.
-	assert.Same(t, first, m.get([]byte("a")))
-	assert.Nil(t, m.load([]byte("a")), "not promoted yet")
+	assert.Same(t, first, m.lookup([]byte("a")))
+	assert.Nil(t, m.loadSnapshot([]byte("a")), "not promoted yet")
 
 	// Looking it up again hits the dirty map, which counts as a miss. With one
 	// edge, one miss is enough to promote.
-	assert.Same(t, first, m.loadOrCreate([]byte("a"), create))
+	assert.Same(t, first, m.getOrCreate([]byte("a"), create))
 	assert.Equal(t, 1, creates, "create must run once per key")
-	assert.Same(t, first, m.load([]byte("a")), "promoted")
+	assert.Same(t, first, m.loadSnapshot([]byte("a")), "promoted")
 
 	// A second edge is not in the snapshot until enough misses accumulate.
-	second := m.loadOrCreate([]byte("b"), create)
+	second := m.getOrCreate([]byte("b"), create)
 	require.NotSame(t, first, second)
 	assert.Equal(t, 2, creates)
-	assert.Equal(t, 2, m.len())
-	assert.Nil(t, m.load([]byte("b")))
-	assert.Same(t, second, m.loadOrCreate([]byte("b"), create)) // miss 1 of 2
-	assert.Nil(t, m.load([]byte("b")))
-	assert.Same(t, second, m.loadOrCreate([]byte("b"), create)) // miss 2 of 2
-	assert.Same(t, second, m.load([]byte("b")), "promoted")
-	assert.Same(t, first, m.load([]byte("a")), "old edges stay in the new snapshot")
+	assert.Len(t, m.dirty, 2)
+	assert.Nil(t, m.loadSnapshot([]byte("b")))
+	assert.Same(t, second, m.getOrCreate([]byte("b"), create)) // miss 1 of 2
+
+	// Snapshot hits must not trigger an early copy of the map.
+	for i := 0; i < 10; i++ {
+		assert.Same(t, first, m.getOrCreate([]byte("a"), create))
+	}
+	assert.Equal(t, 1, m.misses)
+	assert.Nil(t, m.loadSnapshot([]byte("b")))
+	assert.Same(t, second, m.getOrCreate([]byte("b"), create)) // miss 2 of 2
+	assert.Same(t, second, m.loadSnapshot([]byte("b")), "promoted")
+	assert.Same(t, first, m.loadSnapshot([]byte("a")), "old edges stay in the new snapshot")
+	assert.Equal(t, 2, creates)
 }
 
 func TestEdgeMapSnapshotIsImmutable(t *testing.T) {
 	var m edgeMap
-	a := m.loadOrCreate([]byte("a"), func() *edge { return &edge{} })
-	m.loadOrCreate([]byte("a"), nil) // promote
+	a := m.getOrCreate([]byte("a"), func() *edge { return &edge{} })
+	m.getOrCreate([]byte("a"), nil) // promote
 	old := *m.read.Load()
 	require.Len(t, old, 1)
 
-	m.loadOrCreate([]byte("b"), func() *edge { return &edge{} })
-	m.loadOrCreate([]byte("b"), nil)
-	m.loadOrCreate([]byte("b"), nil) // promote again
+	m.getOrCreate([]byte("b"), func() *edge { return &edge{} })
+	m.getOrCreate([]byte("b"), nil)
+	m.getOrCreate([]byte("b"), nil) // promote again
 
 	assert.Len(t, old, 1, "a published snapshot must never change")
 	assert.Same(t, a, old["a"])
 	assert.Len(t, *m.read.Load(), 2)
+}
+
+func TestEdgeMapDelayedMiss(t *testing.T) {
+	var m edgeMap
+	a := m.getOrCreate([]byte("a"), func() *edge { return &edge{} })
+	require.Nil(t, m.loadSnapshot([]byte("a")))
+	m.getOrCreate([]byte("a"), nil) // Another caller promotes before we lock.
+	m.getOrCreate([]byte("b"), func() *edge { return &edge{} })
+	m.getOrCreate([]byte("b"), nil) // miss 1 of 2
+
+	// Resume the original lookup on the slow path after the snapshot changed.
+	assert.Same(t, a, m.getOrCreateSlow([]byte("a"), nil))
+	assert.Equal(t, 1, m.misses, "a delayed snapshot hit must not count as a miss")
+	assert.Nil(t, m.loadSnapshot([]byte("b")), "must not promote early")
+}
+
+func TestEdgeMapCopiesKey(t *testing.T) {
+	var m edgeMap
+	key := []byte("a")
+	a := m.getOrCreate(key, func() *edge { return &edge{} })
+	key[0] = 'b'
+	b := m.getOrCreate(key, func() *edge { return &edge{} })
+	require.NotSame(t, a, b)
+
+	for i := 0; i < 3; i++ {
+		assert.Same(t, a, m.getOrCreate([]byte("a"), nil))
+		assert.Same(t, b, m.getOrCreate([]byte("b"), nil))
+	}
 }
 
 func TestEdgeMapConcurrent(t *testing.T) {
@@ -110,13 +143,10 @@ func TestEdgeMapConcurrent(t *testing.T) {
 				for i := 0; i < keys; i++ {
 					k := (i + g) % keys
 					key := []byte(fmt.Sprintf("key-%d", k))
-					e := m.load(key)
-					if e == nil {
-						e = m.loadOrCreate(key, func() *edge {
-							creates.Add(1)
-							return &edge{}
-						})
-					}
+					e := m.getOrCreate(key, func() *edge {
+						creates.Add(1)
+						return &edge{}
+					})
 					if !seen[k].CompareAndSwap(nil, e) {
 						assert.Same(t, seen[k].Load(), e, "every caller must see the same edge for %d", k)
 					}
@@ -127,40 +157,40 @@ func TestEdgeMapConcurrent(t *testing.T) {
 	wg.Wait()
 
 	assert.EqualValues(t, keys, creates.Load(), "each key is created exactly once")
-	assert.Equal(t, keys, m.len())
+	assert.Len(t, m.dirty, keys)
 	for k := 0; k < keys; k++ {
-		assert.Same(t, seen[k].Load(), m.get([]byte(fmt.Sprintf("key-%d", k))))
+		assert.Same(t, seen[k].Load(), m.getOrCreate([]byte(fmt.Sprintf("key-%d", k)), nil))
 	}
 }
 
-func TestEdgeMapLoadDoesNotAllocate(t *testing.T) {
+func TestEdgeMapGetOrCreateDoesNotAllocate(t *testing.T) {
 	var m edgeMap
 	key := []byte("some-edge-key\x00with\x00several\x00parts")
-	m.loadOrCreate(key, func() *edge { return &edge{} })
-	m.loadOrCreate(key, nil) // promote
-	require.NotNil(t, m.load(key))
+	m.getOrCreate(key, func() *edge { return &edge{} })
+	m.getOrCreate(key, nil) // promote
+	require.NotNil(t, m.loadSnapshot(key))
 
 	allocs := testing.AllocsPerRun(100, func() {
-		if m.load(key) == nil {
+		if m.getOrCreate(key, nil) == nil {
 			t.Fatal("edge went missing")
 		}
 	})
 	assert.Zero(t, allocs, "the hit path must not allocate")
 }
 
-// BenchmarkEdgeMapLoad measures the cost of finding a hot edge from many
+// BenchmarkEdgeMapGetOrCreate measures the cost of finding a hot edge from many
 // cores, which is what every call does.
-func BenchmarkEdgeMapLoad(b *testing.B) {
+func BenchmarkEdgeMapGetOrCreate(b *testing.B) {
 	var m edgeMap
 	key := []byte("caller\x00service\x00tchannel\x00thrift\x00Svc::method\x00rk\x00rd\x00inbound\x00unary")
 	e := &edge{}
-	m.loadOrCreate(key, func() *edge { return e })
-	m.loadOrCreate(key, nil) // promote
+	m.getOrCreate(key, func() *edge { return e })
+	m.getOrCreate(key, nil) // promote
 
 	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if m.load(key) != e {
+			if m.getOrCreate(key, nil) != e {
 				b.Fatal("edge went missing")
 			}
 		}

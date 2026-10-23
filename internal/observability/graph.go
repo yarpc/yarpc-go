@@ -238,19 +238,7 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 }
 
 func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
-	if e := g.edges.load(key); e != nil {
-		return e
-	}
-	return g.createEdge(key, req, direction, rpcType)
-}
-
-func (g *graph) getEdge(key []byte) *edge {
-	return g.edges.get(key)
-}
-
-func (g *graph) createEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
-	// Since we'll rarely hit this code path, the overhead of the lock is acceptable.
-	return g.edges.loadOrCreate(key, func() *edge {
+	return g.edges.getOrCreate(key, func() *edge {
 		return newEdge(g.logger, g.meter, g.ignoreMetricsTag, req, direction, rpcType)
 	})
 }
