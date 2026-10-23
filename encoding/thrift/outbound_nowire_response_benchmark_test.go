@@ -57,7 +57,7 @@ func BenchmarkNoWireResponseDecode(b *testing.B) {
 						values[i] = strings.Repeat("x", 96)
 					}
 					payload := encodeStringList(b, values)
-					client := newResponseBenchmarkClient(b, transportName, payload)
+					client := newNoWireBenchmarkClient(b, transportName, responseBenchmarkHandler{payload: payload})
 					b.ReportAllocs()
 					b.SetBytes(int64(len(payload)))
 					b.ResetTimer()
@@ -95,7 +95,10 @@ func (h responseBenchmarkHandler) Handle(_ context.Context, req *transport.Reque
 	return err
 }
 
-func newResponseBenchmarkClient(b *testing.B, transportName string, payload []byte) NoWireClient {
+// newNoWireBenchmarkClient starts a server with handler registered as the unary
+// handler for MyService::someMethod and returns a NoWireClient connected to it
+// over the named transport.
+func newNoWireBenchmarkClient(b *testing.B, transportName string, handler transport.UnaryHandler, opts ...ClientOption) NoWireClient {
 	b.Helper()
 	const (
 		caller = "caller"
@@ -107,7 +110,7 @@ func newResponseBenchmarkClient(b *testing.B, transportName string, payload []by
 		starters []transport.Lifecycle
 		httpIn   *yhttp.Inbound
 	)
-	if transportName == "http2" {
+	if transportName == "http1" || transportName == "http2" {
 		serverTransport := yhttp.NewTransport()
 		httpIn = serverTransport.NewInbound("127.0.0.1:0")
 		inbound = httpIn
@@ -129,13 +132,17 @@ func newResponseBenchmarkClient(b *testing.B, transportName string, payload []by
 		Name:        procedure.ToName("MyService", "someMethod"),
 		Service:     callee,
 		Encoding:    Encoding,
-		HandlerSpec: transport.NewUnaryHandlerSpec(responseBenchmarkHandler{payload: payload}),
+		HandlerSpec: transport.NewUnaryHandlerSpec(handler),
 	}})
 	require.NoError(b, dispatcher.Start())
 	b.Cleanup(func() { require.NoError(b, dispatcher.Stop()) })
 	if httpIn != nil {
 		clientTransport := yhttp.NewTransport()
-		out := clientTransport.NewSingleOutbound("http://"+httpIn.Addr().String(), yhttp.UseHTTP2())
+		var httpOpts []yhttp.OutboundOption
+		if transportName == "http2" {
+			httpOpts = append(httpOpts, yhttp.UseHTTP2())
+		}
+		out := clientTransport.NewSingleOutbound("http://"+httpIn.Addr().String(), httpOpts...)
 		outbound = out
 		starters = append(starters, clientTransport, out)
 	}
@@ -146,5 +153,5 @@ func newResponseBenchmarkClient(b *testing.B, transportName string, payload []by
 	return NewNoWire(Config{
 		Service:      "MyService",
 		ClientConfig: clientconfig.MultiOutbound(caller, callee, transport.Outbounds{Unary: outbound}),
-	})
+	}, opts...)
 }
