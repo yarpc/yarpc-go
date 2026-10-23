@@ -114,6 +114,20 @@ func (p *httpPeer) h2Sender() (sender, error) {
 
 	pool := p.loadH2Pool()
 	if pool == nil {
+		// Publish the first pool under the same lock that ReleasePeer and
+		// Stop use to snapshot it. Once Stop freezes pool creation, a cold
+		// peer cannot create a pool that neither shutdown path will join.
+		p.transport.lock.Lock()
+		if p.transport.h2PoolsStopping {
+			p.transport.lock.Unlock()
+			return nil, context.Canceled
+		}
+		select {
+		case <-p.released:
+			p.transport.lock.Unlock()
+			return nil, context.Canceled
+		default:
+		}
 		pool = connpool.NewPool(
 			context.Background(),
 			func() connpool.Config { return p.transport.h2PoolConfig },
@@ -135,6 +149,16 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		// with count 0.
 		_ = pool.Start(0, false)
 		p.h2Pool.Store(pool)
+		// Dial only after releasing the transport lock, so a slow destination
+		// does not block unrelated peer retention, release or shutdown.
+		p.transport.lock.Unlock()
+		// Direct Release calls can still race pool publication without going
+		// through the transport's peer map.
+		select {
+		case <-p.released:
+			pool.Stop()
+		default:
+		}
 	}
 
 	// Re-check: another goroutine may have dialed the first connection while
