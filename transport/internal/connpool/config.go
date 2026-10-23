@@ -210,6 +210,11 @@ func (l *ConfigResolver) Get() Config {
 	// A change is seen on the very next call.
 	last := l.last.Load()
 	if last.overlay.equal(overlay) {
+		// An overlay that matches the last valid one ends any invalid streak,
+		// so the next invalid overlay warns again.
+		if l.invalidWarned.Load() {
+			l.invalidWarned.Store(false)
+		}
 		return last.cfg
 	}
 	next := l.startup.Apply(&overlay)
@@ -222,7 +227,15 @@ func (l *ConfigResolver) Get() Config {
 		return last.cfg
 	}
 	l.invalidWarned.Store(false)
-	l.last.Store(&resolvedConfig{overlay: overlay, cfg: next})
+	// Keep a copy of the flag's value: a provider may hand out the same pointer
+	// every call and change what it points at, which would otherwise make the
+	// next comparison read the new value on both sides.
+	cached := overlay
+	if overlay.DynamicScalingEnabled != nil {
+		v := *overlay.DynamicScalingEnabled
+		cached.DynamicScalingEnabled = &v
+	}
+	l.last.Store(&resolvedConfig{overlay: cached, cfg: next})
 	return next
 }
 

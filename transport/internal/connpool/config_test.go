@@ -256,6 +256,39 @@ func TestConfigResolverUnchangedOverlay(t *testing.T) {
 		r := NewConfigResolver(startup, func() Override { return Override{} }, nil, "t", "peer")
 		assert.Equal(t, startup, r.Get())
 	})
+
+	t.Run("a provider that rewrites the same flag in place is seen", func(t *testing.T) {
+		// The provider hands out the same *bool every call and changes what it
+		// points at. The cache must compare against the value it saw, not the
+		// pointer, or the change reads as "unchanged".
+		enabled := true
+		r := NewConfigResolver(startup, func() Override {
+			return Override{DynamicScalingEnabled: &enabled}
+		}, nil, "t", "peer")
+		require.True(t, r.Get().DynamicScalingEnabled)
+		enabled = false
+		assert.False(t, r.Get().DynamicScalingEnabled, "turning scaling off must take effect")
+		enabled = true
+		assert.True(t, r.Get().DynamicScalingEnabled)
+	})
+
+	t.Run("recovering to the same valid overlay re-arms the warning", func(t *testing.T) {
+		core, logs := observer.New(zap.WarnLevel)
+		valid, invalid := Override{MaxConnections: 8}, Override{MinConnections: 20}
+		current := valid
+		r := NewConfigResolver(startup, func() Override { return current }, zap.New(core), "t", "peer")
+		require.Equal(t, 8, r.Get().MaxConnections)
+
+		// valid -> invalid -> the very same valid overlay -> invalid again.
+		current = invalid
+		r.Get()
+		require.Equal(t, 1, logs.Len())
+		current = valid
+		assert.Equal(t, 8, r.Get().MaxConnections)
+		current = invalid
+		r.Get()
+		assert.Equal(t, 2, logs.Len(), "a second invalid streak warns again")
+	})
 }
 
 func TestOverrideEqual(t *testing.T) {
