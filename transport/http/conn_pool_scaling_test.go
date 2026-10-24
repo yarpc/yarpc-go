@@ -472,9 +472,9 @@ func TestReleasedPeerPoolIsTornDownByTransportStop(t *testing.T) {
 	assert.Empty(t, pool.LoadConns())
 }
 
-// TestPoolCreatedAfterReleaseIsStopped covers a request racing a release: the
-// pool it lazily creates must not outlive the released peer.
-func TestPoolCreatedAfterReleaseIsStopped(t *testing.T) {
+// A request reaching an already released peer must not create a pool that
+// Release has missed and Transport.Stop cannot join.
+func TestH2SenderDoesNotCreatePoolAfterRelease(t *testing.T) {
 	hs := newHoldServer(t)
 	hs.releaseAll()
 	tr := newScalingTransport(t)
@@ -482,13 +482,9 @@ func TestPoolCreatedAfterReleaseIsStopped(t *testing.T) {
 
 	p.Release() // nothing to stop yet: no request has created the pool
 
-	// The pool is created and stopped straight away. The dial may or may not
-	// beat that stop, so the error is not asserted -- only that the pool is
-	// stopped and finishes tearing down, which Wait would hang on otherwise.
-	_, _ = p.h2Sender()
-	pool := p.loadH2Pool()
-	require.NotNil(t, pool)
-	pool.Wait()
+	_, err := p.h2Sender()
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Nil(t, p.loadH2Pool())
 }
 
 // TestMinConnectionsSurviveHTTPIdleConnTimeout: the pool, not the HTTP/2
