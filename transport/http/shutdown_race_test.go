@@ -24,8 +24,14 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestConcurrentReleasePeerAndStop releases isolated peers while the transport
@@ -75,4 +81,82 @@ func TestConcurrentReleasePeerAndStop(t *testing.T) {
 		close(start)
 		wg.Wait()
 	}
+}
+
+// Stop's pool snapshot must not miss a cold peer's first pool. Block an
+// existing connection's close so a request can reach the cold peer after the
+// snapshot, while Stop is still waiting for the existing pool.
+func TestH2SenderDoesNotCreatePoolDuringTransportStop(t *testing.T) {
+	server := newH2TestServer(nil)
+	defer server.Close()
+	closeStarted, allowClose := make(chan struct{}), make(chan struct{})
+	var dials atomic.Int32
+	tr := NewTransport(DialContext(func(ctx context.Context, network, addr string) (net.Conn, error) {
+		conn, err := (&net.Dialer{}).DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+		if dials.Add(1) == 1 {
+			return &shutdownBlockingConn{Conn: conn, closeStarted: closeStarted, allowClose: allowClose}, nil
+		}
+		return conn, nil
+	}))
+	require.NoError(t, tr.Start())
+	id, sub := testIdentifier{strings.TrimPrefix(server.URL, "http://")}, idSubscriber{1}
+	aDialer, bDialer := tr.NewDialer().WithConnectionIsolation(), tr.NewDialer().WithConnectionIsolation()
+	a, err := aDialer.RetainPeer(id, sub)
+	require.NoError(t, err)
+	b, err := bDialer.RetainPeer(id, sub)
+	require.NoError(t, err)
+	aPeer, bPeer := a.(*httpPeer), b.(*httpPeer)
+	stopResult := make(chan error, 1)
+	stopStarted := false
+	t.Cleanup(func() {
+		close(allowClose)
+		assert.NoError(t, aDialer.ReleasePeer(id, sub))
+		assert.NoError(t, bDialer.ReleasePeer(id, sub))
+		if stopStarted {
+			select {
+			case err := <-stopResult:
+				assert.NoError(t, err)
+			case <-time.After(5 * time.Second):
+				t.Error("transport shutdown did not finish")
+			}
+		} else {
+			assert.NoError(t, tr.Stop())
+		}
+		for _, p := range []*httpPeer{aPeer, bPeer} {
+			if pool := p.loadH2Pool(); pool != nil {
+				pool.Wait()
+			}
+		}
+	})
+	_, err = aPeer.h2Sender()
+	require.NoError(t, err)
+	require.Nil(t, bPeer.loadH2Pool())
+	stopStarted = true
+	go func() { stopResult <- tr.Stop() }()
+	select {
+	case <-closeStarted:
+		// Stop has collected the pool pointers and is closing the first pool.
+	case <-time.After(5 * time.Second):
+		t.Fatal("shutdown did not start closing the first connection")
+	}
+	_, err = bPeer.h2Sender()
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Nil(t, bPeer.loadH2Pool(), "shutdown must prevent a pool from escaping its snapshot")
+	assert.EqualValues(t, 1, dials.Load(), "a cold peer must not dial after shutdown starts")
+}
+
+type shutdownBlockingConn struct {
+	net.Conn
+	closeStarted chan<- struct{}
+	allowClose   <-chan struct{}
+	once         sync.Once
+}
+
+func (c *shutdownBlockingConn) Close() error {
+	c.once.Do(func() { close(c.closeStarted) })
+	<-c.allowClose
+	return c.Conn.Close()
 }
