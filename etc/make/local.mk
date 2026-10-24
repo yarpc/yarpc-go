@@ -182,6 +182,10 @@ codecov: cover ## run code coverage and upload to codecov.io
 examples: ## run all examples tests
 	RUN=$(RUN) V=$(V) $(MAKE) -j $(EXAMPLES_JOBS) -C internal/examples
 
+.PHONY: benchcompare
+benchcompare: $(BENCHSTAT) ## compare benchmarks for changed packages against the PR base branch
+	PATH=$(BIN):$$PATH ./etc/bin/benchcompare.sh
+
 .PHONY: __eval_packages
 __eval_packages:
 ifndef PACKAGES

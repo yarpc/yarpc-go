@@ -224,12 +224,18 @@ func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 //
 // The URLTemplate option has no effect in this form.
 func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
+	return t.newSingleOutbound(t.outboundPeerTransport(), uri, opts...)
+}
+
+// newSingleOutbound builds NewSingleOutbound's outbound, retaining its one
+// peer through peerTransport: the Transport itself, or a Dialer decorating it.
+func (t *Transport) newSingleOutbound(peerTransport peer.Transport, uri string, opts ...OutboundOption) *Outbound {
 	parsedURL, err := url.Parse(uri)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
+	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), peerTransport)
 	opts = append(opts, URLTemplate(uri))
 	o := t.NewOutbound(chooser, opts...)
 	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
@@ -440,6 +446,15 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	return hpPeer, onFinish, nil
 }
 
+// bodyRewinder is an optional interface for the body of a transport.Request. A
+// body that implements it supplies net/http.Request.GetBody. Then net/http can
+// send the request again after an HTTP/2 GOAWAY or a retried connection error.
+//
+// GetBody must return a body that reads the whole request from the start.
+type bodyRewinder interface {
+	GetBody() (io.ReadCloser, error)
+}
+
 func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
 
@@ -456,6 +471,11 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	hreq, err := http.NewRequest("POST", newURL.String(), treq.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	// A body that can rewind itself supplies GetBody.
+	if rewinder, ok := treq.Body.(bodyRewinder); ok {
+		hreq.GetBody = rewinder.GetBody
 	}
 
 	// net/http only infers Content-Length for *bytes.Buffer, *bytes.Reader and
@@ -561,6 +581,19 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	return req
 }
 
+// readAndClose reads body to EOF and closes it. The body is closed even when
+// the read fails: a response body must always be closed, and a read error (for
+// example a connection reset mid-body) is exactly when callers tend to skip it,
+// which leaks the connection. If both the read and the close fail, both errors
+// are returned, joined.
+func readAndClose(body io.ReadCloser) ([]byte, error) {
+	b, readErr := ioutil.ReadAll(body)
+	if err := errors.Join(readErr, body.Close()); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
 func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response, bothResponseError bool) (*transport.Response, error) {
 	var contents string
 	var details []byte
@@ -571,25 +604,20 @@ func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response
 			// use the contents in the body, in case the contents were not ASCII and
 			// the contents were not preserved in the header.
 			var err error
-			details, err = ioutil.ReadAll(response.Body)
+			details, err = readAndClose(response.Body)
+			// nil out body so that it isn't read later, even on error: it has
+			// been consumed and closed either way
+			tres.Body = nil
 			if err != nil {
 				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 			}
-			if err := response.Body.Close(); err != nil {
-				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
-			}
-			// nil out body so that it isn't read later
-			tres.Body = nil
 		}
 	} else {
-		contentsBytes, err := ioutil.ReadAll(response.Body)
+		contentsBytes, err := readAndClose(response.Body)
 		if err != nil {
 			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 		contents = string(contentsBytes)
-		if err := response.Body.Close(); err != nil {
-			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
-		}
 	}
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(response.StatusCode)
@@ -843,6 +871,12 @@ type bodyHelper struct {
 // See https://cs.opensource.google/go/go/+/refs/tags/go1.26.5:src/net/http/request.go;l=884.
 func needBodyHelper(treq *transport.Request) bool {
 	if treq == nil || treq.Body == nil {
+		return false
+	}
+
+	// A body that rewinds itself already has a GetBody. A TeeReader would copy
+	// the whole payload for no reason.
+	if _, ok := treq.Body.(bodyRewinder); ok {
 		return false
 	}
 

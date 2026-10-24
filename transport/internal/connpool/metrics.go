@@ -79,6 +79,12 @@ type Metrics struct {
 	// idleReactivationTotal counts the number of times an idle connection
 	// was reactivated rather than opening a new one.
 	idleReactivationTotal *metrics.Counter
+	// dialsTotal counts every dial attempt that succeeded, aggregated
+	// across all peers.
+	dialsTotal *metrics.Counter
+	// dialFailuresTotal counts every dial attempt that failed, aggregated
+	// across all peers.
+	dialFailuresTotal *metrics.Counter
 }
 
 // metricsKey identifies one set of registered metrics. go.uber.org/net/metrics
@@ -254,7 +260,7 @@ func newMetrics(p MetricsParams) *Metrics {
 }
 
 // metricsCount is how many handles registerMetrics registers.
-const metricsCount = 6
+const metricsCount = 8
 
 // registerMetrics registers the metric handles on p.Meter, calling warn for
 // each one that fails to register and leaving that handle nil.
@@ -323,6 +329,24 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 		warn("failed to create idle reactivation counter", err)
 	}
 
+	m.dialsTotal, err = p.Meter.Counter(metrics.Spec{
+		Name:      prefix + "_dials_total",
+		Help:      "Total number of connection dial attempts that succeeded, aggregated across all peers.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		warn("failed to create dials counter", err)
+	}
+
+	m.dialFailuresTotal, err = p.Meter.Counter(metrics.Spec{
+		Name:      prefix + "_dial_failures_total",
+		Help:      "Total number of connection dial attempts that failed, aggregated across all peers.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		warn("failed to create dial failures counter", err)
+	}
+
 	return m
 }
 
@@ -366,6 +390,20 @@ func (m *Metrics) incIdleReactivation() {
 		return
 	}
 	m.idleReactivationTotal.Inc()
+}
+
+func (m *Metrics) incDial() {
+	if m == nil || m.dialsTotal == nil {
+		return
+	}
+	m.dialsTotal.Inc()
+}
+
+func (m *Metrics) incDialFailure() {
+	if m == nil || m.dialFailuresTotal == nil {
+		return
+	}
+	m.dialFailuresTotal.Inc()
 }
 
 // Reporter applies a single pool's connection-state counts to the shared,
@@ -432,4 +470,20 @@ func (r *Reporter) IncIdleReactivation() {
 		return
 	}
 	r.shared.incIdleReactivation()
+}
+
+// IncDial records that a pool's dial attempt succeeded.
+func (r *Reporter) IncDial() {
+	if r == nil {
+		return
+	}
+	r.shared.incDial()
+}
+
+// IncDialFailure records that a pool's dial attempt failed.
+func (r *Reporter) IncDialFailure() {
+	if r == nil {
+		return
+	}
+	r.shared.incDialFailure()
 }

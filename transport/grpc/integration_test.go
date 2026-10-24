@@ -1625,7 +1625,24 @@ func TestConnectionPoolScaleUpOnLoad(t *testing.T) {
 		},
 	}
 	te.do(t, func(t *testing.T, e *testEnv) {
-		require.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// tryScaleUp decides on the request path but dials from a background
+		// goroutine that re-reads the least-loaded connection's stream count.
+		// A lone unary request can finish before that goroutine runs (for
+		// example when the host is CPU starved), dropping the count back below
+		// the threshold and legitimately skipping the dial. Keep one stream
+		// held on the connection so the load is still there when it re-checks.
+		apiPeer, onFinish, err := e.Outbound.peerChooser.Choose(ctx, &transport.Request{})
+		require.NoError(t, err)
+		defer onFinish(nil)
+		held := apiPeer.(*grpcPeer).pickConn()
+		require.NotNil(t, held)
+		held.IncStreamCount()
+		defer held.DecStreamCount()
+
+		require.NoError(t, e.SetValueYARPC(ctx, "foo", "bar"))
 
 		assert.Eventually(t, func() bool {
 			_, counters := poolMetricSnapshot(t, root)
