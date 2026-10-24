@@ -68,6 +68,16 @@ type transportOptions struct {
 	serviceName                string
 	outboundTLSConfigProvider  yarpctls.OutboundTLSConfigProvider
 	isolateOutboundConnections bool
+
+	// connPool is the transport-wide HTTP/2 connection pool config every
+	// peer starts from. See the pool options in conn_pool_config.go.
+	connPool connpool.Config
+	// poolConfigProvider is the global live pool provider. See
+	// WithGlobalLiveConnectionPoolProvider.
+	poolConfigProvider LiveConnectionPoolProvider
+	// outboundPoolFactory builds per-outbound live providers for YAML
+	// outbounds. See WithOutboundLiveConnectionPoolProvider.
+	outboundPoolFactory func(outbound string, yaml *ClientConnectionPoolConfig) LiveConnectionPoolProvider
 }
 
 var defaultTransportOptions = transportOptions{
@@ -79,6 +89,7 @@ var defaultTransportOptions = transportOptions{
 	innocenceWindow:     defaultInnocenceWindow,
 	idleConnTimeout:     defaultIdleConnTimeout,
 	jitter:              rand.Int63n,
+	connPool:            defaultH2PoolConfig,
 }
 
 func newTransportOptions() transportOptions {
@@ -343,7 +354,9 @@ func (o *transportOptions) newTransport() *Transport {
 		isolateOutboundConnections: o.isolateOutboundConnections,
 		h1Transport:                buildH1Transport(o),
 		h2Transport:                buildH2Transport(o),
-		h2PoolConfig:               defaultH2PoolConfig,
+		h2PoolConfig:               o.connPool,
+		h2PoolProvider:             o.poolConfigProvider,
+		h2OutboundPoolFactory:      o.outboundPoolFactory,
 		h2PoolMetrics: connpool.NewMetrics(connpool.MetricsParams{
 			Meter:       o.meter,
 			Logger:      logger,
@@ -500,9 +513,17 @@ type Transport struct {
 	// so that duplicate peers pointed at the same address end up with
 	// independent HTTP/2 connections rather than sharing one.
 	h2Transport *http2.Transport
-	// h2PoolConfig is the connpool.Config every peer's HTTP/2 pool is built
-	// with. See defaultH2PoolConfig's doc comment.
+	// h2PoolConfig is the transport-wide connpool.Config every peer's HTTP/2
+	// pool starts from, before a Dialer's OutboundConnectionPool override
+	// and any live provider are applied (see resolveH2PoolConfig and
+	// httpPeer.poolConfig).
 	h2PoolConfig connpool.Config
+	// h2PoolProvider is the global live pool provider, used by every peer
+	// whose Dialer has no provider of its own.
+	h2PoolProvider LiveConnectionPoolProvider
+	// h2OutboundPoolFactory builds the per-outbound live provider for
+	// YAML-built outbounds (see buildOutbound).
+	h2OutboundPoolFactory func(outbound string, yaml *ClientConnectionPoolConfig) LiveConnectionPoolProvider
 	// releasedPoolWg tracks the HTTP/2 pools of peers released via
 	// ReleasePeer. Release only stops a pool (asynchronously), so Stop joins
 	// these to make sure no scaling monitor or connection watcher outlives
@@ -603,31 +624,62 @@ func (a *Transport) IsRunning() bool {
 
 // RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.Chooser)
 func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
-	return a.retainPeer(pid, nil, sub)
+	return a.retainPeer(pid, emptyDialOpts, nil, sub)
 }
 
-func (a *Transport) retainPeer(pid peer.Identifier, connectionScope *connectionScope, sub peer.Subscriber) (peer.Peer, error) {
+func (a *Transport) retainPeer(pid peer.Identifier, options *dialOptions, connectionScope *connectionScope, sub peer.Subscriber) (peer.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	p := a.getOrCreatePeer(pid, connectionScope)
+	p, err := a.getOrCreatePeer(pid, options, connectionScope)
+	if err != nil {
+		return nil, err
+	}
 	p.Subscribe(sub)
 	return p, nil
 }
 
+// resolveH2PoolConfig returns the startup pool config for a peer retained
+// through a Dialer with the given options: the transport-wide config, overlaid
+// field by field by the Dialer's OutboundConnectionPool override. It fails if
+// the result is not a usable pool config, so that a bad option surfaces when
+// the peer is retained rather than as a misbehaving scaler later.
+func (a *Transport) resolveH2PoolConfig(options *dialOptions) (connpool.Config, error) {
+	cfg := options.resolvedPoolConfig(a.h2PoolConfig)
+	if err := cfg.Validate(); err != nil {
+		return connpool.Config{}, err
+	}
+	return cfg, nil
+}
+
+// h2PoolProviderFor returns the live pool provider for a peer retained
+// through a Dialer with the given options: the Dialer's own (per-outbound)
+// provider when set, else the transport's global one. Nil means no live
+// config.
+func (a *Transport) h2PoolProviderFor(options *dialOptions) LiveConnectionPoolProvider {
+	if options.poolConfigProvider != nil {
+		return options.poolConfigProvider
+	}
+	return a.h2PoolProvider
+}
+
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid peer.Identifier, connectionScope *connectionScope) *httpPeer {
+func (a *Transport) getOrCreatePeer(pid peer.Identifier, options *dialOptions, connectionScope *connectionScope) (*httpPeer, error) {
 	key := peerKey{identifier: pid.Identifier(), connectionScope: connectionScope}
 	if p, ok := a.peers[key]; ok {
-		return p
+		return p, nil
+	}
+	startupPool, err := a.resolveH2PoolConfig(options)
+	if err != nil {
+		return nil, err
 	}
 	realAddr := peeraddr.Address(pid.Identifier())
-	p := newPeer(realAddr, a)
+	p := newPeerWithPool(realAddr, a, startupPool, a.h2PoolProviderFor(options))
 	a.peers[key] = p
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
-	return p
+	return p, nil
 }
 
 // ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it
