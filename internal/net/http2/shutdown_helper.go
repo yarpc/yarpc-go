@@ -40,6 +40,14 @@ type ShutdownHelper interface {
 	// ShutdownCallback is invoked during the server's shutdown process.
 	ShutdownCallback()
 
+	// IsShutdownReady indicates whether the first phase of the shutdown
+	// process is over on every connection, so that the server can shut down:
+	// the first GOAWAY was sent, and its PING acknowledged or timed out.
+	// Note: It MUST be invoked after [ShutdownHelper.BeginShutdown], and
+	// before [net/http.Server.Shutdown].
+	// Warning: This MAY be a blocking operation.
+	IsShutdownReady(ctx context.Context) bool
+
 	// IsShutdownComplete indicates whether the shutdown process has completed.
 	// Note: It MUST be invoked after [ShutdownHelper.BeginShutdown] has been called.
 	// Warning: This MAY be a blocking operation.
@@ -64,6 +72,11 @@ func (h *noopHelper) BeginShutdown() {}
 
 // ShutdownCallback implements the [ShutdownHelper] interface for [noopHelper].
 func (h *noopHelper) ShutdownCallback() {}
+
+// IsShutdownReady implements the [ShutdownHelper] interface for [noopHelper].
+func (h *noopHelper) IsShutdownReady(ctx context.Context) bool {
+	return true
+}
 
 // IsShutdownComplete implements the [ShutdownHelper] interface for [noopHelper].
 func (h *noopHelper) IsShutdownComplete(ctx context.Context) bool {
