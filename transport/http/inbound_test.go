@@ -21,6 +21,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -36,6 +37,7 @@ import (
 	"time"
 
 	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/hpack"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -732,7 +734,7 @@ func httpGet(t *testing.T, url string) (*http.Response, string, error) {
 // round trip, a second one carrying the last stream actually processed.
 func TestInboundH2CGracefulShutdown(t *testing.T) {
 	conns := &serverConns{}
-	inbound, h := startBlockingInbound(t, conns.record(), EnableHTTP2ShutdownHelper(true))
+	inbound, h := startBlockingInbound(t, conns.record())
 	addr := inbound.Addr().String()
 
 	c := http2test.DialRawH2C(t, addr)
@@ -794,7 +796,7 @@ func TestInboundH2CGracefulShutdown(t *testing.T) {
 // it behind.
 func TestInboundH2CStopWithWedgedHandler(t *testing.T) {
 	timeout := 200 * testtime.Millisecond
-	inbound, h := startBlockingInbound(t, ShutdownTimeout(timeout), EnableHTTP2ShutdownHelper(true))
+	inbound, h := startBlockingInbound(t, ShutdownTimeout(timeout))
 
 	c := http2test.DialRawH2C(t, inbound.Addr().String())
 	c.OpenStream(t, 1, "/", h2cRequestHeaders("block"), []byte("payload"))
@@ -829,6 +831,200 @@ func TestInboundH2CStopWithWedgedHandler(t *testing.T) {
 	frames = append(frames, c.ReadUntilClosed(t, 5*testtime.Second)...)
 	assert.False(t, http2test.ResponseOn(frames, 1).Complete,
 		"stream 1 completed although its handler never returned")
+}
+
+// TestInboundH2CShutdownWithPingAckHeldBack stops an inbound whose h2c client
+// never acknowledges the PING sent with the first GOAWAY: the second GOAWAY
+// must still arrive, but only once the PING ACK timeout has passed.
+func TestInboundH2CShutdownWithPingAckHeldBack(t *testing.T) {
+	// How long the HTTP/2 shutdown helper waits for the PING ACK.
+	const pingAckTimeout = time.Second
+
+	inbound, h := startBlockingInbound(t)
+	c := dialManualPingH2C(t, inbound.Addr().String())
+	c.openStream(t, 1, h2cRequestHeaders("block"), []byte("payload"))
+	h.awaitEntered(t)
+
+	start := time.Now()
+	stopErr := make(chan error, 1)
+	go func() { stopErr <- inbound.Stop() }()
+
+	assert.Equal(t, uint32(math.MaxInt32), c.nextGoAway(t),
+		"first GOAWAY must reserve the whole stream ID space")
+	c.nextPing(t) // held back: never acknowledged
+
+	assert.Equal(t, uint32(1), c.nextGoAway(t), "second GOAWAY must carry the last processed stream")
+	assert.GreaterOrEqual(t, time.Since(start), pingAckTimeout,
+		"second GOAWAY must wait for the PING ACK until it times out")
+
+	h.releaseAll()
+	assert.Equal(t, map[uint32]string{1: "payload"}, c.responses(t, 1), "in-flight stream 1 must complete")
+	require.NoError(t, c.conn.Close())
+
+	select {
+	case err := <-stopErr:
+		require.NoError(t, err, "Stop must succeed once connections have drained")
+	case <-time.After(5 * testtime.Second):
+		require.FailNow(t, "Stop did not return after the connection drained")
+	}
+}
+
+// TestInboundH2CShutdownServesStreamOpenedBeforePingAck stops an inbound
+// whose h2c client opens a stream after the first GOAWAY, but before it
+// acknowledges the PING sent with it: the client may have sent the stream
+// before it read the GOAWAY, so the stream must be served, and the second
+// GOAWAY must cover it.
+func TestInboundH2CShutdownServesStreamOpenedBeforePingAck(t *testing.T) {
+	inbound, h := startBlockingInbound(t)
+	c := dialManualPingH2C(t, inbound.Addr().String())
+	c.openStream(t, 1, h2cRequestHeaders("block"), []byte("payload-1"))
+	h.awaitEntered(t)
+
+	stopErr := make(chan error, 1)
+	go func() { stopErr <- inbound.Stop() }()
+
+	assert.Equal(t, uint32(math.MaxInt32), c.nextGoAway(t),
+		"first GOAWAY must reserve the whole stream ID space")
+	ping := c.nextPing(t)
+
+	c.openStream(t, 3, h2cRequestHeaders("block"), []byte("payload-3"))
+	h.awaitEntered(t)
+	c.ackPing(t, ping)
+
+	assert.Equal(t, uint32(3), c.nextGoAway(t),
+		"second GOAWAY must carry the stream opened before the PING ACK")
+
+	h.releaseAll()
+	assert.Equal(t, map[uint32]string{1: "payload-1", 3: "payload-3"}, c.responses(t, 1, 3),
+		"both streams must complete")
+	require.NoError(t, c.conn.Close())
+
+	select {
+	case err := <-stopErr:
+		require.NoError(t, err, "Stop must succeed once connections have drained")
+	case <-time.After(5 * testtime.Second):
+		require.FailNow(t, "Stop did not return after the connection drained")
+	}
+}
+
+// manualPingH2CConn is a frame-level h2c client that, unlike
+// http2test.RawH2CConn, leaves the server's PING frames for the test to
+// acknowledge, or not. It reads and writes on the test goroutine.
+type manualPingH2CConn struct {
+	addr   string
+	conn   net.Conn
+	framer *http2.Framer
+	encBuf bytes.Buffer
+	enc    *hpack.Encoder
+}
+
+func dialManualPingH2C(t *testing.T, addr string) *manualPingH2CConn {
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err, "failed to dial %v", addr)
+	t.Cleanup(func() { _ = conn.Close() })
+	require.NoError(t, conn.SetDeadline(time.Now().Add(10*testtime.Second)))
+
+	c := &manualPingH2CConn{addr: addr, conn: conn, framer: http2.NewFramer(conn, conn)}
+	c.enc = hpack.NewEncoder(&c.encBuf)
+	c.framer.ReadMetaHeaders = hpack.NewDecoder(4096, nil)
+	_, err = io.WriteString(conn, http2.ClientPreface)
+	require.NoError(t, err, "failed to write client preface")
+	require.NoError(t, c.framer.WriteSettings(), "failed to write client SETTINGS")
+	return c
+}
+
+// openStream writes a POST request on a new stream, ending it with body.
+func (c *manualPingH2CConn) openStream(t *testing.T, streamID uint32, headers map[string]string, body []byte) {
+	c.encBuf.Reset()
+	fields := []hpack.HeaderField{
+		{Name: ":method", Value: "POST"},
+		{Name: ":scheme", Value: "http"},
+		{Name: ":authority", Value: c.addr},
+		{Name: ":path", Value: "/"},
+	}
+	for k, v := range headers {
+		fields = append(fields, hpack.HeaderField{Name: k, Value: v})
+	}
+	for _, f := range fields {
+		require.NoError(t, c.enc.WriteField(f))
+	}
+	require.NoError(t, c.framer.WriteHeaders(http2.HeadersFrameParam{
+		StreamID:      streamID,
+		BlockFragment: c.encBuf.Bytes(),
+		EndHeaders:    true,
+	}), "failed to open stream %d", streamID)
+	require.NoError(t, c.framer.WriteData(streamID, true, body), "failed to write stream %d", streamID)
+}
+
+// next returns the next frame other than SETTINGS, which it acknowledges, and
+// WINDOW_UPDATE.
+func (c *manualPingH2CConn) next(t *testing.T) http2.Frame {
+	for {
+		f, err := c.framer.ReadFrame()
+		require.NoError(t, err, "failed to read a frame")
+		switch f := f.(type) {
+		case *http2.SettingsFrame:
+			if !f.IsAck() {
+				require.NoError(t, c.framer.WriteSettingsAck())
+			}
+			continue
+		case *http2.WindowUpdateFrame:
+			continue
+		}
+		return f
+	}
+}
+
+func (c *manualPingH2CConn) nextGoAway(t *testing.T) uint32 {
+	f := c.next(t)
+	goAway, ok := f.(*http2.GoAwayFrame)
+	require.True(t, ok, "want a GOAWAY frame, got %v", f)
+	assert.Equal(t, http2.ErrCodeNo, goAway.ErrCode, "graceful shutdown must use NO_ERROR")
+	return goAway.LastStreamID
+}
+
+func (c *manualPingH2CConn) nextPing(t *testing.T) [8]byte {
+	f := c.next(t)
+	ping, ok := f.(*http2.PingFrame)
+	require.True(t, ok, "want a PING frame, got %v", f)
+	require.False(t, ping.IsAck(), "want a PING frame, got a PING ACK")
+	return ping.Data
+}
+
+func (c *manualPingH2CConn) ackPing(t *testing.T, data [8]byte) {
+	require.NoError(t, c.framer.WritePing(true, data), "failed to acknowledge the PING")
+}
+
+// responses reads the responses on streamIDs, which may interleave, until
+// each ends, and returns their bodies. Each must have status 200.
+func (c *manualPingH2CConn) responses(t *testing.T, streamIDs ...uint32) map[uint32]string {
+	open := make(map[uint32]bool, len(streamIDs))
+	for _, id := range streamIDs {
+		open[id] = true
+	}
+	bodies := make(map[uint32]string, len(streamIDs))
+	for len(open) > 0 {
+		f := c.next(t)
+		id := f.Header().StreamID
+		require.True(t, open[id], "unexpected frame %v", f)
+		switch f := f.(type) {
+		case *http2.MetaHeadersFrame:
+			if status := f.PseudoValue("status"); status != "" {
+				assert.Equal(t, "200", status, "unexpected status for stream %d", id)
+			}
+			if f.StreamEnded() {
+				delete(open, id)
+			}
+		case *http2.DataFrame:
+			bodies[id] += string(f.Data())
+			if f.StreamEnded() {
+				delete(open, id)
+			}
+		case *http2.RSTStreamFrame:
+			require.FailNow(t, "stream reset", "stream %d was reset with %v", id, f.ErrCode)
+		}
+	}
+	return bodies
 }
 
 // TestInboundStopWithoutConnections guards against Stop blocking on HTTP/2

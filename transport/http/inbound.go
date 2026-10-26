@@ -166,12 +166,12 @@ func DisableHTTP2(flag bool) InboundOption {
 	}
 }
 
-// EnableHTTP2ShutdownHelper returns an InboundOption that enables the HTTP/2
+// DisableHTTP2ShutdownHelper returns an InboundOption that disables the HTTP/2
 // shutdown helper.
-// This is only considered if HTTP/2 is supported.
-func EnableHTTP2ShutdownHelper(flag bool) InboundOption {
+// The helper is only enabled if HTTP/2 is supported.
+func DisableHTTP2ShutdownHelper(flag bool) InboundOption {
 	return func(i *Inbound) {
-		i.enableHTTP2ShutdownHelper = flag
+		i.disableHTTP2ShutdownHelper = flag
 	}
 }
 
@@ -252,7 +252,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		grabHeaders:                 make(map[string]struct{}),
 		bothResponseError:           true,
 		disableHTTP2:                false,
-		enableHTTP2ShutdownHelper:   false,
+		disableHTTP2ShutdownHelper:  false,
 		headerPreallocationStrategy: HeaderPreallocationUnfiltered,
 	}
 	server := &http.Server{
@@ -291,7 +291,7 @@ type Inbound struct {
 	tlsMode   yarpctls.Mode
 
 	disableHTTP2                             bool
-	enableHTTP2ShutdownHelper                bool
+	disableHTTP2ShutdownHelper               bool
 	overrideOriginalItemWithCanonicalizedKey bool
 	headerCaseMapping                        map[string][]string
 	headerPreallocationStrategy              HeaderPreallocationStrategy
@@ -384,7 +384,7 @@ func (i *Inbound) start() error {
 	i.server.Handler = httpHandler
 	if i.disableHTTP2 {
 		// Cannot enable shutdown helper if HTTP/2 is disabled
-		i.enableHTTP2ShutdownHelper = false
+		i.disableHTTP2ShutdownHelper = true
 	} else {
 		h2s := &http2.Server{}
 		i.server.Handler = h2c.NewHandler(i.server.Handler, h2s)
@@ -403,7 +403,7 @@ func (i *Inbound) start() error {
 	if err != nil {
 		return err
 	}
-	if i.enableHTTP2ShutdownHelper {
+	if !i.disableHTTP2ShutdownHelper {
 		i.shutdownHelper = intneth2.NewShutdownHelper()
 		listener = intneth2.WrapListener(listener, i.shutdownHelper)
 	}
@@ -456,7 +456,13 @@ func (i *Inbound) shutdown(ctx context.Context) error {
 			return i.server.Shutdown(ctx)
 		}
 		i.shutdownHelper.BeginShutdown()
+		// The server must only shut down once streams opened before the
+		// first GOAWAY was acknowledged have been read.
+		ready := i.shutdownHelper.IsShutdownReady(ctx)
 		err := i.server.Shutdown(ctx)
+		if !ready && err == nil {
+			err = ctx.Err()
+		}
 		if !i.shutdownHelper.IsShutdownComplete(ctx) && err == nil {
 			err = ctx.Err()
 		}
