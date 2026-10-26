@@ -56,15 +56,23 @@ import (
 
 // newBenchConn returns the connection the benchmarks write to, over conn,
 // which reads the preface of an HTTP/1 or HTTP/2 client first.
-// It is conn itself: the baseline.
+// It is a [TrackedConn] that read it: tracked for an HTTP/2 client only.
 func newBenchConn(conn *discardConn) net.Conn {
-	return conn
+	tc := newTrackedConn(conn, func(net.Conn) func() { return func() {} })
+	if _, err := tc.Read(make([]byte, len(conn.preface))); err != nil {
+		panic(err)
+	}
+	return tc
 }
 
 // newBenchListener returns the listener the h2c server accepts connections
-// from, over ln. It is ln itself: the baseline.
+// from, over ln. It tracks them, with [WrapListener].
 func newBenchListener(b *testing.B, ln net.Listener) net.Listener {
-	return ln
+	helper := &recordingHelper{}
+	b.Cleanup(func() {
+		require.NotEmpty(b, helper.trackedConns(), "connections must be tracked")
+	})
+	return WrapListener(ln, helper)
 }
 
 // discardConn is a [net.Conn] that reads its preface, then nothing, and
@@ -145,6 +153,7 @@ func benchWrites(tb testing.TB) []benchWrite {
 func TestBenchConn(t *testing.T) {
 	for _, proto := range benchProtos {
 		conn := newBenchConn(newDiscardConn(proto))
+		require.Equal(t, proto == "h2", conn.(*TrackedConn).tracked.Load(), proto)
 		for _, w := range benchWrites(t) {
 			n, err := conn.Write(w.b)
 			require.NoError(t, err, proto)
