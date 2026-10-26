@@ -69,12 +69,14 @@ type TrackedConn struct {
 	closed       chan struct{}
 	closeOnce    sync.Once
 
-	wmu         sync.Mutex // serializes writes, so frames go between frames; protects the next fields
-	wscan       frameScanner
-	prefaceSent bool // the server started its connection preface
-	goAway      goAwayState
-	pending     []byte // frames to write at the next frame boundary
-	split       int    // where Write writes pending frames ahead of a server GOAWAY, or -1
+	wmu              sync.Mutex // serializes writes, so frames go between frames; protects the next fields
+	wscan            frameScanner
+	prefaceSent      bool // the server started its connection preface
+	goAway           goAwayState
+	pending          []byte // frames to write at the next frame boundary
+	split            int    // where Write writes pending frames ahead of a server GOAWAY, or -1
+	swallow          int    // bytes of a repeated server GOAWAY that Write drops at split
+	sentLastStreamID uint32 // last stream ID of the second GOAWAY, once sent
 }
 
 // newTrackedConn is the constructor for [TrackedConn].
@@ -180,8 +182,8 @@ func (tc *TrackedConn) Write(b []byte) (n int, err error) {
 
 	tc.wmu.Lock()
 	defer tc.wmu.Unlock()
-	tc.split = -1
-	tc.wscan.scan(b, tc.frameWrite)
+	tc.split, tc.swallow = -1, 0
+	tc.wscan.scan(b, func(start int, frame []byte) { tc.frameWrite(b, start, frame) })
 	split := len(b)
 	if tc.split >= 0 {
 		split = tc.split
@@ -192,9 +194,12 @@ func (tc *TrackedConn) Write(b []byte) (n int, err error) {
 		err = tc.flushLocked()
 	}
 	if err == nil && split < len(b) {
-		var m int
-		m, err = tc.conn.Write(b[split:])
-		n += m
+		n += tc.swallow
+		if rest := b[split+tc.swallow:]; len(rest) > 0 {
+			var m int
+			m, err = tc.conn.Write(rest)
+			n += m
+		}
 	}
 	return n, err
 }

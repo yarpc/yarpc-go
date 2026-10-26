@@ -572,6 +572,12 @@ func TestTrackedConnClose(t *testing.T) {
 func TestTrackedConnWrite(t *testing.T) {
 	data := rawFrame(xhttp2.FrameData, 0, 1, []byte("hello"))
 	serverGoAway := goAwayFrame(3)
+	secondGoAway := func(tc *TrackedConn) {
+		tc.lastStreamID = 3
+		require.NoError(t, tc.advance(goAwaySecond))
+	}
+	var errGoAway bytes.Buffer
+	require.NoError(t, xhttp2.NewFramer(&errGoAway, nil).WriteGoAway(3, xhttp2.ErrCodeProtocol, nil))
 	cat := func(frames ...[]byte) []byte { return bytes.Join(frames, nil) }
 
 	t.Run("untracked", func(t *testing.T) {
@@ -661,6 +667,46 @@ func TestTrackedConnWrite(t *testing.T) {
 				_, err := tc.Write(data[:5])
 				require.NoError(t, err)
 				require.NoError(t, tc.advance(goAwayFirst))
+			},
+			writes: [][]byte{cat(data[5:], serverGoAway)},
+			want:   cat(data, firstGoAway(), serverGoAway),
+		},
+		{
+			desc:   "repeated server GOAWAY after the second GOAWAY",
+			before: secondGoAway,
+			writes: [][]byte{cat(data, serverGoAway, data)},
+			want:   cat(firstGoAway(), serverGoAway, data, data),
+		},
+		{
+			desc:   "higher server GOAWAY after the second GOAWAY",
+			before: secondGoAway,
+			writes: [][]byte{goAwayFrame(5)},
+			want:   cat(firstGoAway(), serverGoAway), // a last stream ID must not rise
+		},
+		{
+			desc:   "lower server GOAWAY after the second GOAWAY",
+			before: secondGoAway,
+			writes: [][]byte{goAwayFrame(1)},
+			want:   cat(firstGoAway(), serverGoAway, goAwayFrame(1)),
+		},
+		{
+			desc:   "server GOAWAY with an error after the second GOAWAY",
+			before: secondGoAway,
+			writes: [][]byte{errGoAway.Bytes()},
+			want:   cat(firstGoAway(), serverGoAway, errGoAway.Bytes()),
+		},
+		{
+			desc:   "repeated server GOAWAY split after the second GOAWAY",
+			before: secondGoAway,
+			writes: [][]byte{serverGoAway[:frameHeaderLen+2], serverGoAway[frameHeaderLen+2:]},
+			want:   cat(firstGoAway(), serverGoAway, serverGoAway), // only dropped as a whole
+		},
+		{
+			desc: "repeated server GOAWAY, second GOAWAY pending",
+			before: func(tc *TrackedConn) {
+				_, err := tc.Write(data[:5])
+				require.NoError(t, err)
+				secondGoAway(tc)
 			},
 			writes: [][]byte{cat(data[5:], serverGoAway)},
 			want:   cat(data, firstGoAway(), serverGoAway),
