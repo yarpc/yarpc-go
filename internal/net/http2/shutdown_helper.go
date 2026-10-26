@@ -100,6 +100,7 @@ type shutdownState int
 const (
 	shutdownNone     shutdownState = iota // BeginShutdown not invoked yet.
 	shutdownStarted                       // Connections are shutting down.
+	shutdownReady                         // IsShutdownReady invoked: the first phase of new connections is not waited on.
 	shutdownComplete                      // IsShutdownComplete invoked: new connections are refused; final state.
 )
 
@@ -111,6 +112,7 @@ type gracefulShutdownHelper struct {
 	conns map[*TrackedConn]struct{}
 	state shutdownState
 	wg    sync.WaitGroup // one per connection shutting down, until it closes
+	ready sync.WaitGroup // one per connection shutting down before IsShutdownReady, until its first phase is over
 }
 
 // newGracefulShutdownHelper is the constructor for [gracefulShutdownHelper].
@@ -139,7 +141,7 @@ func (h *gracefulShutdownHelper) TrackConnection(conn net.Conn) func() {
 	}
 	defer h.mu.Unlock()
 	h.conns[tc] = struct{}{}
-	if h.state == shutdownStarted {
+	if h.state != shutdownNone {
 		// Accepted before the listener closed, but only sent its preface
 		// after BeginShutdown. This happens before http.Server.Shutdown
 		// returns, so before IsShutdownComplete waits.
@@ -160,9 +162,16 @@ func (h *gracefulShutdownHelper) shutdownLocked(tc *TrackedConn) {
 		return
 	}
 	h.wg.Add(1)
+	ready := func() {}
+	if h.state == shutdownStarted {
+		// IsShutdownReady does not wait yet, so this happens before it does.
+		h.ready.Add(1)
+		ready = h.ready.Done
+	}
 	go func() {
 		defer h.wg.Done()
 		tc.drain()
+		ready()
 		<-tc.done()
 	}()
 }
@@ -185,6 +194,35 @@ func (h *gracefulShutdownHelper) BeginShutdown() {
 // runs it in a goroutine that may only start after IsShutdownComplete.
 func (h *gracefulShutdownHelper) ShutdownCallback() {
 	h.BeginShutdown()
+}
+
+// IsShutdownReady implements the [ShutdownHelper] interface for [gracefulShutdownHelper].
+// Once BeginShutdown was invoked, it blocks until the first phase is over on
+// every connection shutting down: the client acknowledged the PING sent with
+// the first GOAWAY, or did not in time, or the connection closed. It returns
+// false if ctx ends first.
+func (h *gracefulShutdownHelper) IsShutdownReady(ctx context.Context) bool {
+	h.mu.Lock()
+	if h.state != shutdownStarted {
+		h.mu.Unlock()
+		return true
+	}
+	// No connection is waited on from now on, so that every ready.Add
+	// happens before ready.Wait.
+	h.state = shutdownReady
+	h.mu.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		h.ready.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 // IsShutdownComplete implements the [ShutdownHelper] interface for [gracefulShutdownHelper].
