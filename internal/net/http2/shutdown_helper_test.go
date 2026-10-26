@@ -35,6 +35,7 @@ func TestNoopHelper(t *testing.T) {
 	h := NewShutdownHelper()
 
 	t.Run("complete before shutdown", func(t *testing.T) {
+		assert.True(t, h.IsShutdownReady(context.Background()))
 		assert.True(t, h.IsShutdownComplete(context.Background()))
 	})
 
@@ -48,12 +49,14 @@ func TestNoopHelper(t *testing.T) {
 			h.BeginShutdown()
 		})
 		assert.Empty(t, conn.calls, "must not touch tracked connections")
+		assert.True(t, h.IsShutdownReady(context.Background()))
 		assert.True(t, h.IsShutdownComplete(context.Background()))
 	})
 
 	t.Run("complete with ended context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
+		assert.True(t, h.IsShutdownReady(ctx), "must not block nor fail")
 		assert.True(t, h.IsShutdownComplete(ctx), "must not block nor fail")
 	})
 }
