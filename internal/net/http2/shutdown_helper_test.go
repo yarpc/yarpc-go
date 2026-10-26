@@ -185,6 +185,63 @@ func TestGracefulShutdownHelperBeginShutdown(t *testing.T) {
 	}
 }
 
+func TestGracefulShutdownHelperIsShutdownReady(t *testing.T) {
+	t.Run("not shutting down", func(t *testing.T) {
+		h := newGracefulShutdownHelper()
+		newHelperConn(t, h)
+
+		assert.True(t, h.IsShutdownReady(context.Background()), "must not wait before BeginShutdown")
+		assert.Equal(t, shutdownNone, h.shutdownState())
+	})
+
+	t.Run("no connections", func(t *testing.T) {
+		h := newGracefulShutdownHelper()
+		h.BeginShutdown()
+
+		assert.True(t, h.IsShutdownReady(context.Background()))
+		assert.Equal(t, shutdownReady, h.shutdownState())
+		assert.True(t, h.IsShutdownReady(context.Background()), "must remain ready")
+		assert.True(t, h.IsShutdownComplete(context.Background()))
+		assert.True(t, h.IsShutdownReady(context.Background()), "must remain ready once complete")
+	})
+
+	t.Run("first phase over", func(t *testing.T) {
+		h := newGracefulShutdownHelper()
+		acked, _ := newHelperConn(t, h)
+		h.BeginShutdown()
+		closed, _ := newHelperConn(t, h) // sent its preface after BeginShutdown
+
+		result := make(chan bool, 1)
+		go func() { result <- h.IsShutdownReady(context.Background()) }()
+		assert.Never(t, func() bool { return len(result) > 0 }, 50*time.Millisecond, time.Millisecond,
+			"must wait for the PING ACKs")
+
+		close(acked.pingAcked)
+		assert.Never(t, func() bool { return len(result) > 0 }, 50*time.Millisecond, time.Millisecond,
+			"must wait for every connection")
+
+		require.NoError(t, closed.Close())
+		assert.True(t, <-result)
+		assert.False(t, isClosed(acked.done()), "must not close connections")
+
+		late, _ := newHelperConn(t, h) // sent its preface once ready
+		assert.True(t, late.shuttingDown.Load(), "must shut down a connection tracked once ready")
+		assert.True(t, h.IsShutdownReady(context.Background()), "must not wait for a connection tracked once ready")
+	})
+
+	t.Run("timeout", func(t *testing.T) {
+		h := newGracefulShutdownHelper()
+		tc, _ := newHelperConn(t, h)
+		h.BeginShutdown()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+		assert.False(t, h.IsShutdownReady(ctx), "must report the connections not ready")
+		assert.False(t, isClosed(tc.done()), "must not close connections")
+		assert.Equal(t, shutdownReady, h.shutdownState())
+	})
+}
+
 func TestGracefulShutdownHelperIsShutdownComplete(t *testing.T) {
 	t.Run("not shutting down", func(t *testing.T) {
 		h := newGracefulShutdownHelper()
