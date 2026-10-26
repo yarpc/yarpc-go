@@ -133,15 +133,31 @@ func (tc *TrackedConn) frameRead(_ int, frame []byte) {
 	}
 }
 
-// frameWrite handles an HTTP/2 frame about to be written, the first of which
-// starts the server's connection preface.
+// frameWrite handles an HTTP/2 frame about to be written from b, the first
+// of which starts the server's connection preface.
 // A GOAWAY frame of the server's own takes the place of the second GOAWAY,
 // whether shutting down or not: the server may start its own shutdown first.
 // So it sets where Write splits to write the first GOAWAY ahead of it.
+// Once the second GOAWAY is sent, a graceful GOAWAY of the server's own with
+// no lower last stream ID only repeats it, so Write drops it, if b holds all
+// of it: the HTTP/2 server of x/net/http2 before Go 1.27 sends one on
+// shutdown. A lower one tells the client that the server stopped earlier
+// than the second GOAWAY said, so it is written.
 // Note: only thread-safe if tc.wmu is held.
-func (tc *TrackedConn) frameWrite(start int, frame []byte) {
+func (tc *TrackedConn) frameWrite(b []byte, start int, frame []byte) {
 	tc.prefaceSent = true
 	if xhttp2.FrameType(frame[3]) != xhttp2.FrameGoAway || tc.split >= 0 {
+		return
+	}
+	if tc.goAway == goAwaySecond {
+		length := int(frame[0])<<16 | int(frame[1])<<8 | int(frame[2])
+		end := start + frameHeaderLen + length
+		if payload := start + frameHeaderLen; start >= 0 && length >= 8 && end <= len(b) &&
+			binary.BigEndian.Uint32(b[payload:])&maxStreamID >= tc.sentLastStreamID &&
+			xhttp2.ErrCode(binary.BigEndian.Uint32(b[payload+4:])) == xhttp2.ErrCodeNo {
+			tc.split = start
+			tc.swallow = end - start
+		}
 		return
 	}
 	if start < 0 {
@@ -152,6 +168,7 @@ func (tc *TrackedConn) frameWrite(start int, frame []byte) {
 		tc.pending = append(tc.pending, tc.goAwayFramesLocked(goAwayFirst)...)
 	}
 	tc.goAway = goAwaySecond
+	tc.sentLastStreamID = maxStreamID // the server's own: none of its GOAWAYs to drop
 }
 
 // drain runs the two-phase graceful shutdown of RFC 9113 §6.8: a GOAWAY with
@@ -202,6 +219,7 @@ func (tc *TrackedConn) goAwayFramesLocked(target goAwayState) []byte {
 			tc.idMu.Lock()
 			lastStreamID := tc.lastStreamID
 			tc.idMu.Unlock()
+			tc.sentLastStreamID = lastStreamID
 			frames = append(frames, goAwayFrame(lastStreamID)...)
 		}
 	}
