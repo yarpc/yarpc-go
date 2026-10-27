@@ -260,6 +260,6 @@ func TestH2SenderDoesNotCreatePoolAfterRelease(t *testing.T) {
 	p.Release() // nothing to stop yet: no request has created the pool
 
 	_, err := p.h2Sender()
-	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, err, errH2PeerReleased)
 	assert.Nil(t, p.loadH2Pool())
 }

@@ -22,6 +22,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"io"
 	"math/rand"
 	"net/http"
@@ -149,8 +150,17 @@ func (s *h2PeerSender) Do(req *http.Request) (*http.Response, error) {
 	for attempt := 0; ; attempt++ {
 		connSender, err := s.peer.h2Sender()
 		if err != nil {
-			return nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable,
-				"no HTTP/2 connection available for peer %q: %v", s.peer.addr, err)
+			switch {
+			case errors.Is(err, errH2TransportStopping):
+				return nil, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition,
+					"HTTP/2 transport is stopping for peer %q: %w", s.peer.addr, err)
+			case errors.Is(err, errH2PeerReleased):
+				return nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable,
+					"HTTP/2 peer %q was released: %w", s.peer.addr, err)
+			default:
+				return nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable,
+					"no HTTP/2 connection available for peer %q: %v", s.peer.addr, err)
+			}
 		}
 
 		resp, err := connSender.Do(req)

@@ -384,6 +384,36 @@ func TestH2PeerSenderNoConnectionAvailable(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeUnavailable, yarpcerrors.FromError(err).Code())
 }
 
+func TestH2PeerSenderLifecycleErrors(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:1", nil)
+	require.NoError(t, err)
+
+	t.Run("peer released", func(t *testing.T) {
+		tr := NewTransport()
+		require.NoError(t, tr.Start())
+		t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+		p := newPeer("127.0.0.1:1", tr)
+		p.Release()
+
+		_, err := (&h2PeerSender{peer: p}).Do(req)
+		require.Error(t, err)
+		assert.Equal(t, yarpcerrors.CodeUnavailable, yarpcerrors.FromError(err).Code())
+		assert.ErrorIs(t, err, errH2PeerReleased)
+	})
+
+	t.Run("transport stopping", func(t *testing.T) {
+		tr := NewTransport()
+		require.NoError(t, tr.Start())
+		require.NoError(t, tr.Stop())
+		p := newPeer("127.0.0.1:1", tr)
+
+		_, err := (&h2PeerSender{peer: p}).Do(req)
+		require.Error(t, err)
+		assert.Equal(t, yarpcerrors.CodeFailedPrecondition, yarpcerrors.FromError(err).Code())
+		assert.ErrorIs(t, err, errH2TransportStopping)
+	})
+}
+
 // newTestH2Pool builds a pool of HTTP/2 connections to addr whose per-
 // connection watcher only does the teardown half of httpPeer.watchH2Conn, so
 // the tests below control connection health themselves.
