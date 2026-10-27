@@ -22,6 +22,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"net"
 	"sync"
 	stdatomic "sync/atomic"
@@ -93,6 +94,11 @@ func newPeer(addr string, t *Transport) *httpPeer {
 	}
 }
 
+var (
+	errH2TransportStopping = errors.New("http2 transport stopping")
+	errH2PeerReleased      = errors.New("http2 peer released")
+)
+
 // loadH2Pool returns this peer's HTTP/2 connection pool, or nil if h2Sender
 // has never been called for this peer.
 func (p *httpPeer) loadH2Pool() *connpool.Pool[*http2.ClientConn] {
@@ -120,12 +126,12 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		p.transport.lock.Lock()
 		if p.transport.h2PoolsStopping {
 			p.transport.lock.Unlock()
-			return nil, context.Canceled
+			return nil, errH2TransportStopping
 		}
 		select {
 		case <-p.released:
 			p.transport.lock.Unlock()
-			return nil, context.Canceled
+			return nil, errH2PeerReleased
 		default:
 		}
 		pool = connpool.NewPool(

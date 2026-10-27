@@ -143,7 +143,7 @@ func TestH2SenderDoesNotCreatePoolDuringTransportStop(t *testing.T) {
 		t.Fatal("shutdown did not start closing the first connection")
 	}
 	_, err = bPeer.h2Sender()
-	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, err, errH2TransportStopping)
 	assert.Nil(t, bPeer.loadH2Pool(), "shutdown must prevent a pool from escaping its snapshot")
 	assert.EqualValues(t, 1, dials.Load(), "a cold peer must not dial after shutdown starts")
 }
