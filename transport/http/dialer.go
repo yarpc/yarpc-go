@@ -62,6 +62,27 @@ func (t *Transport) outboundPeerTransport() peer.Transport {
 	return t
 }
 
+// configuredOutboundPeerTransport shares an isolated Dialer between the unary
+// and oneway outbounds for one configured client. Use the client key, not the
+// destination service name: separate clients may target the same service.
+func (t *Transport) configuredOutboundPeerTransport(key string) peer.Transport {
+	if !t.isolateOutboundConnections {
+		return t
+	}
+
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	if t.configuredOutboundDialers == nil {
+		t.configuredOutboundDialers = make(map[string]*Dialer)
+	}
+	d := t.configuredOutboundDialers[key]
+	if d == nil {
+		d = t.NewDialer().WithConnectionIsolation()
+		t.configuredOutboundDialers[key] = d
+	}
+	return d
+}
+
 // RetainPeer retains the identified peer.
 func (d *Dialer) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
 	return d.trans.retainPeer(id, d.connectionScope, ps)

@@ -272,6 +272,9 @@ func OutboundTLSConfigProvider(provider yarpctls.OutboundTLSConfigProvider) Tran
 // through the transport or through configuration and so cannot supply a Dialer
 // themselves.
 //
+// Unary and oneway outbounds for the same configured client share its peers.
+// Different client keys remain isolated even if they target the same service.
+//
 // It does not affect outbounds built with NewOutbound from a peer chooser the
 // caller created: that chooser already holds the transport or Dialer it
 // retains peers through.
@@ -491,6 +494,10 @@ type Transport struct {
 	// IsolateConnectionsPerOutbound.
 	isolateOutboundConnections bool
 
+	// configuredOutboundDialers retains one isolated Dialer per client config
+	// key for the transport's lifetime. Guarded by lock.
+	configuredOutboundDialers map[string]*Dialer
+
 	h1Transport *http.Transport
 	// h2Transport is shared across all peers, but only as a *http2.ClientConn
 	// factory (via dialH2Conn) and holder of the transport's configured
@@ -517,8 +524,8 @@ type Transport struct {
 	// h2ActivePeers tracks the one HTTP/2 metric connpool has no notion of:
 	// how many peers have dialed an HTTP/2 connection at least once and have
 	// not been released (not whether they hold a live connection now; the
-	// connpool connection gauges track that). See newH2ActivePeersGauge for why it's created once here and shared by
-	// every peer rather than per peer.
+	// connpool connection gauges track that). See newH2ActivePeersGauge for why
+	// it's created once here and shared by every peer rather than per peer.
 	h2ActivePeers *metrics.Gauge
 }
 

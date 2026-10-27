@@ -225,8 +225,8 @@ func TestIsolateConnectionsPerOutbound(t *testing.T) {
 		assert.Equal(t, 2, peerCount(t, tr, a, b), "each outbound has its own peer")
 	})
 
-	// build loads config with two outbounds to the same address and returns
-	// the unary outbounds.
+	// build loads config with clients to the same address and returns
+	// both the unary and oneway outbounds for each client.
 	build := func(t *testing.T, outbounds map[string]interface{}, opts ...Option) (*Transport, []*Outbound) {
 		t.Helper()
 		configurator := yarpcconfig.New()
@@ -234,21 +234,35 @@ func TestIsolateConnectionsPerOutbound(t *testing.T) {
 		cfg, err := configurator.LoadConfig("foo", map[string]interface{}{"outbounds": outbounds})
 		require.NoError(t, err)
 		var obs []*Outbound
-		for _, name := range []string{"a", "b"} {
-			obs = append(obs, cfg.Outbounds[name].Unary.(*Outbound))
+		for name := range outbounds {
+			obs = append(obs, cfg.Outbounds[name].Unary.(*Outbound), cfg.Outbounds[name].Oneway.(*Outbound))
 		}
-		require.Same(t, obs[0].transport, obs[1].transport)
+		for _, ob := range obs[1:] {
+			require.Same(t, obs[0].transport, ob.transport)
+		}
 		return obs[0].transport, obs
 	}
 
 	forms := map[string]map[string]interface{}{
 		"url only": {
-			"a": map[string]interface{}{"http": map[string]interface{}{"url": "http://" + addr + "/rpc"}},
-			"b": map[string]interface{}{"http": map[string]interface{}{"url": "http://" + addr + "/rpc"}},
+			"a": map[string]interface{}{"service": "downstream", "http": map[string]interface{}{"url": "http://" + addr + "/rpc"}},
+			"b": map[string]interface{}{"service": "downstream", "http": map[string]interface{}{"url": "http://" + addr + "/rpc"}},
 		},
 		"peer": {
-			"a": map[string]interface{}{"http": map[string]interface{}{"url": "http://x/rpc", "peer": addr}},
-			"b": map[string]interface{}{"http": map[string]interface{}{"url": "http://x/rpc", "peer": addr}},
+			"a": map[string]interface{}{"service": "downstream", "http": map[string]interface{}{"url": "http://x/rpc", "peer": addr}},
+			"b": map[string]interface{}{"service": "downstream", "http": map[string]interface{}{"url": "http://x/rpc", "peer": addr}},
+		},
+		"mixed url and peer": {
+			"a": map[string]interface{}{
+				"service": "downstream",
+				"unary":   map[string]interface{}{"http": map[string]interface{}{"url": "http://" + addr + "/rpc"}},
+				"oneway":  map[string]interface{}{"http": map[string]interface{}{"url": "http://x/rpc", "peer": addr}},
+			},
+			"b": map[string]interface{}{
+				"service": "downstream",
+				"unary":   map[string]interface{}{"http": map[string]interface{}{"url": "http://" + addr + "/rpc"}},
+				"oneway":  map[string]interface{}{"http": map[string]interface{}{"url": "http://x/rpc", "peer": addr}},
+			},
 		},
 	}
 	for name, outbounds := range forms {
@@ -256,9 +270,13 @@ func TestIsolateConnectionsPerOutbound(t *testing.T) {
 			tr, obs := build(t, outbounds)
 			assert.Equal(t, 1, peerCount(t, tr, obs...))
 		})
+		t.Run("config "+name+" shares unary and oneway within one client", func(t *testing.T) {
+			tr, obs := build(t, map[string]interface{}{"a": outbounds["a"]}, IsolateConnectionsPerOutbound(true))
+			assert.Equal(t, 1, peerCount(t, tr, obs...), "unary and oneway must share the client's peer")
+		})
 		t.Run("config "+name+" isolates when enabled", func(t *testing.T) {
 			tr, obs := build(t, outbounds, IsolateConnectionsPerOutbound(true))
-			assert.Equal(t, 2, peerCount(t, tr, obs...), "each configured outbound has its own peer")
+			assert.Equal(t, 2, peerCount(t, tr, obs...), "each client has one peer shared by unary and oneway, even when both clients target the same service")
 		})
 	}
 
