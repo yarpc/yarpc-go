@@ -404,12 +404,14 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 	}
 	opts = append(option, opts...)
 
+	peerTransport := x.configuredOutboundPeerTransport(k.OutboundKey())
+
 	// Special case where the URL implies the single peer.
 	if oc.Empty() {
-		return x.NewSingleOutbound(oc.URL, opts...), nil
+		return x.newSingleOutbound(oc.URL, peerTransport, opts...), nil
 	}
 
-	chooser, err := oc.BuildPeerChooser(x, hostport.Identify, k)
+	chooser, err := oc.BuildPeerChooser(peerTransport, hostport.Identify, k)
 	if err != nil {
 		return nil, fmt.Errorf("cannot configure peer chooser for HTTP outbound: %v", err)
 	}

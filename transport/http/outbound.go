@@ -224,12 +224,16 @@ func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 //
 // The URLTemplate option has no effect in this form.
 func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
+	return t.newSingleOutbound(uri, t.outboundPeerTransport(), opts...)
+}
+
+func (t *Transport) newSingleOutbound(uri string, peerTransport peer.Transport, opts ...OutboundOption) *Outbound {
 	parsedURL, err := url.Parse(uri)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
+	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), peerTransport)
 	opts = append(opts, URLTemplate(uri))
 	o := t.NewOutbound(chooser, opts...)
 	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
