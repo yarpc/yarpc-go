@@ -767,6 +767,12 @@ func (o *Outbound) doWithPeer(
 				"client canceled request for procedure %q of service %q after %v",
 				treq.Procedure, treq.Service, end.Sub(start))
 		}
+		if yarpcerrors.IsStatus(err) {
+			if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeUnavailable && !errors.Is(err, errH2PeerReleased) {
+				p.onDisconnected()
+			}
+			return nil, err
+		}
 
 		// Note that the connection may have been lost so the peer connection
 		// maintenance loop resumes probing for availability.

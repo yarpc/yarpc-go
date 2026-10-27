@@ -1246,6 +1246,53 @@ func TestCallOneWayFailWithCtxCancelled(t *testing.T) {
 	require.Nil(t, ack)
 }
 
+func TestHTTP2OutboundLifecycleErrorCodes(t *testing.T) {
+	newRequest := func(t *testing.T) (*http.Request, *transport.Request, context.Context, context.CancelFunc) {
+		t.Helper()
+		hreq, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:1", strings.NewReader("world"))
+		require.NoError(t, err)
+		treq := &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "hello",
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		return hreq, treq, ctx, cancel
+	}
+
+	t.Run("peer released is unavailable", func(t *testing.T) {
+		tr := NewTransport()
+		require.NoError(t, tr.Start())
+		t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+		out := tr.NewSingleOutbound("http://127.0.0.1:1", UseHTTP2())
+		p := newPeer("127.0.0.1:1", tr)
+		p.Release()
+		hreq, treq, ctx, cancel := newRequest(t)
+		defer cancel()
+
+		_, err := out.doWithPeer(ctx, hreq, treq, time.Now(), testtime.Second, p, nil)
+		require.Error(t, err)
+		assert.Equal(t, yarpcerrors.CodeUnavailable, yarpcerrors.FromError(err).Code())
+		assert.ErrorIs(t, err, errH2PeerReleased)
+	})
+
+	t.Run("transport stopping is failed precondition", func(t *testing.T) {
+		tr := NewTransport()
+		require.NoError(t, tr.Start())
+		out := tr.NewSingleOutbound("http://127.0.0.1:1", UseHTTP2())
+		p := newPeer("127.0.0.1:1", tr)
+		require.NoError(t, tr.Stop())
+		hreq, treq, ctx, cancel := newRequest(t)
+		defer cancel()
+
+		_, err := out.doWithPeer(ctx, hreq, treq, time.Now(), testtime.Second, p, nil)
+		require.Error(t, err)
+		assert.Equal(t, yarpcerrors.CodeFailedPrecondition, yarpcerrors.FromError(err).Code())
+		assert.ErrorIs(t, err, errH2TransportStopping)
+	})
+}
+
 func TestAddReservedHeader(t *testing.T) {
 	tests := []string{
 		"Rpc-Foo",
