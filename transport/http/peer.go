@@ -46,6 +46,12 @@ type httpPeer struct {
 	timer                 *time.Timer
 	innocentUntilUnixNano *atomic.Int64
 
+	// poolConfig resolves this peer's HTTP/2 pool tuning at every scaling
+	// decision: the startup snapshot (transport options, YAML, and the
+	// Dialer's OutboundConnectionPool override) overlaid by the live
+	// provider when one is set. It is the pool's Config function.
+	poolConfig *connpool.ConfigResolver
+
 	// h2Pool manages this peer's HTTP/2 connection(s): every httpPeer gets
 	// its own pool (rather than sharing one across peers) so that duplicate
 	// peers pointed at the same address end up with independent HTTP/2
@@ -73,7 +79,16 @@ type httpPeer struct {
 	h2Counted stdatomic.Bool
 }
 
+// newPeer creates a peer that uses the transport-wide pool config and the
+// transport's global live provider.
 func newPeer(addr string, t *Transport) *httpPeer {
+	return newPeerWithPool(addr, t, t.h2PoolConfig, t.h2PoolProvider)
+}
+
+// newPeerWithPool creates a peer whose HTTP/2 pool starts from startupPool,
+// which the caller has already validated, and is overlaid at runtime by
+// provider (which may be nil).
+func newPeerWithPool(addr string, t *Transport, startupPool connpool.Config, provider LiveConnectionPoolProvider) *httpPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -83,6 +98,18 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		<-timer.C
 	}
 
+	t.logger.Info("http2: connection pool config resolved",
+		zap.String("peer", addr),
+		zap.Bool("dynamicScalingEnabled", startupPool.DynamicScalingEnabled),
+		zap.Int("minConnections", startupPool.MinConnections),
+		zap.Int("maxConnections", startupPool.MaxConnections),
+		zap.Int32("maxConcurrentStreams", startupPool.MaxConcurrentStreams),
+		zap.Float64("scaleUpThreshold", startupPool.ScaleUpThreshold),
+		zap.Float64("scaleDownGap", startupPool.ScaleDownGap),
+		zap.Duration("idleTimeout", startupPool.IdleTimeout),
+		zap.Duration("scalingMonitorInterval", startupPool.ScalingMonitorInterval),
+	)
+
 	return &httpPeer{
 		Peer:                  abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport:             t,
@@ -91,6 +118,7 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		released:              make(chan struct{}),
 		timer:                 timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
+		poolConfig:            connpool.NewConfigResolver(startupPool, provider.toOverrideFunc(), t.logger, "http2", addr),
 	}
 }
 
@@ -136,7 +164,7 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		}
 		pool = connpool.NewPool(
 			context.Background(),
-			func() connpool.Config { return p.transport.h2PoolConfig },
+			p.poolConfig.Get,
 			func(ctx context.Context) (*http2.ClientConn, error) { return p.transport.dialH2Conn(ctx, p.addr) },
 			p.transport.logger,
 			p.addr,
