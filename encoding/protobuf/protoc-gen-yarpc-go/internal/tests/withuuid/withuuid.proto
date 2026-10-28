@@ -23,8 +23,8 @@
 //     `map<string,Msg>` hop; the accessor ranges the values and recurses.
 //   - WrapperActorsRequest annotates message-typed fields, as single,
 //     repeated, and map-value fields, including wrapper types around the
-//     UUID string (UUID, UserId, google.protobuf.StringValue); every
-//     string inside an annotated message is collected.
+//     UUID string (UUID, UserId, google.protobuf.StringValue); the single
+//     string inside an annotated message, at any depth, is collected.
 //   - IgnoredAnnotationsRequest has annotations on shapes that must be
 //     ignored (a non-string scalar, and a message-typed field whose
 //     subtree holds no string leaf); the generator must NOT emit an
@@ -156,11 +156,12 @@ message UserId {
   UUID uuid = 1;
 }
 
-// Actor has more than one string field: annotating a field of this type
-// collects all of them.
+// Actor has a single string field next to a non-string one: annotating a
+// field of this type collects the string. A second string field would
+// fail generation, since the validator could not tell the two apart.
 message Actor {
   string uuid = 1;
-  string name = 2;
+  int64 version = 2;
 }
 
 // WrapperActorsRequest annotates message-typed fields. trace has the

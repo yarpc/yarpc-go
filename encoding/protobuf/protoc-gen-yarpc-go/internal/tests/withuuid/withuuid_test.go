@@ -199,21 +199,21 @@ func TestActorUUIDAccessor_MapMessage(t *testing.T) {
 }
 
 // TestActorUUIDAccessor_WrapperMessages covers annotations on
-// message-typed fields: the accessor collects every string inside the
-// annotated message, at any depth. The unannotated trace, of the same
+// message-typed fields: the accessor collects the single string inside
+// the annotated message, at any depth. The unannotated trace, of the same
 // type as actor, is not collected.
 func TestActorUUIDAccessor_WrapperMessages(t *testing.T) {
-	t.Run("every_string_in_annotated_messages_collected", func(t *testing.T) {
+	t.Run("string_in_annotated_messages_collected", func(t *testing.T) {
 		req := &WrapperActorsRequest{
 			Actor:       &UUID{Value: "alice"},
 			User:        &UserId{Uuid: &UUID{Value: "bob"}},
 			LegacyActor: &types.StringValue{Value: "carol"},
 			Actors:      []*UUID{{Value: "dave"}, {Value: "erin"}},
-			Owner:       &Actor{Uuid: "frank", Name: "Frank"},
+			Owner:       &Actor{Uuid: "frank", Version: 3},
 			Trace:       &UUID{Value: "not-annotated"},
 		}
 		assert.Equal(t,
-			[]string{"alice", "bob", "carol", "dave", "erin", "frank", "Frank"},
+			[]string{"alice", "bob", "carol", "dave", "erin", "frank"},
 			req.ActorUUID())
 	})
 
@@ -228,7 +228,7 @@ func TestActorUUIDAccessor_WrapperMessages(t *testing.T) {
 	})
 
 	t.Run("unset_wrappers_are_nil_safe", func(t *testing.T) {
-		assert.Equal(t, []string{"", "", "", "", ""}, (&WrapperActorsRequest{}).ActorUUID(),
+		assert.Equal(t, []string{"", "", "", ""}, (&WrapperActorsRequest{}).ActorUUID(),
 			"each single-valued annotated path surfaces the empty string; empty containers contribute nothing")
 	})
 }

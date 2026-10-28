@@ -423,17 +423,79 @@ func TestConvertAndWalk(t *testing.T) {
 			"only map values are leaves, never the keys")
 	})
 
-	t.Run("annotatedMessageCollectsEveryString", func(t *testing.T) {
-		// Every string in the annotated subtree is collected, single and
-		// repeated alike; non-string scalars are still skipped.
+	t.Run("annotatedMessageWithNonStringSiblings", func(t *testing.T) {
+		// Non-string fields next to the single string are allowed.
 		actor := newMessage(t, "Actor",
 			stringField(t, "uuid", false),
 			int64Field(t, "age", false),
-			repeatedStringField(t, "aliases", false),
 		)
 		req := newMessage(t, "Req", annotatedMessageField(t, "actor", actor))
 		paths := walkPathOf(t, req, actor)
-		assert.Equal(t, [][]string{{"actor", "uuid"}, {"actor", "aliases"}}, allStepNames(paths))
+		assert.Equal(t, [][]string{{"actor", "uuid"}}, allStepNames(paths))
+	})
+
+	t.Run("annotatedMessageWithSingleRepeatedString", func(t *testing.T) {
+		// One repeated string field yields many values, all from the
+		// same field, so it is unambiguous.
+		group := newMessage(t, "Group", repeatedStringField(t, "ids", false))
+		req := newMessage(t, "Req", annotatedMessageField(t, "group", group))
+		paths := walkPathOf(t, req, group)
+		require.Len(t, paths, 1)
+		assert.Equal(t, []string{"group", "ids"}, stepNames(paths[0]))
+		assert.Equal(t, []protogen.StepKind{protogen.StepScalarMessage, protogen.StepRepeatedStringLeaf}, stepKinds(paths[0]))
+	})
+
+	t.Run("annotatedMessageWithTwoStringsFails", func(t *testing.T) {
+		actor := newMessage(t, "Actor",
+			stringField(t, "uuid", false),
+			stringField(t, "name", false),
+		)
+		req := newMessage(t, "Req", annotatedMessageField(t, "actor", actor))
+		_, err := convertOf(t, req, actor)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "field Req.actor")
+		assert.Contains(t, err.Error(), "message Actor")
+		assert.Contains(t, err.Error(), "more than one string field path")
+	})
+
+	t.Run("annotatedMessageWithDeepSecondStringFails", func(t *testing.T) {
+		// The second string sits two levels down; depth does not matter.
+		meta := newMessage(t, "Meta", stringField(t, "label", false))
+		uuid := newMessage(t, "UUID", stringField(t, "value", false))
+		userID := newMessage(t, "UserId",
+			messageField(t, "uuid", uuid),
+			messageField(t, "meta", meta),
+		)
+		req := newMessage(t, "Req", annotatedMessageField(t, "user", userID))
+		_, err := convertOf(t, req, userID, uuid, meta)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "field Req.user")
+	})
+
+	t.Run("annotatedMessageWithTwoRoutesToOneStringFails", func(t *testing.T) {
+		// Pair reaches UUID.value through both a and b: two values the
+		// validator could not tell apart.
+		uuid := newMessage(t, "UUID", stringField(t, "value", false))
+		pair := newMessage(t, "Pair",
+			messageField(t, "a", uuid),
+			messageField(t, "b", uuid),
+		)
+		req := newMessage(t, "Req", annotatedMessageField(t, "pair", pair))
+		_, err := convertOf(t, req, pair, uuid)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "field Req.pair")
+	})
+
+	t.Run("annotatedMapOfMultiStringMessagesFails", func(t *testing.T) {
+		actor := newMessage(t, "Actor",
+			stringField(t, "uuid", false),
+			stringField(t, "name", false),
+		)
+		entry := mapEntryMessage(t, "ActorsByRoleEntry", messageValueField(t, actor))
+		req := newMessage(t, "Req", mapField(t, "actors_by_role", entry, true))
+		_, err := convertOf(t, req, entry, actor)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "field Req.actors_by_role")
 	})
 
 	t.Run("annotatedCycleTerminates", func(t *testing.T) {
@@ -453,11 +515,10 @@ func TestConvertAndWalk(t *testing.T) {
 			"the self-reference below the annotated field is skipped")
 	})
 
-	t.Run("annotatedDiamondsHitPathCap", func(t *testing.T) {
-		// Below an annotated field, 7 chained diamonds over an
-		// unannotated leaf expand to 2^7 = 128 paths, over the cap of
-		// 100: generation fails with the same error as unannotated
-		// diamonds.
+	t.Run("annotatedDiamondsFailFast", func(t *testing.T) {
+		// 7 chained diamonds below an annotated field would expand to
+		// 128 routes; the single-string check rejects the field as soon
+		// as a second route is found.
 		root, rest := diamondChain(t, 7)
 		root.Fields[0].FieldDescriptorProto.Options = withActorUUIDOption(t, true)
 		rest[0].Fields[0].FieldDescriptorProto.Options = nil
@@ -467,26 +528,7 @@ func TestConvertAndWalk(t *testing.T) {
 		)
 		_, err := actorUUIDMethods(info)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "actor_uuid paths")
-		assert.Contains(t, err.Error(), "Req")
-	})
-
-	t.Run("annotatedDiamondsUnderCapSucceed", func(t *testing.T) {
-		// 6 annotated diamonds over an unannotated leaf: each route
-		// reaches the leaf once, and only Req has an accessor because
-		// nothing else is annotated.
-		root, rest := diamondChain(t, 6)
-		root.Fields[0].FieldDescriptorProto.Options = withActorUUIDOption(t, true)
-		rest[0].Fields[0].FieldDescriptorProto.Options = nil
-		info := newTemplateInfoWithServices(t,
-			append([]*protoplugin.Message{root}, rest...),
-			svc(t, "S", method(t, "M", root, root)),
-		)
-		got, err := actorUUIDMethods(info)
-		require.NoError(t, err)
-		require.Len(t, got, 1)
-		assert.Equal(t, "Req", got[0].GoTypeName)
-		assert.Len(t, got[0].Exprs, 64)
+		assert.Contains(t, err.Error(), "field Req.root")
 	})
 
 	t.Run("annotatedMessageWithoutStringsYieldsNothing", func(t *testing.T) {
@@ -1144,6 +1186,16 @@ func newMessage(t *testing.T, name string, fields ...*protoplugin.Field) *protop
 // path actorUUIDMethods uses, but bypasses the file/service scaffolding.
 func walkPathOf(t *testing.T, req *protoplugin.Message, others ...*protoplugin.Message) []*protogen.Path {
 	t.Helper()
+	node, err := convertOf(t, req, others...)
+	require.NoError(t, err)
+	paths, _ := protogen.Walk(node, _maxActorUUIDPaths)
+	return paths
+}
+
+// convertOf converts `req` to the neutral protogen graph, with a fresh
+// context indexing the given messages.
+func convertOf(t *testing.T, req *protoplugin.Message, others ...*protoplugin.Message) (*protogen.Node, error) {
+	t.Helper()
 	all := append([]*protoplugin.Message{req}, others...)
 	file := &protoplugin.File{
 		FileDescriptorProto: &descriptor.FileDescriptorProto{
@@ -1155,11 +1207,7 @@ func walkPathOf(t *testing.T, req *protoplugin.Message, others ...*protoplugin.M
 	for _, m := range all {
 		m.File = file
 	}
-	ctx := newUUIDContext(file)
-	node, err := newUUIDConverter(_testActorUUIDFieldNumber, ctx).convert(req)
-	require.NoError(t, err)
-	paths, _ := protogen.Walk(node, _maxActorUUIDPaths)
-	return paths
+	return newUUIDConverter(_testActorUUIDFieldNumber, newUUIDContext(file)).convert(req)
 }
 
 // diamondChain builds a chain of `levels` diamond-shaped messages: each
