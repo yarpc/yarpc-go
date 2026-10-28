@@ -32,6 +32,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
@@ -84,6 +85,7 @@ func (s *recordingServer) MapMessageAction(context.Context, *MapMessageRequest) 
 	return &DeleteUserResponse{}, nil
 }
 func (s *recordingServer) WrapperAction(context.Context, *WrapperActorsRequest) (*DeleteUserResponse, error) {
+	s.called = true
 	return &DeleteUserResponse{}, nil
 }
 func (s *recordingServer) IgnoredAction(context.Context, *IgnoredAnnotationsRequest) (*DeleteUserResponse, error) {
@@ -229,4 +231,44 @@ func TestActorUUIDValidator_UnannotatedMethodSkipsValidator(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, calls, "validator must not fire for an unannotated method")
 	assert.True(t, impl.called, "the unannotated method's handler must still run")
+}
+
+// TestActorUUIDValidator_WrapperMessages proves that values read through
+// annotated message-typed fields reach the validator over the wire: the
+// single string inside each annotated wrapper, at any depth, and nothing
+// from the unannotated trace field of the same type.
+func TestActorUUIDValidator_WrapperMessages(t *testing.T) {
+	var seen []string
+	validator := func(_ context.Context, actorUUIDs []string) error {
+		seen = actorUUIDs
+		return nil
+	}
+
+	impl := &recordingServer{}
+	procedures := BuildUserServiceYARPCProcedures(impl, protobuf.WithActorUUIDValidator(validator))
+	proc := unaryProcedure(t, procedures, "WrapperAction")
+
+	body, err := proto.Marshal(&WrapperActorsRequest{
+		Actor:       &UUID{Value: "alice"},
+		User:        &UserId{Uuid: &UUID{Value: "bob"}},
+		LegacyActor: &types.StringValue{Value: "carol"},
+		Actors:      []*UUID{{Value: "dave"}, {Value: "erin"}},
+		UsersByRole: map[string]*UserId{"admin": {Uuid: &UUID{Value: "frank"}}},
+		Owner:       &Actor{Uuid: "gina", Version: 3},
+		Trace:       &UUID{Value: "not-annotated"},
+	})
+	require.NoError(t, err)
+	err = proc.HandlerSpec.Unary().Handle(
+		context.Background(),
+		&transport.Request{
+			Procedure: proc.Name,
+			Encoding:  protobuf.Encoding,
+			Body:      bytes.NewReader(body),
+		},
+		&transporttest.FakeResponseWriter{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"alice", "bob", "carol", "dave", "erin", "frank", "gina"}, seen,
+		"validator should receive one value per annotated wrapper path, and nothing from trace")
+	assert.True(t, impl.called, "validator returning nil should let the handler run")
 }
