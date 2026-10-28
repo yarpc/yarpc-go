@@ -277,10 +277,12 @@ func newActorUUIDMethod(goType string, paths []*protogen.Path) *actorUUIDMethod 
 // order: message-typed hops and actor_uuid-annotated string-valued
 // leaves. A leaf is a plain `string`, a `repeated string`, or a
 // `map<K, string>` field carrying the annotation. An annotation on a
-// message-typed field (singular, repeated, or a map<K, Msg>) marks every
-// string-valued field below it, at any depth, as a leaf. Annotations on
-// non-string scalars are silently dropped. Message-typed fields whose
-// type reference does not resolve are likewise dropped.
+// message-typed field (singular, repeated, or a map<K, Msg>) makes the
+// single string-valued field below it, at any depth, the leaf; reaching
+// more than one fails generation (see convertChild), and reaching none
+// is a no-op. Annotations on non-string scalars are silently dropped.
+// Message-typed fields whose type reference does not resolve are
+// likewise dropped.
 //
 // Messages reached through an annotated message field are converted by a
 // separate collect-all converter (see collector), so each converter's
@@ -329,15 +331,31 @@ func (c *uuidConverter) annotated(f *protoplugin.Field) (bool, error) {
 
 // convertChild converts msg, reached through the message-typed field f,
 // with the collect-all converter when f is annotated.
+//
+// An annotated message must reach at most one string-valued field path,
+// at any depth: the validator receives bare values, so it could not tell
+// the actor UUID apart from any other collected string.
 func (c *uuidConverter) convertChild(f *protoplugin.Field, msg *protoplugin.Message) (*protogen.Node, error) {
 	annotated, err := c.annotated(f)
 	if err != nil {
 		return nil, err
 	}
-	if annotated {
-		return c.collector().convert(msg)
+	if !annotated {
+		return c.convert(msg)
 	}
-	return c.convert(msg)
+	child, err := c.collector().convert(msg)
+	if err != nil {
+		return nil, err
+	}
+	if !c.all {
+		if _, n := protogen.Walk(child, 1); n > 1 {
+			return nil, fmt.Errorf(
+				"field %s.%s is annotated with actor_uuid but its message %s reaches more than one string field path; "+
+					"annotate the string field that holds the actor UUID instead",
+				f.Message.GetName(), f.GetName(), msg.GetName())
+		}
+	}
+	return child, nil
 }
 
 // convert returns the memoized Node for msg, building it (and,
