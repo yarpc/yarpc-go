@@ -132,6 +132,7 @@ func headerValue(headers http.Header, canonicalKey, lowerKey string) string {
 type handler struct {
 	router                                   transport.Router
 	tracer                                   opentracing.Tracer
+	noopSpan                                 opentracing.Span
 	grabHeaders                              map[string]struct{}
 	bothResponseError                        bool
 	logger                                   *zap.Logger
@@ -352,6 +353,11 @@ func updateSpanWithErr(span opentracing.Span, err error) {
 }
 
 func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
+	if h.noopSpan != nil {
+		// Keep a span in the context without building tags or span options.
+		return opentracing.ContextWithSpan(ctx, h.noopSpan), h.noopSpan
+	}
+
 	// Extract opentracing etc baggage from headers
 	// Annotate the inbound context with a trace span
 	tracer := h.tracer
