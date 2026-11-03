@@ -151,19 +151,24 @@ basiclint: gofmt govet golint staticcheck errcheck goimports # run gofmt govet g
 .PHONY: lint
 lint: basiclint generatenodiff nogogenerate verifycodecovignores ## run all linters
 
+# CI containers request 7.5 CPUs. Leave GOMAXPROCS uncapped and `go test`
+# compiles one package per host core; the coverage build of the whole module
+# then gets the pod evicted, which Buildkite reports as exit status -1.
+CI_GOMAXPROCS := $(if $(CI),GOMAXPROCS=8,)
+
 .PHONY: test
 test: $(THRIFTRW) __eval_chunked_packages ## run chunked tests
-	PATH=$(BIN):$$PATH go test -race $(CHUNKED_PACKAGES)
+	PATH=$(BIN):$$PATH $(CI_GOMAXPROCS) go test -race $(CHUNKED_PACKAGES)
 
 .PHONY: cover
 cover: $(THRIFTRW) __eval_chunked_packages ## run chunked tests and output code coverage
-	PATH=$(BIN):$$PATH go run ./internal/cover/main.go $(CHUNKED_PACKAGES)
+	PATH=$(BIN):$$PATH $(CI_GOMAXPROCS) go run ./internal/cover/main.go $(CHUNKED_PACKAGES)
 	go tool cover -html=coverage.txt -o cover.html
 
 .PHONY: crossdock-cover
 crossdock-cover:
 	cd internal/crossdock && \
-		PATH=$(BIN):$$PATH go run ../cover/main.go $$(go list ./...) && \
+		PATH=$(BIN):$$PATH $(CI_GOMAXPROCS) go run ../cover/main.go $$(go list ./...) && \
 		go tool cover -html=coverage.txt -o cover.html
 	mv internal/crossdock/coverage.txt crossdock.coverage.txt
 	mv internal/crossdock/cover.html crossdock.cover.html

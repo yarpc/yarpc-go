@@ -11,6 +11,7 @@ services:
       - TOTAL_CHUNKS=${BUILDKITE_PARALLEL_JOB_COUNT}
       - CODECOV_TOKEN
       - CI=true
+      - GOMAXPROCS=8
       - BUILDKITE
       - BUILDKITE_AGENT_ID
       - BUILDKITE_BRANCH
@@ -38,6 +39,7 @@ services:
       - TOTAL_CHUNKS=${BUILDKITE_PARALLEL_JOB_COUNT}
       - CODECOV_TOKEN
       - CI=true
+      - GOMAXPROCS=8
       - BUILDKITE
       - BUILDKITE_AGENT_ID
       - BUILDKITE_BRANCH
@@ -59,6 +61,9 @@ services:
       - TOTAL_CHUNKS=${BUILDKITE_PARALLEL_JOB_COUNT}
       - CODECOV_TOKEN
       - CI=true
+      # Pods request 7.5 CPUs. Go 1.23 otherwise uses every core on the node,
+      # and the coverage compile gets the pod evicted (Buildkite exit status -1).
+      - GOMAXPROCS=8
       - BUILDKITE
       - BUILDKITE_AGENT_ID
       - BUILDKITE_BRANCH

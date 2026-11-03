@@ -37,6 +37,16 @@ agents:
 steps:
   - name: ":go: 1.23 test - %n"
     parallelism: 6
+    # -1 is a lost agent (the pod disappeared before the command exited).
+    # 137 is the kernel killing the command. Neither is a test failure.
+    retry: &ci_retry
+      automatic:
+        - exit_status: -1
+          limit: 2
+        - exit_status: 137
+          limit: 2
+        - signal_reason: agent_stop
+          limit: 2
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -52,6 +62,7 @@ steps:
 
   - name: ":go: 1.23 race test - %n"
     parallelism: 6
+    retry: *ci_retry
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -66,6 +77,7 @@ steps:
           run: yarpc-go-1.23
 
   - name: ":go: 1.23 crossdock"
+    retry: *ci_retry
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -80,6 +92,7 @@ steps:
           run: yarpc-go-1.23
 
   - name: ":go: 1.23 lint"
+    retry: *ci_retry
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -94,6 +107,7 @@ steps:
           run: yarpc-go-1.23
 
   - name: ":go: 1.23 examples"
+    retry: *ci_retry
     plugins:
       - kubernetes:
           <<: *kubernetes
