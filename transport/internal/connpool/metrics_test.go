@@ -145,6 +145,55 @@ func TestReporter_AllIncrementsAndIdleDelta(t *testing.T) {
 	}
 }
 
+// TestReporter_DialCounters pins the dial counters' behavior: IncDial and
+// IncDialFailure each move only their own series, once per call.
+func TestReporter_DialCounters(t *testing.T) {
+	root := metrics.New()
+	r := NewReporter(NewMetrics(MetricsParams{Meter: root.Scope(), Transport: "http2"}))
+
+	dialCounts := func() (dials, failures int64) {
+		for _, c := range root.Snapshot().Counters {
+			switch c.Name {
+			case "conn_pool_dials_total":
+				dials = c.Value
+			case "conn_pool_dial_failures_total":
+				failures = c.Value
+			}
+		}
+		return dials, failures
+	}
+
+	d, f := dialCounts()
+	assert.Zero(t, d)
+	assert.Zero(t, f)
+
+	r.IncDial()
+	r.IncDial()
+	d, f = dialCounts()
+	assert.EqualValues(t, 2, d)
+	assert.Zero(t, f, "successful dials must not count as failures")
+
+	r.IncDialFailure()
+	d, f = dialCounts()
+	assert.EqualValues(t, 2, d, "a failed dial must not count as a success")
+	assert.EqualValues(t, 1, f)
+}
+
+// TestMetrics_DialIncrementsNilSafe covers the dial counters on a nil Metrics
+// and on a Metrics whose counters failed to register.
+func TestMetrics_DialIncrementsNilSafe(t *testing.T) {
+	var nilMetrics *Metrics
+	assert.NotPanics(t, func() {
+		nilMetrics.incDial()
+		nilMetrics.incDialFailure()
+	})
+	unregistered := &Metrics{}
+	assert.NotPanics(t, func() {
+		unregistered.incDial()
+		unregistered.incDialFailure()
+	})
+}
+
 func TestReporter_NilReceiverSafe(t *testing.T) {
 	var r *Reporter
 	r.SetCounts(1, 2, 3)
