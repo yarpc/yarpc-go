@@ -227,6 +227,8 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 	return t.newSingleOutbound(uri, t.outboundPeerTransport(), opts...)
 }
 
+// newSingleOutbound builds NewSingleOutbound's outbound, retaining its one
+// peer through peerTransport: the Transport itself, or a Dialer decorating it.
 func (t *Transport) newSingleOutbound(uri string, peerTransport peer.Transport, opts ...OutboundOption) *Outbound {
 	parsedURL, err := url.Parse(uri)
 	if err != nil {
