@@ -25,15 +25,18 @@ import (
 )
 
 // NewDialer creates a transport that is decorated to optionally isolate
-// retained peers from other dialers.
-func (t *Transport) NewDialer() *Dialer {
-	return &Dialer{trans: t}
+// retained peers from other dialers, and to apply per-outbound options (such
+// as OutboundConnectionPool) to every peer it retains.
+func (t *Transport) NewDialer(options ...DialOption) *Dialer {
+	return &Dialer{trans: t, options: newDialOptions(options)}
 }
 
 // Dialer is a decorator for an HTTP transport that can isolate its peers,
-// and therefore connections, from other dialers.
+// and therefore connections, from other dialers, and that threads dial
+// options through to every retained peer.
 type Dialer struct {
 	trans           *Transport
+	options         *dialOptions
 	connectionScope *connectionScope
 }
 
@@ -45,8 +48,15 @@ var _ peer.Transport = (*Dialer)(nil)
 //
 // Callers should create one isolated Dialer per logical outbound. Requests
 // within that outbound continue to share peers normally.
+//
+// OutboundConnectionPool on this Dialer applies to peers retained through it.
+// Isolation is what keeps those peers (and their pools) from being shared
+// with other dialers. Live outbound providers are attached at YAML
+// buildOutbound from WithOutboundLiveConnectionPoolProvider.
 func (d *Dialer) WithConnectionIsolation() *Dialer {
 	isolated := *d
+	optionsCopy := *d.options
+	isolated.options = &optionsCopy
 	isolated.connectionScope = new(connectionScope)
 	return &isolated
 }
@@ -62,11 +72,17 @@ func (t *Transport) outboundPeerTransport() peer.Transport {
 	return t
 }
 
-// configuredOutboundPeerTransport shares an isolated Dialer between the unary
-// and oneway outbounds for one configured client. Use the client key, not the
-// destination service name: separate clients may target the same service.
-func (t *Transport) configuredOutboundPeerTransport(key string) peer.Transport {
-	if !t.isolateOutboundConnections {
+// configuredOutboundPeerTransport returns the peer.Transport for one configured
+// client, shared by that client's unary and oneway outbounds. Use the client
+// key, not the destination service name: separate clients may target the same
+// service.
+//
+// With neither isolation nor dial options it returns the Transport itself, so
+// every such client shares peers. Otherwise the Dialer is created once per key.
+// isolate gives that Dialer its own connection scope. options (pool override,
+// transport DialOptions, live provider) are applied when the Dialer is created.
+func (t *Transport) configuredOutboundPeerTransport(key string, isolate bool, options ...DialOption) peer.Transport {
+	if !isolate && len(options) == 0 {
 		return t
 	}
 
@@ -77,7 +93,10 @@ func (t *Transport) configuredOutboundPeerTransport(key string) peer.Transport {
 	}
 	d := t.configuredOutboundDialers[key]
 	if d == nil {
-		d = t.NewDialer().WithConnectionIsolation()
+		d = t.NewDialer(options...)
+		if isolate {
+			d = d.WithConnectionIsolation()
+		}
 		t.configuredOutboundDialers[key] = d
 	}
 	return d
@@ -85,7 +104,7 @@ func (t *Transport) configuredOutboundPeerTransport(key string) peer.Transport {
 
 // RetainPeer retains the identified peer.
 func (d *Dialer) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
-	return d.trans.retainPeer(id, d.connectionScope, ps)
+	return d.trans.retainPeer(id, d.options, d.connectionScope, ps)
 }
 
 // ReleasePeer releases the identified peer.
