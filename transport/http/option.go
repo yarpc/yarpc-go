@@ -21,11 +21,12 @@
 package http
 
 // Option allows customizing the YARPC HTTP transport. Any InboundOption,
-// OutboundOption, or TransportOption is a valid Option.
+// OutboundOption, TransportOption, or DialOption is a valid Option.
 type Option interface {
 	httpOption()
 }
 
+var _ Option = (DialOption)(nil)
 var _ Option = (InboundOption)(nil)
 var _ Option = (OutboundOption)(nil)
 var _ Option = (TransportOption)(nil)

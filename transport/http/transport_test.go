@@ -318,8 +318,10 @@ func TestGetOrCreatePeerDoesNotDedupeSuffixedIdentifiers(t *testing.T) {
 
 	// getOrCreatePeer requires the write lock.
 	tr.lock.Lock()
-	p1 := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#1"}, nil)
-	p2 := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#2"}, nil)
+	p1, err := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#1"}, emptyDialOpts, nil)
+	require.NoError(t, err)
+	p2, err := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#2"}, emptyDialOpts, nil)
+	require.NoError(t, err)
 	tr.lock.Unlock()
 
 	require.NotSame(t, p1, p2, "duplicate identifiers must not collapse into one peer")
