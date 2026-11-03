@@ -1639,8 +1639,8 @@ func TestConnectionPoolScaleUpOnLoad(t *testing.T) {
 		defer onFinish(nil)
 		held := apiPeer.(*grpcPeer).pickConn()
 		require.NotNil(t, held)
-		held.incStreamCount()
-		defer held.decStreamCount()
+		held.IncStreamCount()
+		defer held.DecStreamCount()
 
 		require.NoError(t, e.SetValueYARPC(ctx, "foo", "bar"))
 

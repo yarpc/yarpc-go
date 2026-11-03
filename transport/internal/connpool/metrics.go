@@ -260,7 +260,7 @@ func newMetrics(p MetricsParams) *Metrics {
 }
 
 // metricsCount is how many handles registerMetrics registers.
-const metricsCount = 6
+const metricsCount = 8
 
 // registerMetrics registers the metric handles on p.Meter, calling warn for
 // each one that fails to register and leaving that handle nil.
@@ -335,7 +335,7 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Warn("failed to create dials counter", zap.Error(err))
+		warn("failed to create dials counter", err)
 	}
 
 	m.dialFailuresTotal, err = p.Meter.Counter(metrics.Spec{
@@ -344,7 +344,7 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 		ConstTags: tags,
 	})
 	if err != nil {
-		p.Logger.Warn("failed to create dial failures counter", zap.Error(err))
+		warn("failed to create dial failures counter", err)
 	}
 
 	return m

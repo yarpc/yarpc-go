@@ -435,9 +435,9 @@ func TestMetrics_RegistrationErrorsAreLogged(t *testing.T) {
 	require.Zero(t, logs.Len(), "first registration must not log")
 
 	// The second registration on the same scope and tags fails for each of the
-	// six handles, and each failure is logged.
+	// eight handles, and each failure is logged.
 	_ = newMetrics(params)
-	assert.Equal(t, 6, logs.Len(), "expected one warning per duplicate metric registration")
+	assert.Equal(t, 8, logs.Len(), "expected one warning per duplicate metric registration")
 	for _, e := range logs.All() {
 		assert.Equal(t, zap.WarnLevel, e.Level)
 	}
@@ -468,7 +468,7 @@ func observedParams(scope *metrics.Scope) (MetricsParams, *observer.ObservedLogs
 }
 
 // A process can build several transports on one meter and service name. The
-// second used to fail every registration, warn six times, and report nothing.
+// second used to fail every registration, warn for each metric, and report nothing.
 func TestMetrics_RepeatCallersShareOneSetWithoutWarnings(t *testing.T) {
 	params, logs := observedParams(metrics.New().Scope())
 
@@ -493,6 +493,13 @@ func TestMetrics_RepeatCallersShareOneSetWithoutWarnings(t *testing.T) {
 	r1.IncScaleUp()
 	r2.IncScaleUp()
 	assert.Equal(t, int64(2), first.scaleUpTotal.Load())
+	r1.IncDial()
+	r2.IncDial()
+	r2.IncDialFailure()
+	require.NotNil(t, first.dialsTotal)
+	require.NotNil(t, first.dialFailuresTotal)
+	assert.Equal(t, int64(2), first.dialsTotal.Load())
+	assert.Equal(t, int64(1), first.dialFailuresTotal.Load())
 
 	// One transport shutting down only removes its own contribution.
 	r1.SetCounts(0, 0, 0)
@@ -609,7 +616,7 @@ func TestMetrics_SameTagNamesWithOtherValuesStaySeparate(t *testing.T) {
 
 // The registry rejects a metric name registered again with different tag
 // names, so a scope tagged differently from the one that registered first can
-// never register its own copy. It must get the first set, not warn six times
+// never register its own copy. It must get the first set, not warn for every metric
 // and be left with nil handles.
 func TestMetrics_DifferentTagNamesShareTheRegisteredFamily(t *testing.T) {
 	root := metrics.New()
@@ -634,6 +641,14 @@ func TestMetrics_DifferentTagNamesShareTheRegisteredFamily(t *testing.T) {
 	r2.SetCounts(2, 0, 0)
 	active, _, _ := reportedGauges(first)
 	assert.Equal(t, int64(3), active)
+	r1.IncDial()
+	r2.IncDial()
+	r1.IncDialFailure()
+	r2.IncDialFailure()
+	require.NotNil(t, first.dialsTotal)
+	require.NotNil(t, first.dialFailuresTotal)
+	assert.Equal(t, int64(2), first.dialsTotal.Load())
+	assert.Equal(t, int64(2), first.dialFailuresTotal.Load())
 }
 
 func TestMetrics_ScopesOverDifferentRegistriesStaySeparate(t *testing.T) {
