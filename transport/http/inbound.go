@@ -36,6 +36,7 @@ import (
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/api/x/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
+	intneth2 "go.uber.org/yarpc/internal/net/http2"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -165,6 +166,15 @@ func DisableHTTP2(flag bool) InboundOption {
 	}
 }
 
+// DisableHTTP2ShutdownHelper returns an InboundOption that disables the HTTP/2
+// shutdown helper.
+// The helper is only enabled if HTTP/2 is supported.
+func DisableHTTP2ShutdownHelper(flag bool) InboundOption {
+	return func(i *Inbound) {
+		i.disableHTTP2ShutdownHelper = flag
+	}
+}
+
 // EnableOverrideOriginalItemWithCanonicalizedKey returns an InboundOption that enables overrideOriginalItemWithCanonicalizedKey
 func EnableOverrideOriginalItemWithCanonicalizedKey() InboundOption {
 	return func(i *Inbound) {
@@ -242,6 +252,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		grabHeaders:                 make(map[string]struct{}),
 		bothResponseError:           true,
 		disableHTTP2:                false,
+		disableHTTP2ShutdownHelper:  false,
 		headerPreallocationStrategy: HeaderPreallocationUnfiltered,
 	}
 	server := &http.Server{
@@ -262,6 +273,7 @@ type Inbound struct {
 	mux             *http.ServeMux
 	muxPattern      string
 	server          *intnet.HTTPServer
+	shutdownHelper  intneth2.ShutdownHelper // nil = no shutdown helper
 	shutdownTimeout time.Duration
 	router          transport.Router
 	tracer          opentracing.Tracer
@@ -279,6 +291,7 @@ type Inbound struct {
 	tlsMode   yarpctls.Mode
 
 	disableHTTP2                             bool
+	disableHTTP2ShutdownHelper               bool
 	overrideOriginalItemWithCanonicalizedKey bool
 	headerCaseMapping                        map[string][]string
 	headerPreallocationStrategy              HeaderPreallocationStrategy
@@ -369,7 +382,10 @@ func (i *Inbound) start() error {
 	}
 
 	i.server.Handler = httpHandler
-	if !i.disableHTTP2 {
+	if i.disableHTTP2 {
+		// Cannot enable shutdown helper if HTTP/2 is disabled
+		i.disableHTTP2ShutdownHelper = true
+	} else {
 		h2s := &http2.Server{}
 		i.server.Handler = h2c.NewHandler(i.server.Handler, h2s)
 		err := http2.ConfigureServer(i.server.Server, h2s)
@@ -386,6 +402,10 @@ func (i *Inbound) start() error {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
+	}
+	if !i.disableHTTP2ShutdownHelper {
+		i.shutdownHelper = intneth2.NewShutdownHelper()
+		listener = intneth2.WrapListener(listener, i.shutdownHelper)
 	}
 
 	if i.tlsMode != yarpctls.Disabled {
@@ -432,7 +452,21 @@ func (i *Inbound) shutdown(ctx context.Context) error {
 			return nil
 		}
 
-		return i.server.Shutdown(ctx)
+		if i.shutdownHelper == nil {
+			return i.server.Shutdown(ctx)
+		}
+		i.shutdownHelper.BeginShutdown()
+		// The server must only shut down once streams opened before the
+		// first GOAWAY was acknowledged have been read.
+		ready := i.shutdownHelper.IsShutdownReady(ctx)
+		err := i.server.Shutdown(ctx)
+		if !ready && err == nil {
+			err = ctx.Err()
+		}
+		if !i.shutdownHelper.IsShutdownComplete(ctx) && err == nil {
+			err = ctx.Err()
+		}
+		return err
 	})
 }
 
