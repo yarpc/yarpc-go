@@ -163,8 +163,9 @@ generate_with_protoc_all() {
   # name "annotations"; map it to its full module import path so the
   # generated withuuid.pb.go references it as
   # go.uber.org/yarpc/.../annotations rather than an unqualified path.
+  # It also imports google/protobuf/wrappers.proto, mapped to gogo's types.
   protoc_go encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto
-  EXTRA_PROTOC_M="Mencoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto=go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations" \
+  EXTRA_PROTOC_M="Mencoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations/annotations.proto=go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types" \
     protoc_all encoding/protobuf/protoc-gen-yarpc-go/internal/tests/withuuid/withuuid.proto
 }
 

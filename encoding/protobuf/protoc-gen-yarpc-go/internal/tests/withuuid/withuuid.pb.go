@@ -8,6 +8,7 @@ import (
 	fmt "fmt"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
+	types "github.com/gogo/protobuf/types"
 	_ "go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/tests/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -899,6 +900,243 @@ func (m *MapMessageRequest) GetItemsById() map[string]*ActorItem {
 	return nil
 }
 
+// UUID and UserId are wrapper types around the UUID string, protobuf's
+// stand-in for a Thrift typedef of string: UUID wraps the string, UserId
+// wraps UUID. Neither carries an annotation itself; annotating a field of
+// either type makes the string inside it the leaf.
+type UUID struct {
+	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+}
+
+func (m *UUID) Reset()      { *m = UUID{} }
+func (*UUID) ProtoMessage() {}
+func (*UUID) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f5f8405fd7619e54, []int{18}
+}
+func (m *UUID) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *UUID) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_UUID.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *UUID) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UUID.Merge(m, src)
+}
+func (m *UUID) XXX_Size() int {
+	return m.Size()
+}
+func (m *UUID) XXX_DiscardUnknown() {
+	xxx_messageInfo_UUID.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UUID proto.InternalMessageInfo
+
+func (m *UUID) GetValue() string {
+	if m != nil {
+		return m.Value
+	}
+	return ""
+}
+
+type UserId struct {
+	Uuid *UUID `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+}
+
+func (m *UserId) Reset()      { *m = UserId{} }
+func (*UserId) ProtoMessage() {}
+func (*UserId) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f5f8405fd7619e54, []int{19}
+}
+func (m *UserId) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *UserId) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_UserId.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *UserId) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UserId.Merge(m, src)
+}
+func (m *UserId) XXX_Size() int {
+	return m.Size()
+}
+func (m *UserId) XXX_DiscardUnknown() {
+	xxx_messageInfo_UserId.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UserId proto.InternalMessageInfo
+
+func (m *UserId) GetUuid() *UUID {
+	if m != nil {
+		return m.Uuid
+	}
+	return nil
+}
+
+// Actor has a single string field next to a non-string one: annotating a
+// field of this type collects the string. A second string field would
+// fail generation, since the validator could not tell the two apart.
+type Actor struct {
+	Uuid    string `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Version int64  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+}
+
+func (m *Actor) Reset()      { *m = Actor{} }
+func (*Actor) ProtoMessage() {}
+func (*Actor) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f5f8405fd7619e54, []int{20}
+}
+func (m *Actor) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Actor) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Actor.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Actor) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Actor.Merge(m, src)
+}
+func (m *Actor) XXX_Size() int {
+	return m.Size()
+}
+func (m *Actor) XXX_DiscardUnknown() {
+	xxx_messageInfo_Actor.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Actor proto.InternalMessageInfo
+
+func (m *Actor) GetUuid() string {
+	if m != nil {
+		return m.Uuid
+	}
+	return ""
+}
+
+func (m *Actor) GetVersion() int64 {
+	if m != nil {
+		return m.Version
+	}
+	return 0
+}
+
+// WrapperActorsRequest annotates message-typed fields. trace has the
+// same type as actor but is not annotated, so it must not be collected.
+type WrapperActorsRequest struct {
+	Actor       *UUID              `protobuf:"bytes,1,opt,name=actor,proto3" json:"actor,omitempty"`
+	User        *UserId            `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	LegacyActor *types.StringValue `protobuf:"bytes,3,opt,name=legacy_actor,json=legacyActor,proto3" json:"legacy_actor,omitempty"`
+	Actors      []*UUID            `protobuf:"bytes,4,rep,name=actors,proto3" json:"actors,omitempty"`
+	UsersByRole map[string]*UserId `protobuf:"bytes,5,rep,name=users_by_role,json=usersByRole,proto3" json:"users_by_role,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Owner       *Actor             `protobuf:"bytes,6,opt,name=owner,proto3" json:"owner,omitempty"`
+	Trace       *UUID              `protobuf:"bytes,7,opt,name=trace,proto3" json:"trace,omitempty"`
+}
+
+func (m *WrapperActorsRequest) Reset()      { *m = WrapperActorsRequest{} }
+func (*WrapperActorsRequest) ProtoMessage() {}
+func (*WrapperActorsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f5f8405fd7619e54, []int{21}
+}
+func (m *WrapperActorsRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *WrapperActorsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_WrapperActorsRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *WrapperActorsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_WrapperActorsRequest.Merge(m, src)
+}
+func (m *WrapperActorsRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *WrapperActorsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_WrapperActorsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_WrapperActorsRequest proto.InternalMessageInfo
+
+func (m *WrapperActorsRequest) GetActor() *UUID {
+	if m != nil {
+		return m.Actor
+	}
+	return nil
+}
+
+func (m *WrapperActorsRequest) GetUser() *UserId {
+	if m != nil {
+		return m.User
+	}
+	return nil
+}
+
+func (m *WrapperActorsRequest) GetLegacyActor() *types.StringValue {
+	if m != nil {
+		return m.LegacyActor
+	}
+	return nil
+}
+
+func (m *WrapperActorsRequest) GetActors() []*UUID {
+	if m != nil {
+		return m.Actors
+	}
+	return nil
+}
+
+func (m *WrapperActorsRequest) GetUsersByRole() map[string]*UserId {
+	if m != nil {
+		return m.UsersByRole
+	}
+	return nil
+}
+
+func (m *WrapperActorsRequest) GetOwner() *Actor {
+	if m != nil {
+		return m.Owner
+	}
+	return nil
+}
+
+func (m *WrapperActorsRequest) GetTrace() *UUID {
+	if m != nil {
+		return m.Trace
+	}
+	return nil
+}
+
 // IgnoredAnnotationsRequest carries annotations only on shapes that must
 // be ignored: a non-string scalar (timestamp), and a message-typed field
 // (creds) whose subtree holds no string leaf. None of these are valid
@@ -906,16 +1144,15 @@ func (m *MapMessageRequest) GetItemsById() map[string]*ActorItem {
 // request type.
 type IgnoredAnnotationsRequest struct {
 	Timestamp int64 `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// The annotation on a message-typed field is ignored. The walker does
-	// still descend into creds looking for a string leaf - and finds none,
-	// since IgnoredCredsContainer holds only a non-string scalar.
+	// IgnoredCredsContainer holds no string field, so the annotated creds
+	// subtree has nothing to collect.
 	Creds *IgnoredCredsContainer `protobuf:"bytes,2,opt,name=creds,proto3" json:"creds,omitempty"`
 }
 
 func (m *IgnoredAnnotationsRequest) Reset()      { *m = IgnoredAnnotationsRequest{} }
 func (*IgnoredAnnotationsRequest) ProtoMessage() {}
 func (*IgnoredAnnotationsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f5f8405fd7619e54, []int{18}
+	return fileDescriptor_f5f8405fd7619e54, []int{22}
 }
 func (m *IgnoredAnnotationsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -968,7 +1205,7 @@ type IgnoredCredsContainer struct {
 func (m *IgnoredCredsContainer) Reset()      { *m = IgnoredCredsContainer{} }
 func (*IgnoredCredsContainer) ProtoMessage() {}
 func (*IgnoredCredsContainer) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f5f8405fd7619e54, []int{19}
+	return fileDescriptor_f5f8405fd7619e54, []int{23}
 }
 func (m *IgnoredCredsContainer) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1013,7 +1250,7 @@ type UnannotatedRequest struct {
 func (m *UnannotatedRequest) Reset()      { *m = UnannotatedRequest{} }
 func (*UnannotatedRequest) ProtoMessage() {}
 func (*UnannotatedRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f5f8405fd7619e54, []int{20}
+	return fileDescriptor_f5f8405fd7619e54, []int{24}
 }
 func (m *UnannotatedRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1056,7 +1293,7 @@ type UnannotatedResponse struct {
 func (m *UnannotatedResponse) Reset()      { *m = UnannotatedResponse{} }
 func (*UnannotatedResponse) ProtoMessage() {}
 func (*UnannotatedResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f5f8405fd7619e54, []int{21}
+	return fileDescriptor_f5f8405fd7619e54, []int{25}
 }
 func (m *UnannotatedResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1113,6 +1350,11 @@ func init() {
 	proto.RegisterType((*RepeatedMessageRequest)(nil), "uber.yarpc.tests.protouuid.RepeatedMessageRequest")
 	proto.RegisterType((*MapMessageRequest)(nil), "uber.yarpc.tests.protouuid.MapMessageRequest")
 	proto.RegisterMapType((map[string]*ActorItem)(nil), "uber.yarpc.tests.protouuid.MapMessageRequest.ItemsByIdEntry")
+	proto.RegisterType((*UUID)(nil), "uber.yarpc.tests.protouuid.UUID")
+	proto.RegisterType((*UserId)(nil), "uber.yarpc.tests.protouuid.UserId")
+	proto.RegisterType((*Actor)(nil), "uber.yarpc.tests.protouuid.Actor")
+	proto.RegisterType((*WrapperActorsRequest)(nil), "uber.yarpc.tests.protouuid.WrapperActorsRequest")
+	proto.RegisterMapType((map[string]*UserId)(nil), "uber.yarpc.tests.protouuid.WrapperActorsRequest.UsersByRoleEntry")
 	proto.RegisterType((*IgnoredAnnotationsRequest)(nil), "uber.yarpc.tests.protouuid.IgnoredAnnotationsRequest")
 	proto.RegisterType((*IgnoredCredsContainer)(nil), "uber.yarpc.tests.protouuid.IgnoredCredsContainer")
 	proto.RegisterType((*UnannotatedRequest)(nil), "uber.yarpc.tests.protouuid.UnannotatedRequest")
@@ -1124,80 +1366,95 @@ func init() {
 }
 
 var fileDescriptor_f5f8405fd7619e54 = []byte{
-	// 1154 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x57, 0x4f, 0x6f, 0x1b, 0x45,
-	0x14, 0xf7, 0x3a, 0x71, 0x62, 0x3f, 0xa7, 0x69, 0x33, 0xa4, 0x90, 0x1a, 0xb4, 0x6a, 0x97, 0x06,
-	0x42, 0x89, 0x1d, 0x1a, 0x04, 0xa2, 0x7f, 0x14, 0x94, 0xa4, 0x40, 0x2d, 0xc5, 0xa1, 0xda, 0x2a,
-	0x1c, 0x50, 0x91, 0x35, 0xf6, 0x4e, 0xcd, 0x24, 0xeb, 0x19, 0x77, 0x67, 0x1c, 0xe4, 0x72, 0xe1,
-	0xc8, 0x09, 0xf1, 0x31, 0xf8, 0x02, 0x9c, 0xb9, 0x72, 0xcc, 0xa9, 0xea, 0x91, 0x38, 0x17, 0x8e,
-	0xfd, 0x08, 0x68, 0xfe, 0xac, 0xed, 0x8d, 0xc3, 0xd6, 0xee, 0x6d, 0xe7, 0xfd, 0xf9, 0xfd, 0xde,
-	0x3c, 0xbf, 0x37, 0x3f, 0x19, 0xf6, 0x08, 0x6b, 0xf2, 0x80, 0xb2, 0xd6, 0x46, 0x27, 0xe2, 0x92,
-	0x37, 0xba, 0x4f, 0xcd, 0x47, 0xb3, 0xdc, 0x22, 0xac, 0xdc, 0xc3, 0x51, 0xa7, 0x59, 0x6e, 0xf1,
-	0x0d, 0xca, 0x24, 0x89, 0x18, 0x0e, 0x37, 0x24, 0x11, 0x52, 0x6c, 0xfc, 0x44, 0xe5, 0x8f, 0xdd,
-	0x2e, 0x0d, 0x06, 0x1f, 0x15, 0x9d, 0x84, 0x4a, 0xdd, 0x06, 0x89, 0x2a, 0x3a, 0xab, 0xa2, 0x23,
-	0x8d, 0x5d, 0x45, 0x94, 0xfc, 0x37, 0x62, 0xc2, 0x8c, 0x71, 0x89, 0x25, 0xe5, 0x2c, 0xf1, 0x6d,
-	0x70, 0xbd, 0x87, 0xb0, 0xf4, 0x80, 0x84, 0x44, 0x92, 0x03, 0x41, 0x22, 0x9f, 0x3c, 0xeb, 0x12,
-	0x21, 0x51, 0x09, 0x72, 0xb8, 0x29, 0x79, 0xb4, 0xe2, 0x5c, 0x77, 0xd6, 0x0a, 0x3b, 0xb3, 0xbf,
-	0xfe, 0xb9, 0xe2, 0xf8, 0xc6, 0x84, 0xde, 0x81, 0xf9, 0xae, 0x20, 0x51, 0x9d, 0x06, 0x2b, 0x59,
-	0xe5, 0xf5, 0xe7, 0xd4, 0xb1, 0x1a, 0x78, 0x37, 0x01, 0x8d, 0x22, 0x89, 0x0e, 0x67, 0x82, 0xa0,
-	0x45, 0xc8, 0xf2, 0x23, 0x8d, 0x93, 0xf7, 0xb3, 0xfc, 0xc8, 0xfb, 0x0e, 0x16, 0xbf, 0x21, 0x72,
-	0x94, 0xec, 0x43, 0x58, 0x88, 0xcc, 0xa7, 0x41, 0x1d, 0xe5, 0x2c, 0x0e, 0x3c, 0xd5, 0x00, 0xbd,
-	0x0b, 0x05, 0x89, 0xa3, 0x16, 0x91, 0x43, 0xee, 0xbc, 0x31, 0x54, 0x03, 0xaf, 0x06, 0x97, 0x07,
-	0xb8, 0x96, 0x7a, 0xa4, 0x52, 0x67, 0xb4, 0x52, 0x74, 0x03, 0x16, 0x02, 0x2a, 0x3a, 0x21, 0xee,
-	0xd5, 0x19, 0x6e, 0x13, 0x8b, 0x55, 0xb4, 0xb6, 0x7d, 0xdc, 0x26, 0xde, 0x0f, 0x70, 0x65, 0x8f,
-	0x0a, 0x8d, 0x27, 0xe2, 0x42, 0xd7, 0xe1, 0x72, 0x13, 0x87, 0x21, 0x89, 0xea, 0xba, 0x13, 0xe7,
-	0x6b, 0xbd, 0x64, 0x9c, 0xdb, 0xca, 0x67, 0xaa, 0xed, 0xe0, 0x16, 0xa9, 0x0b, 0xfa, 0xdc, 0x30,
-	0xe4, 0xfc, 0xbc, 0x32, 0x3c, 0xa6, 0xcf, 0x89, 0x57, 0x81, 0xa5, 0x11, 0x78, 0x5b, 0xef, 0x35,
-	0xc8, 0xdb, 0x7a, 0xc5, 0x8a, 0x73, 0x7d, 0x66, 0xad, 0xe0, 0xcf, 0x9b, 0x82, 0x85, 0x77, 0x1b,
-	0xa0, 0xca, 0x18, 0x89, 0xf6, 0xc8, 0x31, 0x09, 0xd1, 0xfb, 0x00, 0x54, 0x9d, 0xea, 0x6a, 0x2a,
-	0x12, 0x35, 0x14, 0xb4, 0xfd, 0xa0, 0x4b, 0x03, 0xef, 0x21, 0xe4, 0x6b, 0x34, 0x30, 0x09, 0xf7,
-	0x21, 0xa7, 0x1d, 0x3a, 0xb6, 0xb8, 0xf9, 0x41, 0xe5, 0xff, 0x87, 0xac, 0x32, 0xe4, 0xf1, 0x4d,
-	0x92, 0xf7, 0x00, 0xe0, 0xdb, 0xae, 0x8c, 0xc9, 0x3f, 0x87, 0x99, 0xb6, 0x65, 0x2d, 0x6e, 0xde,
-	0x4c, 0x43, 0x8a, 0xe9, 0x7d, 0x95, 0xe0, 0x1d, 0xc2, 0xa5, 0x7d, 0xf5, 0x4b, 0x06, 0x71, 0x3b,
-	0xb7, 0x60, 0x8e, 0x69, 0xc3, 0x24, 0x55, 0x0d, 0x0b, 0xf0, 0x6d, 0x96, 0x6a, 0x97, 0x8c, 0x70,
-	0x93, 0x0c, 0xa7, 0x61, 0x5e, 0x9f, 0xab, 0x81, 0xf7, 0x04, 0x0a, 0xbb, 0xbd, 0x66, 0x48, 0xf6,
-	0x79, 0x40, 0xd0, 0x1d, 0x98, 0x0d, 0x39, 0xef, 0x58, 0x96, 0xd5, 0x34, 0x96, 0x41, 0x92, 0xaf,
-	0x53, 0xd0, 0x32, 0x64, 0x63, 0x70, 0xdb, 0xe0, 0x2c, 0x0d, 0xbc, 0x2a, 0x2c, 0xe8, 0xc0, 0xf8,
-	0x22, 0x77, 0x60, 0x36, 0xe2, 0x5c, 0x4e, 0x49, 0xa0, 0x52, 0xbc, 0x16, 0x5c, 0xad, 0x75, 0x43,
-	0x49, 0xb7, 0xcd, 0x5e, 0x0e, 0x9b, 0xb3, 0x0a, 0xc5, 0xa7, 0x34, 0x12, 0xb2, 0x3e, 0xbe, 0x87,
-	0xa0, 0x1d, 0x7a, 0xcc, 0xd4, 0xee, 0x08, 0xd2, 0xe4, 0x2c, 0xb0, 0x71, 0xa3, 0xa5, 0x16, 0x8d,
-	0x47, 0x07, 0x7a, 0x8f, 0xe0, 0xaa, 0x4f, 0x3a, 0x44, 0x51, 0x68, 0xc3, 0x60, 0xa8, 0xdf, 0x83,
-	0x39, 0x9d, 0x6a, 0x47, 0xce, 0xe6, 0x5a, 0x5b, 0x5a, 0x8f, 0xff, 0x72, 0xe0, 0x4a, 0x0d, 0x77,
-	0x92, 0x68, 0x87, 0xb0, 0x68, 0x32, 0xeb, 0x8d, 0x5e, 0x3d, 0xe2, 0x21, 0xd1, 0xa8, 0xc5, 0xcd,
-	0xad, 0xd4, 0x39, 0x39, 0x87, 0x52, 0x31, 0xa7, 0x9d, 0x9e, 0xcf, 0x43, 0xf2, 0x15, 0x93, 0x51,
-	0xcf, 0x56, 0xb5, 0x80, 0x47, 0x1c, 0xa5, 0x2f, 0x61, 0x69, 0x2c, 0x10, 0x5d, 0x81, 0x99, 0x23,
-	0xd2, 0xb3, 0xfb, 0xae, 0x3e, 0xd1, 0x32, 0xe4, 0x8e, 0x71, 0xd8, 0x8d, 0xb7, 0xdc, 0x1c, 0xee,
-	0x66, 0xbf, 0x70, 0xbc, 0xaf, 0xa1, 0x60, 0x96, 0x55, 0x92, 0xb6, 0xda, 0x29, 0xb3, 0xd5, 0xe3,
-	0x3b, 0xa5, 0xed, 0x6a, 0xa7, 0x14, 0x56, 0x88, 0x1b, 0x24, 0x8c, 0xb1, 0xf4, 0xc1, 0x3b, 0x80,
-	0xb7, 0xe3, 0xde, 0xd6, 0x88, 0x10, 0xb8, 0x35, 0x98, 0x8c, 0x7b, 0x90, 0xa3, 0x92, 0xb4, 0x85,
-	0xed, 0x42, 0xea, 0x68, 0x0c, 0x4a, 0xf1, 0x4d, 0x8e, 0xf7, 0xc2, 0x81, 0xa5, 0x1a, 0xee, 0x9c,
-	0x83, 0x7c, 0x02, 0x45, 0xed, 0x56, 0x0d, 0xd6, 0x85, 0x2a, 0xe0, 0xfb, 0xaf, 0x69, 0x6f, 0x12,
-	0xa3, 0xa2, 0x58, 0xc4, 0x4e, 0xaf, 0x1a, 0xe8, 0x9e, 0xf9, 0x05, 0x1a, 0x9f, 0x4b, 0x4d, 0x58,
-	0x4c, 0x3a, 0x2f, 0x68, 0xe8, 0xbd, 0xd1, 0x86, 0x4e, 0x7e, 0xa9, 0x61, 0xdf, 0x7f, 0x73, 0xe0,
-	0x5a, 0xb5, 0xc5, 0x78, 0x44, 0x82, 0xed, 0xa1, 0x1e, 0xc5, 0x17, 0xf4, 0xa0, 0x20, 0x69, 0x9b,
-	0x08, 0x89, 0xdb, 0x66, 0x67, 0x67, 0xe2, 0xdf, 0x61, 0x60, 0x46, 0x35, 0xc8, 0x35, 0x23, 0x12,
-	0x08, 0x5b, 0xc2, 0xed, 0xd4, 0xf7, 0xcc, 0x30, 0xed, 0xaa, 0xf8, 0x5d, 0xce, 0x24, 0xa6, 0x8c,
-	0x44, 0xb1, 0xa4, 0x69, 0x14, 0xef, 0x2e, 0x5c, 0xbd, 0x30, 0x0a, 0xdd, 0x80, 0x02, 0x15, 0xa2,
-	0x4b, 0x82, 0x3a, 0x96, 0x89, 0x5a, 0xf2, 0xc6, 0xbc, 0x2d, 0xbd, 0x5b, 0x80, 0x0e, 0x18, 0x3e,
-	0xbf, 0xbe, 0xcb, 0x90, 0x93, 0xfc, 0x88, 0x30, 0xdb, 0x37, 0x73, 0xf0, 0x56, 0xe1, 0xad, 0x44,
-	0xec, 0xc5, 0x12, 0xb9, 0xf9, 0x02, 0xa0, 0xa8, 0x94, 0xe1, 0x31, 0x89, 0x8e, 0x69, 0x93, 0xa0,
-	0x23, 0x80, 0xa1, 0xb0, 0xa2, 0x72, 0xda, 0x65, 0xc7, 0xa4, 0xbc, 0x54, 0x99, 0x34, 0xdc, 0x16,
-	0xd3, 0x80, 0x79, 0xab, 0xa3, 0xe8, 0x56, 0x5a, 0x6a, 0x52, 0xc4, 0x4b, 0x1f, 0x4f, 0x14, 0x6b,
-	0x39, 0x0e, 0xa1, 0x30, 0x50, 0x3f, 0xb4, 0x9e, 0x96, 0x79, 0x5e, 0x83, 0x4b, 0xe5, 0x09, 0xa3,
-	0x0d, 0xd3, 0x27, 0x0e, 0x6a, 0xc1, 0xec, 0x23, 0xca, 0x5a, 0x28, 0xb5, 0x0f, 0xe3, 0xbf, 0x60,
-	0x69, 0x63, 0xe2, 0x78, 0x7b, 0x29, 0x0e, 0x48, 0x4d, 0x0f, 0x61, 0x92, 0xe2, 0x50, 0xbf, 0xb2,
-	0x94, 0x33, 0xf4, 0x51, 0x1a, 0x4c, 0x42, 0x0f, 0xa7, 0xfe, 0xa5, 0x5a, 0x50, 0xd4, 0x72, 0x62,
-	0x99, 0xd6, 0x5e, 0xab, 0x3b, 0x6f, 0x4a, 0x24, 0x60, 0x51, 0x8b, 0x54, 0x67, 0xc0, 0x95, 0xba,
-	0x70, 0x17, 0x0a, 0xda, 0xd4, 0xa4, 0x3d, 0x58, 0x4e, 0x0a, 0xd6, 0x24, 0xd4, 0x17, 0x4a, 0xdc,
-	0xd4, 0xd4, 0x1c, 0x2e, 0x0f, 0x24, 0xc9, 0xb2, 0xae, 0x4f, 0xa3, 0x5f, 0x53, 0x13, 0xfe, 0x3c,
-	0x14, 0x67, 0xfb, 0x52, 0x5b, 0xda, 0xcd, 0x49, 0x2e, 0x9b, 0x7c, 0xdc, 0xa7, 0x26, 0x7f, 0xa6,
-	0x65, 0x3c, 0xc9, 0x5b, 0x9e, 0x4a, 0x4f, 0xa6, 0xa6, 0x3c, 0x86, 0x4b, 0xf1, 0xfb, 0x6f, 0xf8,
-	0x3e, 0x9b, 0xe0, 0x01, 0x1f, 0x97, 0x8a, 0x69, 0x79, 0x77, 0xb6, 0x4e, 0x4e, 0xdd, 0xcc, 0xcb,
-	0x53, 0x37, 0xf3, 0xea, 0xd4, 0x75, 0x7e, 0xe9, 0xbb, 0xce, 0x1f, 0x7d, 0xd7, 0xf9, 0xbb, 0xef,
-	0x3a, 0x27, 0x7d, 0xd7, 0xf9, 0xa7, 0xef, 0x3a, 0xff, 0xf6, 0xdd, 0xcc, 0xab, 0xbe, 0xeb, 0xfc,
-	0x7e, 0xe6, 0x66, 0x4e, 0xce, 0xdc, 0xcc, 0xcb, 0x33, 0x37, 0xf3, 0x7d, 0x3e, 0xfe, 0x87, 0xd6,
-	0x98, 0xd3, 0xe8, 0x9f, 0xfe, 0x17, 0x00, 0x00, 0xff, 0xff, 0xaf, 0x58, 0xa0, 0xf6, 0xf2, 0x0d,
-	0x00, 0x00,
+	// 1395 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x58, 0x4b, 0x6f, 0x13, 0xd7,
+	0x17, 0xcf, 0x24, 0x76, 0x62, 0x9f, 0x49, 0x42, 0x72, 0xff, 0xe1, 0xdf, 0xe0, 0xa2, 0x11, 0x4c,
+	0xa1, 0xa5, 0x94, 0x38, 0x90, 0x16, 0xc4, 0x23, 0x4d, 0x95, 0x00, 0x2d, 0x96, 0x30, 0x45, 0x83,
+	0x4c, 0xa5, 0x8a, 0xca, 0x1a, 0x7b, 0x2e, 0xd3, 0x4b, 0xc6, 0x73, 0xcd, 0xcc, 0x75, 0x90, 0xe9,
+	0xa6, 0xcb, 0xae, 0xaa, 0x7e, 0x8c, 0x7e, 0x81, 0xae, 0xbb, 0x6d, 0x77, 0xac, 0x2a, 0x96, 0x8d,
+	0xd9, 0x74, 0xc9, 0x47, 0xa8, 0xee, 0x63, 0x5e, 0xb1, 0x3b, 0x8c, 0xb3, 0xf3, 0x3d, 0x8f, 0xdf,
+	0xef, 0xdc, 0x73, 0xcf, 0x99, 0x73, 0x64, 0xb8, 0x8f, 0xfd, 0x2e, 0x75, 0x88, 0xef, 0x6e, 0xf6,
+	0x03, 0xca, 0x68, 0x67, 0xf0, 0x54, 0xfe, 0xe8, 0x6e, 0xb8, 0xd8, 0xdf, 0x18, 0xda, 0x41, 0xbf,
+	0xbb, 0xe1, 0xd2, 0x4d, 0xe2, 0x33, 0x1c, 0xf8, 0xb6, 0xb7, 0xc9, 0x70, 0xc8, 0xc2, 0xcd, 0x17,
+	0x84, 0x7d, 0x3f, 0x18, 0x10, 0x27, 0xfe, 0x51, 0x17, 0x4e, 0xa8, 0x36, 0xe8, 0xe0, 0xa0, 0x2e,
+	0xbc, 0xea, 0xc2, 0x52, 0xca, 0xb9, 0x45, 0xcd, 0x3a, 0x16, 0x93, 0xed, 0xfb, 0x94, 0xd9, 0x8c,
+	0x50, 0x3f, 0xf3, 0x5b, 0xe2, 0xd6, 0x0c, 0x97, 0x52, 0xd7, 0xc3, 0x09, 0xe2, 0x8b, 0xc0, 0xee,
+	0xf7, 0x71, 0xa0, 0xf4, 0xe6, 0x3d, 0x58, 0xbd, 0x83, 0x3d, 0xcc, 0x70, 0x2b, 0xc4, 0x81, 0x85,
+	0x9f, 0x0f, 0x70, 0xc8, 0x50, 0x0d, 0xca, 0x76, 0x97, 0xd1, 0x60, 0x5d, 0x3b, 0xa3, 0x5d, 0xa8,
+	0xee, 0x95, 0x7e, 0xfa, 0x6d, 0x5d, 0xb3, 0xa4, 0x08, 0xbd, 0x07, 0x0b, 0x83, 0x10, 0x07, 0x6d,
+	0xe2, 0xac, 0xcf, 0x72, 0xad, 0x35, 0xcf, 0x8f, 0x0d, 0xc7, 0x3c, 0x07, 0x28, 0x8d, 0x14, 0xf6,
+	0xa9, 0x1f, 0x62, 0xb4, 0x0c, 0xb3, 0x74, 0x5f, 0xe0, 0x54, 0xac, 0x59, 0xba, 0x6f, 0x3e, 0x86,
+	0xe5, 0xaf, 0x30, 0x4b, 0x93, 0x7d, 0x04, 0x8b, 0x81, 0xfc, 0x29, 0x51, 0xd3, 0x9c, 0x7a, 0xac,
+	0x69, 0x38, 0xe8, 0x7d, 0xa8, 0x32, 0x3b, 0x70, 0x31, 0x4b, 0xb8, 0x2b, 0x52, 0xd0, 0x70, 0xcc,
+	0x26, 0x9c, 0x88, 0x71, 0x15, 0x75, 0x2a, 0x52, 0x2d, 0x1d, 0x29, 0x3a, 0x0b, 0x8b, 0x0e, 0x09,
+	0xfb, 0x9e, 0x3d, 0x6c, 0xfb, 0x76, 0x0f, 0x2b, 0x2c, 0x5d, 0xc9, 0x1e, 0xd8, 0x3d, 0x6c, 0x7e,
+	0x07, 0x2b, 0xf7, 0x49, 0x28, 0xf0, 0xc2, 0x28, 0xd0, 0x4b, 0x70, 0xa2, 0x6b, 0x7b, 0x1e, 0x0e,
+	0xda, 0x22, 0x13, 0x47, 0x63, 0x5d, 0x92, 0xca, 0x5d, 0xae, 0x93, 0xd1, 0xf6, 0x6d, 0x17, 0xb7,
+	0x43, 0xf2, 0x52, 0x32, 0x94, 0xad, 0x0a, 0x17, 0x3c, 0x22, 0x2f, 0xb1, 0x59, 0x87, 0xd5, 0x14,
+	0xbc, 0x8a, 0xf7, 0x14, 0x54, 0x54, 0xbc, 0xe1, 0xba, 0x76, 0x66, 0xee, 0x42, 0xd5, 0x5a, 0x90,
+	0x01, 0x87, 0xe6, 0x15, 0x80, 0x86, 0xef, 0xe3, 0xe0, 0x3e, 0x3e, 0xc0, 0x1e, 0xfa, 0x00, 0x80,
+	0xf0, 0x53, 0x9b, 0x57, 0x4d, 0x26, 0x86, 0xaa, 0x90, 0xb7, 0x06, 0xc4, 0x31, 0xef, 0x41, 0xa5,
+	0x49, 0x1c, 0xe9, 0xb0, 0x0d, 0x65, 0xa1, 0x10, 0xb6, 0xfa, 0xd6, 0x87, 0xf5, 0xff, 0x2e, 0xc2,
+	0x7a, 0xc2, 0x63, 0x49, 0x27, 0xf3, 0x0e, 0xc0, 0xd7, 0x03, 0x16, 0x91, 0x5f, 0x83, 0xb9, 0x9e,
+	0x62, 0xd5, 0xb7, 0xce, 0xe5, 0x21, 0x45, 0xf4, 0x16, 0x77, 0x30, 0x9f, 0xc1, 0xd2, 0x03, 0xfe,
+	0x92, 0x4e, 0x94, 0xce, 0x1d, 0x98, 0xf7, 0x85, 0xa0, 0x48, 0x54, 0x49, 0x00, 0x96, 0xf2, 0xe2,
+	0xe9, 0x62, 0x81, 0xdd, 0xc5, 0x49, 0x35, 0x2c, 0x88, 0x73, 0xc3, 0x31, 0x9f, 0x40, 0xf5, 0xf6,
+	0xb0, 0xeb, 0xe1, 0x07, 0xd4, 0xc1, 0xe8, 0x06, 0x94, 0x3c, 0x4a, 0xfb, 0x8a, 0xe5, 0x7c, 0x1e,
+	0x4b, 0xec, 0x64, 0x09, 0x17, 0xb4, 0x06, 0xb3, 0x11, 0xb8, 0x4a, 0xf0, 0x2c, 0x71, 0xcc, 0x06,
+	0x2c, 0x0a, 0xc3, 0xe8, 0x22, 0x37, 0xa0, 0x14, 0x50, 0xca, 0xa6, 0x24, 0xe0, 0x2e, 0xa6, 0x0b,
+	0x27, 0x9b, 0x03, 0x8f, 0x91, 0x5d, 0xd9, 0xb7, 0x49, 0x72, 0xce, 0x83, 0xfe, 0x94, 0x04, 0x21,
+	0x6b, 0x8f, 0xf7, 0x21, 0x08, 0x85, 0x28, 0x33, 0xde, 0x3b, 0x21, 0xee, 0x52, 0xdf, 0x51, 0x76,
+	0xe9, 0x50, 0x75, 0xa9, 0x11, 0x86, 0xe6, 0x43, 0x38, 0x69, 0xe1, 0x3e, 0xe6, 0x14, 0x42, 0x10,
+	0x17, 0xf5, 0x69, 0x98, 0x17, 0xae, 0xaa, 0xe4, 0x94, 0xaf, 0x92, 0xe5, 0xe5, 0xf8, 0x77, 0x0d,
+	0x56, 0x9a, 0x76, 0x3f, 0x8b, 0xf6, 0x0c, 0x96, 0xa5, 0x67, 0xbb, 0x33, 0x6c, 0x07, 0xd4, 0xc3,
+	0x02, 0x55, 0xdf, 0xda, 0xc9, 0xad, 0x93, 0x23, 0x28, 0x75, 0x79, 0xda, 0x1b, 0x5a, 0xd4, 0xc3,
+	0x77, 0x7d, 0x16, 0x0c, 0x55, 0x54, 0x8b, 0x76, 0x4a, 0x51, 0xfb, 0x02, 0x56, 0xc7, 0x0c, 0xd1,
+	0x0a, 0xcc, 0xed, 0xe3, 0xa1, 0xea, 0x77, 0xfe, 0x13, 0xad, 0x41, 0xf9, 0xc0, 0xf6, 0x06, 0x51,
+	0x97, 0xcb, 0xc3, 0xcd, 0xd9, 0xeb, 0x9a, 0xf9, 0x25, 0x54, 0x65, 0xb3, 0x32, 0xdc, 0xe3, 0x3d,
+	0x25, 0xbb, 0x7a, 0xbc, 0xa7, 0x84, 0x9c, 0xf7, 0x14, 0xc7, 0xf2, 0xec, 0x0e, 0xf6, 0x22, 0x2c,
+	0x71, 0x30, 0x5b, 0xf0, 0xff, 0x28, 0xb7, 0x4d, 0x1c, 0x86, 0xb6, 0x1b, 0x57, 0xc6, 0x2d, 0x28,
+	0x13, 0x86, 0x7b, 0xa1, 0xca, 0x42, 0x6e, 0x69, 0xc4, 0xa1, 0x58, 0xd2, 0xc7, 0xfc, 0x4b, 0x83,
+	0xd5, 0xa6, 0xdd, 0x3f, 0x02, 0xf9, 0x04, 0x74, 0xa1, 0xe6, 0x09, 0x16, 0x81, 0x72, 0xe0, 0xed,
+	0x77, 0xa4, 0x37, 0x8b, 0x51, 0xe7, 0x2c, 0xe1, 0xde, 0xb0, 0xe1, 0x88, 0x9c, 0x59, 0x55, 0x12,
+	0x9d, 0x6b, 0x5d, 0x58, 0xce, 0x2a, 0x27, 0x24, 0xf4, 0x56, 0x3a, 0xa1, 0xc5, 0x2f, 0x95, 0xe4,
+	0xfd, 0x34, 0x94, 0x5a, 0xad, 0xc6, 0x9d, 0xe4, 0x65, 0xb4, 0xd4, 0xcb, 0x98, 0x3b, 0x30, 0xdf,
+	0x92, 0x9f, 0xe9, 0xcf, 0xa0, 0x14, 0x3f, 0x86, 0xbe, 0x75, 0x26, 0x8f, 0x87, 0xe3, 0x59, 0xc2,
+	0xda, 0xbc, 0x0a, 0x65, 0xd9, 0x1b, 0x28, 0xe5, 0x5e, 0x95, 0x4a, 0xb4, 0x0e, 0x0b, 0x07, 0x38,
+	0x08, 0x09, 0xf5, 0x45, 0xf4, 0x73, 0x56, 0x74, 0x34, 0x0f, 0x4b, 0xb0, 0xf6, 0x8d, 0x1c, 0x8d,
+	0xd9, 0x92, 0xde, 0x4e, 0xcf, 0xc2, 0x02, 0x61, 0x64, 0xa7, 0xe5, 0x36, 0x94, 0xf8, 0x37, 0x5c,
+	0xe5, 0xca, 0xcc, 0x75, 0x16, 0xb7, 0x56, 0xee, 0xc2, 0x0b, 0xdd, 0x85, 0x45, 0x0f, 0xbb, 0x76,
+	0x77, 0xa8, 0xda, 0x7b, 0x4e, 0xa0, 0x9c, 0xae, 0xcb, 0x99, 0x5e, 0x8f, 0x66, 0x7a, 0xfd, 0x11,
+	0x0b, 0x88, 0xef, 0x3e, 0xe6, 0xf9, 0x8b, 0x9a, 0x5f, 0xfa, 0xc9, 0x4c, 0xec, 0xc4, 0x3d, 0x5e,
+	0x12, 0xe5, 0x52, 0xf4, 0x0e, 0xd1, 0x57, 0x60, 0x1f, 0x96, 0x78, 0x38, 0x49, 0x53, 0x97, 0x05,
+	0xcc, 0x6e, 0x1e, 0xcc, 0xa4, 0x5c, 0x8a, 0x2b, 0x4e, 0xe8, 0x6b, 0x7d, 0x90, 0xc8, 0xd1, 0xe7,
+	0x50, 0xa6, 0x2f, 0xf8, 0xac, 0x9a, 0x17, 0x97, 0x3d, 0xfb, 0xce, 0xf2, 0x8a, 0x12, 0x2e, 0xbc,
+	0xd0, 0x35, 0x28, 0x8b, 0x2f, 0xd4, 0xfa, 0x42, 0xc1, 0xaa, 0x91, 0xe6, 0xb5, 0x0e, 0xac, 0x1c,
+	0x8d, 0x6e, 0x42, 0xed, 0x5f, 0xcf, 0xd6, 0x7e, 0x81, 0xf7, 0x4c, 0x17, 0xfe, 0xcf, 0x1a, 0x9c,
+	0x6a, 0xb8, 0x3e, 0x0d, 0xb0, 0xb3, 0x9b, 0x2c, 0x6a, 0x51, 0xa1, 0x99, 0x50, 0x65, 0xa4, 0x87,
+	0x43, 0x66, 0xf7, 0xe4, 0xb0, 0x9a, 0x8b, 0x3e, 0x40, 0xb1, 0x18, 0x35, 0xa1, 0xdc, 0x0d, 0xb0,
+	0x13, 0x2a, 0xfe, 0x2b, 0xb9, 0x83, 0x5c, 0x32, 0xdd, 0xe6, 0xf6, 0xb7, 0xa9, 0xcf, 0x6c, 0xe2,
+	0xe3, 0x38, 0x59, 0x02, 0xc5, 0xbc, 0x09, 0x27, 0x27, 0x5a, 0xa1, 0xb3, 0x50, 0x25, 0x61, 0x38,
+	0xc0, 0x4e, 0xdb, 0x66, 0x99, 0x58, 0x2a, 0x52, 0xbc, 0xcb, 0xcc, 0x8b, 0x80, 0x5a, 0xbe, 0x7d,
+	0x74, 0x6e, 0xad, 0x41, 0x99, 0xd1, 0x7d, 0xec, 0x47, 0x3d, 0x2d, 0x0e, 0xe6, 0x79, 0xf8, 0x5f,
+	0xc6, 0x76, 0xf2, 0x6e, 0xb8, 0xf5, 0xa7, 0x0e, 0x3a, 0xcf, 0xda, 0x23, 0x1c, 0x1c, 0x90, 0x2e,
+	0x46, 0xfb, 0x00, 0xc9, 0x46, 0x89, 0x36, 0xf2, 0x2e, 0x3b, 0xb6, 0xc3, 0xd6, 0xea, 0x45, 0xcd,
+	0x55, 0x30, 0x1d, 0x58, 0x50, 0x0b, 0x24, 0xba, 0x98, 0xe7, 0x9a, 0xdd, 0x5e, 0x6b, 0x9f, 0x14,
+	0xb2, 0x55, 0x1c, 0xcf, 0xa0, 0x1a, 0xaf, 0x7d, 0xe8, 0x52, 0x9e, 0xe7, 0xd1, 0xe5, 0xb3, 0xb6,
+	0x51, 0xd0, 0x5a, 0x32, 0x5d, 0xd6, 0x90, 0x0b, 0xa5, 0x87, 0xc4, 0x77, 0x51, 0x6e, 0x1e, 0xc6,
+	0x5f, 0xb0, 0xb6, 0x59, 0xd8, 0x5e, 0x5d, 0x8a, 0x02, 0xe2, 0xd5, 0x83, 0x7d, 0x46, 0x6c, 0x4f,
+	0xac, 0x17, 0x84, 0xfa, 0xe8, 0xe3, 0x3c, 0x98, 0xcc, 0x22, 0x38, 0xf5, 0x4b, 0xb9, 0xa0, 0x8b,
+	0x3d, 0x4a, 0x31, 0x5d, 0x78, 0xe7, 0xc2, 0x75, 0x5c, 0xa2, 0x10, 0x96, 0xc5, 0x76, 0xd6, 0x8f,
+	0xb9, 0x72, 0x1b, 0x6e, 0xe2, 0x26, 0x37, 0x35, 0xe9, 0x10, 0xd6, 0xb2, 0x9b, 0x5a, 0x11, 0xea,
+	0x89, 0xbb, 0xdd, 0xd4, 0xd4, 0x14, 0x4e, 0xc4, 0xbb, 0x98, 0x62, 0xbd, 0x34, 0xcd, 0xe2, 0x36,
+	0x35, 0xe1, 0x0f, 0xc9, 0x56, 0xaa, 0x56, 0x14, 0x45, 0xbb, 0x55, 0xe4, 0xb2, 0xd9, 0xad, 0x66,
+	0x6a, 0xf2, 0xe7, 0x62, 0x7f, 0xcd, 0xf2, 0x6e, 0x4c, 0xb5, 0x48, 0x1d, 0x83, 0x72, 0x29, 0x99,
+	0x8b, 0x9c, 0xef, 0xf2, 0xb4, 0x23, 0x74, 0x6a, 0xca, 0x03, 0x58, 0x8a, 0x46, 0x8e, 0xa4, 0xbc,
+	0x5a, 0x60, 0x66, 0x8c, 0x4f, 0xa7, 0x69, 0x79, 0xf7, 0x76, 0x5e, 0x1d, 0x1a, 0x33, 0xaf, 0x0f,
+	0x8d, 0x99, 0xb7, 0x87, 0x86, 0xf6, 0xe3, 0xc8, 0xd0, 0x7e, 0x1d, 0x19, 0xda, 0x1f, 0x23, 0x43,
+	0x7b, 0x35, 0x32, 0xb4, 0xbf, 0x47, 0x86, 0xf6, 0xcf, 0xc8, 0x98, 0x79, 0x3b, 0x32, 0xb4, 0x5f,
+	0xde, 0x18, 0x33, 0xaf, 0xde, 0x18, 0x33, 0xaf, 0xdf, 0x18, 0x33, 0xdf, 0x56, 0xa2, 0x7f, 0x4b,
+	0x3a, 0xf3, 0x02, 0xfd, 0xd3, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0x64, 0xd0, 0x13, 0xab, 0x7e,
+	0x11, 0x00, 0x00,
 }
 
 func (this *DeleteUserRequest) Equal(that interface{}) bool {
@@ -1684,6 +1941,133 @@ func (this *MapMessageRequest) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *UUID) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*UUID)
+	if !ok {
+		that2, ok := that.(UUID)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Value != that1.Value {
+		return false
+	}
+	return true
+}
+func (this *UserId) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*UserId)
+	if !ok {
+		that2, ok := that.(UserId)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.Uuid.Equal(that1.Uuid) {
+		return false
+	}
+	return true
+}
+func (this *Actor) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Actor)
+	if !ok {
+		that2, ok := that.(Actor)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Uuid != that1.Uuid {
+		return false
+	}
+	if this.Version != that1.Version {
+		return false
+	}
+	return true
+}
+func (this *WrapperActorsRequest) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*WrapperActorsRequest)
+	if !ok {
+		that2, ok := that.(WrapperActorsRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.Actor.Equal(that1.Actor) {
+		return false
+	}
+	if !this.User.Equal(that1.User) {
+		return false
+	}
+	if !this.LegacyActor.Equal(that1.LegacyActor) {
+		return false
+	}
+	if len(this.Actors) != len(that1.Actors) {
+		return false
+	}
+	for i := range this.Actors {
+		if !this.Actors[i].Equal(that1.Actors[i]) {
+			return false
+		}
+	}
+	if len(this.UsersByRole) != len(that1.UsersByRole) {
+		return false
+	}
+	for i := range this.UsersByRole {
+		if !this.UsersByRole[i].Equal(that1.UsersByRole[i]) {
+			return false
+		}
+	}
+	if !this.Owner.Equal(that1.Owner) {
+		return false
+	}
+	if !this.Trace.Equal(that1.Trace) {
+		return false
+	}
+	return true
+}
 func (this *IgnoredAnnotationsRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -2008,6 +2392,79 @@ func (this *MapMessageRequest) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *UUID) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&withuuid.UUID{")
+	s = append(s, "Value: "+fmt.Sprintf("%#v", this.Value)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *UserId) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&withuuid.UserId{")
+	if this.Uuid != nil {
+		s = append(s, "Uuid: "+fmt.Sprintf("%#v", this.Uuid)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *Actor) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&withuuid.Actor{")
+	s = append(s, "Uuid: "+fmt.Sprintf("%#v", this.Uuid)+",\n")
+	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *WrapperActorsRequest) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 11)
+	s = append(s, "&withuuid.WrapperActorsRequest{")
+	if this.Actor != nil {
+		s = append(s, "Actor: "+fmt.Sprintf("%#v", this.Actor)+",\n")
+	}
+	if this.User != nil {
+		s = append(s, "User: "+fmt.Sprintf("%#v", this.User)+",\n")
+	}
+	if this.LegacyActor != nil {
+		s = append(s, "LegacyActor: "+fmt.Sprintf("%#v", this.LegacyActor)+",\n")
+	}
+	if this.Actors != nil {
+		s = append(s, "Actors: "+fmt.Sprintf("%#v", this.Actors)+",\n")
+	}
+	keysForUsersByRole := make([]string, 0, len(this.UsersByRole))
+	for k, _ := range this.UsersByRole {
+		keysForUsersByRole = append(keysForUsersByRole, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForUsersByRole)
+	mapStringForUsersByRole := "map[string]*UserId{"
+	for _, k := range keysForUsersByRole {
+		mapStringForUsersByRole += fmt.Sprintf("%#v: %#v,", k, this.UsersByRole[k])
+	}
+	mapStringForUsersByRole += "}"
+	if this.UsersByRole != nil {
+		s = append(s, "UsersByRole: "+mapStringForUsersByRole+",\n")
+	}
+	if this.Owner != nil {
+		s = append(s, "Owner: "+fmt.Sprintf("%#v", this.Owner)+",\n")
+	}
+	if this.Trace != nil {
+		s = append(s, "Trace: "+fmt.Sprintf("%#v", this.Trace)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func (this *IgnoredAnnotationsRequest) GoString() string {
 	if this == nil {
 		return "nil"
@@ -2083,6 +2540,7 @@ type UserServiceClient interface {
 	MapActorsAction(ctx context.Context, in *MapActorsRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
 	RepeatedMessageAction(ctx context.Context, in *RepeatedMessageRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
 	MapMessageAction(ctx context.Context, in *MapMessageRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
+	WrapperAction(ctx context.Context, in *WrapperActorsRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
 	IgnoredAction(ctx context.Context, in *IgnoredAnnotationsRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
 }
 
@@ -2216,6 +2674,15 @@ func (c *userServiceClient) MapMessageAction(ctx context.Context, in *MapMessage
 	return out, nil
 }
 
+func (c *userServiceClient) WrapperAction(ctx context.Context, in *WrapperActorsRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error) {
+	out := new(DeleteUserResponse)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.tests.protouuid.UserService/WrapperAction", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userServiceClient) IgnoredAction(ctx context.Context, in *IgnoredAnnotationsRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error) {
 	out := new(DeleteUserResponse)
 	err := c.cc.Invoke(ctx, "/uber.yarpc.tests.protouuid.UserService/IgnoredAction", in, out, opts...)
@@ -2238,6 +2705,7 @@ type UserServiceServer interface {
 	MapActorsAction(context.Context, *MapActorsRequest) (*DeleteUserResponse, error)
 	RepeatedMessageAction(context.Context, *RepeatedMessageRequest) (*DeleteUserResponse, error)
 	MapMessageAction(context.Context, *MapMessageRequest) (*DeleteUserResponse, error)
+	WrapperAction(context.Context, *WrapperActorsRequest) (*DeleteUserResponse, error)
 	IgnoredAction(context.Context, *IgnoredAnnotationsRequest) (*DeleteUserResponse, error)
 }
 
@@ -2277,6 +2745,9 @@ func (*UnimplementedUserServiceServer) RepeatedMessageAction(ctx context.Context
 }
 func (*UnimplementedUserServiceServer) MapMessageAction(ctx context.Context, req *MapMessageRequest) (*DeleteUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MapMessageAction not implemented")
+}
+func (*UnimplementedUserServiceServer) WrapperAction(ctx context.Context, req *WrapperActorsRequest) (*DeleteUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WrapperAction not implemented")
 }
 func (*UnimplementedUserServiceServer) IgnoredAction(ctx context.Context, req *IgnoredAnnotationsRequest) (*DeleteUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IgnoredAction not implemented")
@@ -2487,6 +2958,24 @@ func _UserService_MapMessageAction_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_WrapperAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WrapperActorsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).WrapperAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/uber.yarpc.tests.protouuid.UserService/WrapperAction",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).WrapperAction(ctx, req.(*WrapperActorsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserService_IgnoredAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(IgnoredAnnotationsRequest)
 	if err := dec(in); err != nil {
@@ -2548,6 +3037,10 @@ var _UserService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MapMessageAction",
 			Handler:    _UserService_MapMessageAction_Handler,
+		},
+		{
+			MethodName: "WrapperAction",
+			Handler:    _UserService_WrapperAction_Handler,
 		},
 		{
 			MethodName: "IgnoredAction",
@@ -3235,6 +3728,229 @@ func (m *MapMessageRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *UUID) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *UUID) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *UUID) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Value) > 0 {
+		i -= len(m.Value)
+		copy(dAtA[i:], m.Value)
+		i = encodeVarintWithuuid(dAtA, i, uint64(len(m.Value)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *UserId) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *UserId) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *UserId) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Uuid != nil {
+		{
+			size, err := m.Uuid.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintWithuuid(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *Actor) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Actor) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Actor) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Version != 0 {
+		i = encodeVarintWithuuid(dAtA, i, uint64(m.Version))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Uuid) > 0 {
+		i -= len(m.Uuid)
+		copy(dAtA[i:], m.Uuid)
+		i = encodeVarintWithuuid(dAtA, i, uint64(len(m.Uuid)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *WrapperActorsRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *WrapperActorsRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *WrapperActorsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Trace != nil {
+		{
+			size, err := m.Trace.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintWithuuid(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
+	}
+	if m.Owner != nil {
+		{
+			size, err := m.Owner.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintWithuuid(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.UsersByRole) > 0 {
+		for k := range m.UsersByRole {
+			v := m.UsersByRole[k]
+			baseI := i
+			if v != nil {
+				{
+					size, err := v.MarshalToSizedBuffer(dAtA[:i])
+					if err != nil {
+						return 0, err
+					}
+					i -= size
+					i = encodeVarintWithuuid(dAtA, i, uint64(size))
+				}
+				i--
+				dAtA[i] = 0x12
+			}
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintWithuuid(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintWithuuid(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
+	if len(m.Actors) > 0 {
+		for iNdEx := len(m.Actors) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Actors[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintWithuuid(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if m.LegacyActor != nil {
+		{
+			size, err := m.LegacyActor.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintWithuuid(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.User != nil {
+		{
+			size, err := m.User.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintWithuuid(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Actor != nil {
+		{
+			size, err := m.Actor.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintWithuuid(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *IgnoredAnnotationsRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -3664,6 +4380,96 @@ func (m *MapMessageRequest) Size() (n int) {
 	return n
 }
 
+func (m *UUID) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Value)
+	if l > 0 {
+		n += 1 + l + sovWithuuid(uint64(l))
+	}
+	return n
+}
+
+func (m *UserId) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Uuid != nil {
+		l = m.Uuid.Size()
+		n += 1 + l + sovWithuuid(uint64(l))
+	}
+	return n
+}
+
+func (m *Actor) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Uuid)
+	if l > 0 {
+		n += 1 + l + sovWithuuid(uint64(l))
+	}
+	if m.Version != 0 {
+		n += 1 + sovWithuuid(uint64(m.Version))
+	}
+	return n
+}
+
+func (m *WrapperActorsRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Actor != nil {
+		l = m.Actor.Size()
+		n += 1 + l + sovWithuuid(uint64(l))
+	}
+	if m.User != nil {
+		l = m.User.Size()
+		n += 1 + l + sovWithuuid(uint64(l))
+	}
+	if m.LegacyActor != nil {
+		l = m.LegacyActor.Size()
+		n += 1 + l + sovWithuuid(uint64(l))
+	}
+	if len(m.Actors) > 0 {
+		for _, e := range m.Actors {
+			l = e.Size()
+			n += 1 + l + sovWithuuid(uint64(l))
+		}
+	}
+	if len(m.UsersByRole) > 0 {
+		for k, v := range m.UsersByRole {
+			_ = k
+			_ = v
+			l = 0
+			if v != nil {
+				l = v.Size()
+				l += 1 + sovWithuuid(uint64(l))
+			}
+			mapEntrySize := 1 + len(k) + sovWithuuid(uint64(len(k))) + l
+			n += mapEntrySize + 1 + sovWithuuid(uint64(mapEntrySize))
+		}
+	}
+	if m.Owner != nil {
+		l = m.Owner.Size()
+		n += 1 + l + sovWithuuid(uint64(l))
+	}
+	if m.Trace != nil {
+		l = m.Trace.Size()
+		n += 1 + l + sovWithuuid(uint64(l))
+	}
+	return n
+}
+
 func (m *IgnoredAnnotationsRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -3933,6 +4739,68 @@ func (this *MapMessageRequest) String() string {
 	mapStringForItemsById += "}"
 	s := strings.Join([]string{`&MapMessageRequest{`,
 		`ItemsById:` + mapStringForItemsById + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *UUID) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&UUID{`,
+		`Value:` + fmt.Sprintf("%v", this.Value) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *UserId) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&UserId{`,
+		`Uuid:` + strings.Replace(this.Uuid.String(), "UUID", "UUID", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Actor) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Actor{`,
+		`Uuid:` + fmt.Sprintf("%v", this.Uuid) + `,`,
+		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *WrapperActorsRequest) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForActors := "[]*UUID{"
+	for _, f := range this.Actors {
+		repeatedStringForActors += strings.Replace(f.String(), "UUID", "UUID", 1) + ","
+	}
+	repeatedStringForActors += "}"
+	keysForUsersByRole := make([]string, 0, len(this.UsersByRole))
+	for k, _ := range this.UsersByRole {
+		keysForUsersByRole = append(keysForUsersByRole, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForUsersByRole)
+	mapStringForUsersByRole := "map[string]*UserId{"
+	for _, k := range keysForUsersByRole {
+		mapStringForUsersByRole += fmt.Sprintf("%v: %v,", k, this.UsersByRole[k])
+	}
+	mapStringForUsersByRole += "}"
+	s := strings.Join([]string{`&WrapperActorsRequest{`,
+		`Actor:` + strings.Replace(this.Actor.String(), "UUID", "UUID", 1) + `,`,
+		`User:` + strings.Replace(this.User.String(), "UserId", "UserId", 1) + `,`,
+		`LegacyActor:` + strings.Replace(fmt.Sprintf("%v", this.LegacyActor), "StringValue", "types.StringValue", 1) + `,`,
+		`Actors:` + repeatedStringForActors + `,`,
+		`UsersByRole:` + mapStringForUsersByRole + `,`,
+		`Owner:` + strings.Replace(this.Owner.String(), "Actor", "Actor", 1) + `,`,
+		`Trace:` + strings.Replace(this.Trace.String(), "UUID", "UUID", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5917,6 +6785,668 @@ func (m *MapMessageRequest) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.ItemsById[mapkey] = mapvalue
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipWithuuid(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *UUID) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowWithuuid
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: UUID: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: UUID: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Value = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipWithuuid(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *UserId) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowWithuuid
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: UserId: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: UserId: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Uuid", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Uuid == nil {
+				m.Uuid = &UUID{}
+			}
+			if err := m.Uuid.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipWithuuid(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Actor) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowWithuuid
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Actor: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Actor: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Uuid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Uuid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			m.Version = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Version |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipWithuuid(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *WrapperActorsRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowWithuuid
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: WrapperActorsRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: WrapperActorsRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Actor", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Actor == nil {
+				m.Actor = &UUID{}
+			}
+			if err := m.Actor.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field User", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.User == nil {
+				m.User = &UserId{}
+			}
+			if err := m.User.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LegacyActor", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.LegacyActor == nil {
+				m.LegacyActor = &types.StringValue{}
+			}
+			if err := m.LegacyActor.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Actors", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Actors = append(m.Actors, &UUID{})
+			if err := m.Actors[len(m.Actors)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UsersByRole", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.UsersByRole == nil {
+				m.UsersByRole = make(map[string]*UserId)
+			}
+			var mapkey string
+			var mapvalue *UserId
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowWithuuid
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowWithuuid
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthWithuuid
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthWithuuid
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var mapmsglen int
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowWithuuid
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapmsglen |= int(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					if mapmsglen < 0 {
+						return ErrInvalidLengthWithuuid
+					}
+					postmsgIndex := iNdEx + mapmsglen
+					if postmsgIndex < 0 {
+						return ErrInvalidLengthWithuuid
+					}
+					if postmsgIndex > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = &UserId{}
+					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
+						return err
+					}
+					iNdEx = postmsgIndex
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipWithuuid(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthWithuuid
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.UsersByRole[mapkey] = mapvalue
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Owner", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Owner == nil {
+				m.Owner = &Actor{}
+			}
+			if err := m.Owner.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Trace", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWithuuid
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthWithuuid
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Trace == nil {
+				m.Trace = &UUID{}
+			}
+			if err := m.Trace.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
