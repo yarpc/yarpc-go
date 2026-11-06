@@ -133,6 +133,7 @@ func TestCreateRequestContentLength(t *testing.T) {
 	payload := []byte("some-payload")
 	tests := []struct {
 		desc              string
+		http1             bool
 		body              io.Reader
 		bodySize          int
 		wantContentLength int64
@@ -167,11 +168,18 @@ func TestCreateRequestContentLength(t *testing.T) {
 			bodySize:          0,
 			wantContentLength: 0,
 		},
+		{
+			desc:              "http1: unsized ReadCloser does not use BodySize",
+			http1:             true,
+			body:              io.NopCloser(bytes.NewReader(payload)),
+			bodySize:          len(payload),
+			wantContentLength: 0,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			o := &Outbound{urlTemplate: defaultURLTemplate}
+			o := &Outbound{urlTemplate: defaultURLTemplate, useHTTP2: !tt.http1}
 			hreq, err := o.createRequest(&transport.Request{
 				Body:     tt.body,
 				BodySize: tt.bodySize,
