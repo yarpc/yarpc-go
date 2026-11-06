@@ -21,6 +21,7 @@
 package thrift
 
 import (
+	"bufio"
 	"context"
 	"io"
 
@@ -39,6 +40,10 @@ var _loggedMissingAppErrMetaSetter bool
 
 // NoWireCall contains all of the required objects needed for an underlying
 // Handle needs to unpack any given request.
+//
+// Reader may be a buffered view of the request body. It is only valid for the
+// duration of the HandleNoWire call and must not be retained or read from
+// another goroutine after HandleNoWire returns.
 type NoWireCall struct {
 	Reader        io.Reader
 	RequestReader stream.RequestReader
@@ -148,8 +153,24 @@ func (t thriftNoWireHandler) decodeAndHandle(
 		return _emptyResponse, err
 	}
 
+	// The buffered reader is only valid while the handler runs. Generated
+	// handlers decode the whole request inside HandleNoWire; the transport
+	// still owns and closes treq.Body afterwards.
+	reader, release := bufferNoWireReader(treq.Body)
+	defer release()
+	if br, ok := reader.(*bufio.Reader); ok {
+		// ThriftRW's Protocol.ReadRequest sniffs for an envelope with a single
+		// Read of two bytes, and treats a shorter read as an empty struct. A
+		// transport body may legitimately return one byte first (for example
+		// when only the first HTTP/2 DATA chunk has arrived), which would
+		// misdecode the request. Fill the buffer so that read always succeeds.
+		// An error here is not lost: the next Read returns it after any
+		// buffered bytes.
+		_, _ = br.Peek(2)
+	}
+
 	nwc := NoWireCall{
-		Reader:        treq.Body,
+		Reader:        reader,
 		EnvelopeType:  reqEnvelopeType,
 		RequestReader: t.RequestReader,
 	}
