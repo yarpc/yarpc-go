@@ -26,11 +26,26 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/net/metrics"
+	"go.uber.org/yarpc/api/metrics/metricstagdecorator"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/sampledlogger"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+const (
+	testMetricsTagsDecoratorKey   = "test_tag"
+	testMetricsTagsDecoratorValue = "test_value"
+)
+
+type TestMetricsTagsDecorator struct{}
+
+func (d *TestMetricsTagsDecorator) ProvideTags(ctx context.Context) map[string]string {
+	return map[string]string{
+		testMetricsTagsDecoratorKey: testMetricsTagsDecoratorValue,
+	}
+}
 
 func TestHandleWithReservedField(t *testing.T) {
 	root := metrics.New()
@@ -148,6 +163,41 @@ func TestMetricsTagIgnore(t *testing.T) {
 	}
 }
 
+func TestPopulatingMetricsTagsDecorators(t *testing.T) {
+	root := metrics.New()
+	meter := root.Scope()
+	req := &transport.Request{
+		Caller:          "caller",
+		Service:         "service",
+		Transport:       "",
+		Encoding:        "proto",
+		Procedure:       "procedure",
+		RoutingKey:      "rk",
+		RoutingDelegate: "rd",
+	}
+
+	// Creating new edge with MetricsTagsDecorators
+	decorator := []metricstagdecorator.MetricsTagDecorator{&TestMetricsTagsDecorator{}}
+	graph := newGraph(meter, zap.NewNop(), nil, nil, decorator)
+
+	_ = newEdge(context.Background(), graph.logger, graph.sampledLogger, graph.meter, graph.ignoreMetricsTag, graph.decoratorTags, req, string(_directionOutbound), transport.Unary)
+
+	for _, counter := range root.Snapshot().Counters {
+		assert.Equal(t, counter.Tags[testMetricsTagsDecoratorKey], testMetricsTagsDecoratorValue,
+			"Expected testMetricsTagsDecorator tag to populate in %s metrics tags", counter.Name)
+	}
+
+	for _, gauge := range root.Snapshot().Gauges {
+		assert.Equal(t, gauge.Tags[testMetricsTagsDecoratorKey], testMetricsTagsDecoratorValue,
+			"Expected testMetricsTagsDecorator tag to populate in %s metrics tags", gauge.Name)
+	}
+
+	for _, histogram := range root.Snapshot().Histograms {
+		assert.Equal(t, histogram.Tags[testMetricsTagsDecoratorKey], testMetricsTagsDecoratorValue,
+			"Expected testMetricsTagsDecorator tag to populate in %s metrics tags", histogram.Name)
+	}
+}
+
 func TestEdgeNopFallbacks(t *testing.T) {
 	// If we fail to create any of the metrics required for the edge, we should
 	// fall back to no-op implementations. The easiest way to trigger failures
@@ -166,11 +216,11 @@ func TestEdgeNopFallbacks(t *testing.T) {
 	}
 
 	// Should succeed, covered by middleware tests.
-	_ = newEdge(zap.NewNop(), meter, &metricsTagIgnore{}, req, string(_directionOutbound), transport.Unary)
+	_ = newEdge(context.Background(), zap.NewNop(), sampledlogger.NewDefaultSampledLogger(), meter, &metricsTagIgnore{}, nil, req, string(_directionOutbound), transport.Unary)
 
 	// Should fall back to no-op metrics.
 	// Usage of nil metrics should not panic, should not observe changes.
-	e := newEdge(zap.NewNop(), meter, &metricsTagIgnore{}, req, string(_directionOutbound), transport.Unary)
+	e := newEdge(context.Background(), zap.NewNop(), sampledlogger.NewDefaultSampledLogger(), meter, &metricsTagIgnore{}, nil, req, string(_directionOutbound), transport.Unary)
 
 	e.calls.Inc()
 	assert.Equal(t, int64(0), e.calls.Load(), "Expected to fall back to no-op metrics.")
