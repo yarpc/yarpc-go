@@ -22,6 +22,7 @@ package yarpctest_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,7 +56,7 @@ func TestContextWithCall(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			ctx := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{
+			testCall := &yarpctest.Call{
 				Caller:          "caller",
 				Service:         "service",
 				Transport:       "transport",
@@ -67,7 +68,8 @@ func TestContextWithCall(t *testing.T) {
 				RoutingDelegate: "routingdelegate",
 				ResponseHeaders: tt.resHeaders,
 				CallerProcedure: "callerProcedure",
-			})
+			}
+			ctx := yarpctest.ContextWithCall(context.Background(), testCall)
 			call := yarpc.CallFromContext(ctx)
 
 			assert.Equal(t, "caller", call.Caller())
@@ -83,7 +85,13 @@ func TestContextWithCall(t *testing.T) {
 			assert.Equal(t, "callerProcedure", call.CallerProcedure())
 
 			assert.NoError(t, call.WriteResponseHeader("baz", "qux"))
-			assert.Equal(t, tt.wantResHeaders, tt.resHeaders)
+			// response headers map contain the expected
+			assert.Equal(t, tt.wantResHeaders, testCall.ResponseHeaders)
+
+			// response headers map is the same as the one in the call (i.e. not a copy)
+			p1 := reflect.ValueOf(tt.resHeaders).UnsafePointer()
+			p2 := reflect.ValueOf(testCall.ResponseHeaders).UnsafePointer()
+			assert.Equal(t, p1, p2)
 		})
 	}
 
