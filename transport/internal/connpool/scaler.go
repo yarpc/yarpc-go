@@ -93,16 +93,37 @@ func (p *Pool[T]) EvaluateScaling() {
 	p.sampleStreamMetrics()
 }
 
-// sampleStreamMetrics records each active connection's in-flight stream count
-// and utilization in the aggregate distributions. It runs once per monitor
-// pass, after scaling decisions, so every pool contributes the same number of
-// samples per interval per connection rather than one weighted by scale events.
+// sampleStreamMetrics records the aggregate load metrics once per monitor pass,
+// after scaling decisions, so every pool contributes the same number of samples
+// per interval per connection rather than one weighted by scale events.
+//
+// Each active connection's in-flight request count and utilization go into the
+// in-flight distributions. When the pool has a StreamState, the streams open
+// and requests pending on every connection (draining ones still carry streams)
+// are published to the shared gauges, and each active connection's open streams
+// go into the stream distribution.
 func (p *Pool[T]) sampleStreamMetrics() {
 	maxStreams := p.Config().MaxConcurrentStreams
+	var streams, pending int64
 	for _, c := range p.LoadConns() {
 		if c.IsActive() {
-			p.metrics.ObserveConnection(c.StreamCount(), maxStreams)
+			p.metrics.ObserveInFlight(c.StreamCount(), maxStreams)
 		}
+		if p.StreamState == nil {
+			continue
+		}
+		active, queued, ok := p.StreamState(c.Conn)
+		if !ok {
+			continue
+		}
+		streams += int64(active)
+		pending += int64(queued)
+		if c.IsActive() {
+			p.metrics.ObserveStreams(active)
+		}
+	}
+	if p.StreamState != nil {
+		p.metrics.SetStreams(streams, pending)
 	}
 }
 

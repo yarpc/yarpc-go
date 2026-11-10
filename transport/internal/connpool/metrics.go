@@ -91,34 +91,60 @@ type Metrics struct {
 	// which counts connections marked for draining (and those can be
 	// reactivated), this says how many connections actually went away.
 	closedConnectionsTotal *metrics.Counter
-	// activeStreams is the number of in-flight streams/requests, summed
-	// across all connections of all peers.
-	activeStreams *metrics.Gauge
-	// streamsTotal counts every stream/request started on a pooled
-	// connection, aggregated across all peers.
-	streamsTotal *metrics.Counter
+	// inFlightRequests is the pool's own count of requests handed to its
+	// connections that have not finished, summed across all connections of all
+	// peers. It includes requests still waiting for a free stream on a
+	// connection that is at the peer's stream limit, so it can exceed what the
+	// peer is actually serving. It is the count the scaling decisions use.
+	inFlightRequests *metrics.Gauge
+	// requestsTotal counts every request handed to a pooled connection,
+	// aggregated across all peers.
+	requestsTotal *metrics.Counter
 	// scaleUpBlockedTotal counts scale-up attempts that were skipped because
 	// the pool was already at MaxConnections.
 	scaleUpBlockedTotal *metrics.Counter
-	// connectionStreams is the distribution of in-flight streams per active
+	// connectionInFlight is the distribution of in-flight requests per active
+	// connection, sampled by the scaling monitor.
+	connectionInFlight *metrics.Histogram
+	// connectionInFlightUtilization is the distribution of in-flight requests
+	// per active connection as a percentage of MaxConcurrentStreams, sampled by
+	// the scaling monitor. Above 100 means requests are queued.
+	connectionInFlightUtilization *metrics.Histogram
+
+	// The metrics below are real HTTP/2 stream counts read from the
+	// connections themselves, so unlike the in-flight ones they never exceed
+	// what the peer allows. They are reported only by transports whose
+	// connections can say how many streams are open (see Pool.StreamState)
+	// and are sampled by the scaling monitor, so they lag by up to its
+	// interval.
+
+	// activeStreams is the number of streams open on the wire, summed across
+	// all connections of all peers.
+	activeStreams *metrics.Gauge
+	// pendingRequests is the number of requests waiting for a free stream
+	// because their connection is at the peer's stream limit, summed across
+	// all connections of all peers.
+	pendingRequests *metrics.Gauge
+	// connectionStreams is the distribution of open streams per active
 	// connection, sampled by the scaling monitor.
 	connectionStreams *metrics.Histogram
-	// connectionUtilization is the distribution of in-flight streams per
-	// active connection as a percentage of MaxConcurrentStreams, sampled by
-	// the scaling monitor.
-	connectionUtilization *metrics.Histogram
 }
 
 // Histogram buckets. The histograms record plain integers, not durations, so
 // they use the smallest unit and IncBucket.
 var (
-	// connectionStreamsBuckets spans an idle connection up to the common
-	// HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS values (100, 250).
-	connectionStreamsBuckets = []int64{0, 1, 2, 5, 10, 25, 50, 100, 150, 200, 250, 500}
-	// connectionUtilizationBuckets are percentages of MaxConcurrentStreams,
+	// connectionLoadBuckets spans an idle connection up to the common
+	// HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS values (100, 250). The 500
+	// bucket is for in-flight requests, which can pass the stream limit while
+	// they queue; open streams never do.
+	connectionLoadBuckets = []int64{0, 1, 2, 5, 10, 25, 50, 100, 150, 200, 250, 500}
+	// connectionStreamsBuckets are for open streams, which stop at the peer's
+	// limit, so there is no bucket past the largest common limit.
+	connectionStreamsBuckets = []int64{0, 1, 2, 5, 10, 25, 50, 100, 150, 200, 250}
+	// connectionInFlightUtilizationBuckets are percentages of MaxConcurrentStreams,
 	// dense around the default scale-up threshold. The catch-all bucket holds
 	// connections over their configured limit.
-	connectionUtilizationBuckets = []int64{0, 10, 25, 50, 70, 80, 90, 100}
+	connectionInFlightUtilizationBuckets = []int64{0, 10, 25, 50, 70, 80, 90, 100}
 )
 
 // metricsKey identifies one set of registered metrics. go.uber.org/net/metrics
@@ -294,7 +320,7 @@ func newMetrics(p MetricsParams) *Metrics {
 }
 
 // metricsCount is how many handles registerMetrics registers.
-const metricsCount = 14
+const metricsCount = 17
 
 // registerMetrics registers the metric handles on p.Meter, calling warn for
 // each one that fails to register and leaving that handle nil.
@@ -390,22 +416,22 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 		warn("failed to create closed connections counter", err)
 	}
 
-	m.activeStreams, err = p.Meter.Gauge(metrics.Spec{
-		Name:      prefix + "_active_streams",
-		Help:      "Number of in-flight streams across all pooled connections, aggregated across all peers.",
+	m.inFlightRequests, err = p.Meter.Gauge(metrics.Spec{
+		Name:      prefix + "_in_flight_requests",
+		Help:      "Number of requests handed to pooled connections that have not finished, including any queued behind the stream limit, aggregated across all peers.",
 		ConstTags: tags,
 	})
 	if err != nil {
-		warn("failed to create active streams gauge", err)
+		warn("failed to create in-flight requests gauge", err)
 	}
 
-	m.streamsTotal, err = p.Meter.Counter(metrics.Spec{
-		Name:      prefix + "_streams_total",
-		Help:      "Total number of streams started on pooled connections, aggregated across all peers.",
+	m.requestsTotal, err = p.Meter.Counter(metrics.Spec{
+		Name:      prefix + "_requests_total",
+		Help:      "Total number of requests handed to pooled connections, aggregated across all peers.",
 		ConstTags: tags,
 	})
 	if err != nil {
-		warn("failed to create streams counter", err)
+		warn("failed to create requests counter", err)
 	}
 
 	m.scaleUpBlockedTotal, err = p.Meter.Counter(metrics.Spec{
@@ -417,10 +443,54 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 		warn("failed to create scale up blocked counter", err)
 	}
 
+	m.connectionInFlight, err = p.Meter.Histogram(metrics.HistogramSpec{
+		Spec: metrics.Spec{
+			Name:      prefix + "_connection_in_flight_requests",
+			Help:      "Distribution of in-flight requests per active connection, including any queued behind the stream limit, sampled by the scaling monitor across all peers.",
+			ConstTags: tags,
+		},
+		Unit:    time.Nanosecond,
+		Buckets: connectionLoadBuckets,
+	})
+	if err != nil {
+		warn("failed to create connection in-flight requests histogram", err)
+	}
+
+	m.connectionInFlightUtilization, err = p.Meter.Histogram(metrics.HistogramSpec{
+		Spec: metrics.Spec{
+			Name:      prefix + "_connection_in_flight_utilization_percent",
+			Help:      "Distribution of in-flight requests per active connection as a percentage of the maximum concurrent streams (above 100 means requests are queued), sampled by the scaling monitor across all peers.",
+			ConstTags: tags,
+		},
+		Unit:    time.Nanosecond,
+		Buckets: connectionInFlightUtilizationBuckets,
+	})
+	if err != nil {
+		warn("failed to create connection in-flight utilization histogram", err)
+	}
+
+	m.activeStreams, err = p.Meter.Gauge(metrics.Spec{
+		Name:      prefix + "_active_streams",
+		Help:      "Number of streams open on pooled HTTP/2 connections, aggregated across all peers and sampled by the scaling monitor.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		warn("failed to create active streams gauge", err)
+	}
+
+	m.pendingRequests, err = p.Meter.Gauge(metrics.Spec{
+		Name:      prefix + "_pending_requests",
+		Help:      "Number of requests waiting for a free stream on pooled HTTP/2 connections at the peer's stream limit, aggregated across all peers and sampled by the scaling monitor.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		warn("failed to create pending requests gauge", err)
+	}
+
 	m.connectionStreams, err = p.Meter.Histogram(metrics.HistogramSpec{
 		Spec: metrics.Spec{
 			Name:      prefix + "_connection_streams",
-			Help:      "Distribution of in-flight streams per active connection, sampled by the scaling monitor across all peers.",
+			Help:      "Distribution of streams open per active HTTP/2 connection, sampled by the scaling monitor across all peers.",
 			ConstTags: tags,
 		},
 		Unit:    time.Nanosecond,
@@ -428,19 +498,6 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 	})
 	if err != nil {
 		warn("failed to create connection streams histogram", err)
-	}
-
-	m.connectionUtilization, err = p.Meter.Histogram(metrics.HistogramSpec{
-		Spec: metrics.Spec{
-			Name:      prefix + "_connection_stream_utilization_percent",
-			Help:      "Distribution of in-flight streams per active connection as a percentage of the maximum concurrent streams, sampled by the scaling monitor across all peers.",
-			ConstTags: tags,
-		},
-		Unit:    time.Nanosecond,
-		Buckets: connectionUtilizationBuckets,
-	})
-	if err != nil {
-		warn("failed to create connection stream utilization histogram", err)
 	}
 
 	return m
@@ -509,18 +566,18 @@ func (m *Metrics) incClosed() {
 	m.closedConnectionsTotal.Inc()
 }
 
-func (m *Metrics) addActiveStreams(delta int64) {
-	if m == nil || m.activeStreams == nil || delta == 0 {
+func (m *Metrics) addInFlightRequests(delta int64) {
+	if m == nil || m.inFlightRequests == nil || delta == 0 {
 		return
 	}
-	m.activeStreams.Add(delta)
+	m.inFlightRequests.Add(delta)
 }
 
-func (m *Metrics) incStreams() {
-	if m == nil || m.streamsTotal == nil {
+func (m *Metrics) incRequests() {
+	if m == nil || m.requestsTotal == nil {
 		return
 	}
-	m.streamsTotal.Inc()
+	m.requestsTotal.Inc()
 }
 
 func (m *Metrics) incScaleUpBlocked() {
@@ -530,17 +587,40 @@ func (m *Metrics) incScaleUpBlocked() {
 	m.scaleUpBlockedTotal.Inc()
 }
 
-// observeConnection records one active connection's in-flight stream count and
+func (m *Metrics) addActiveStreams(delta int64) {
+	if m == nil || m.activeStreams == nil || delta == 0 {
+		return
+	}
+	m.activeStreams.Add(delta)
+}
+
+func (m *Metrics) addPendingRequests(delta int64) {
+	if m == nil || m.pendingRequests == nil || delta == 0 {
+		return
+	}
+	m.pendingRequests.Add(delta)
+}
+
+// observeInFlight records one active connection's in-flight request count and
 // its utilization, as a percentage of maxStreams, in the sampled histograms.
 // The utilization is skipped when maxStreams is not positive.
-func (m *Metrics) observeConnection(streams, maxStreams int32) {
+func (m *Metrics) observeInFlight(inFlight, maxStreams int32) {
+	if m == nil {
+		return
+	}
+	m.connectionInFlight.IncBucket(int64(inFlight))
+	if maxStreams > 0 {
+		m.connectionInFlightUtilization.IncBucket(int64(inFlight) * 100 / int64(maxStreams))
+	}
+}
+
+// observeStreams records one active connection's open stream count in the
+// sampled histogram.
+func (m *Metrics) observeStreams(streams int) {
 	if m == nil {
 		return
 	}
 	m.connectionStreams.IncBucket(int64(streams))
-	if maxStreams > 0 {
-		m.connectionUtilization.IncBucket(int64(streams) * 100 / int64(maxStreams))
-	}
 }
 
 // Reporter applies a single pool's connection-state counts to the shared,
@@ -556,6 +636,8 @@ type Reporter struct {
 	lastActive   int64
 	lastDraining int64
 	lastIdle     int64
+	lastStreams  int64
+	lastPending  int64
 }
 
 // NewReporter creates a Reporter that feeds the shared Metrics.
@@ -639,8 +721,8 @@ func (r *Reporter) streamStarted() {
 	if r == nil {
 		return
 	}
-	r.shared.addActiveStreams(1)
-	r.shared.incStreams()
+	r.shared.addInFlightRequests(1)
+	r.shared.incRequests()
 }
 
 // streamFinished records a stream ending on one of the pool's connections.
@@ -648,16 +730,44 @@ func (r *Reporter) streamFinished() {
 	if r == nil {
 		return
 	}
-	r.shared.addActiveStreams(-1)
+	r.shared.addInFlightRequests(-1)
 }
 
-// ObserveConnection records one active connection's stream load in the
-// sampled distributions.
-func (r *Reporter) ObserveConnection(streams, maxStreams int32) {
+// ObserveInFlight records one active connection's in-flight request count in
+// the sampled distributions.
+func (r *Reporter) ObserveInFlight(inFlight, maxStreams int32) {
 	if r == nil {
 		return
 	}
-	r.shared.observeConnection(streams, maxStreams)
+	r.shared.observeInFlight(inFlight, maxStreams)
+}
+
+// ObserveStreams records one active connection's open stream count in the
+// sampled distribution.
+func (r *Reporter) ObserveStreams(streams int) {
+	if r == nil {
+		return
+	}
+	r.shared.observeStreams(streams)
+}
+
+// SetStreams publishes this pool's current open stream and pending request
+// counts, applying the difference from the previously reported values to the
+// shared aggregate gauges, as SetCounts does for connection counts. Safe for
+// concurrent use.
+func (r *Reporter) SetStreams(active, pending int64) {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	dActive := active - r.lastStreams
+	dPending := pending - r.lastPending
+	r.lastStreams = active
+	r.lastPending = pending
+	r.mu.Unlock()
+
+	r.shared.addActiveStreams(dActive)
+	r.shared.addPendingRequests(dPending)
 }
 
 // IncDialFailure records that a pool's dial attempt failed.
