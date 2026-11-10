@@ -40,12 +40,34 @@ import (
 	"go.uber.org/yarpc/pkg/procedure"
 )
 
-const _responseReadBufferSize = 32 << 10
+const _noWireReadBufferSize = 32 << 10
 
-var _responseReaderPool = sync.Pool{
+var _noWireReaderPool = sync.Pool{
 	New: func() interface{} {
-		return bufio.NewReaderSize(nil, _responseReadBufferSize)
+		return bufio.NewReaderSize(nil, _noWireReadBufferSize)
 	},
+}
+
+// bufferNoWireReader returns a reader for ThriftRW's streaming decoder, and a
+// release function the caller must call once decoding is done.
+//
+// Stream protocols make many small reads. Batching them before they reach the
+// transport avoids per-field locks and flow-control flushes on HTTP/2 bodies.
+// Seekable readers, such as memory-backed pooled TChannel bodies, are returned
+// as is so the protocol can still skip fields without copying.
+//
+// The returned reader must not be used after release is called: the buffer is
+// owned by this decode, not by the transport.
+func bufferNoWireReader(r io.Reader) (io.Reader, func()) {
+	if _, ok := r.(io.Seeker); ok {
+		return r, func() {}
+	}
+	buffered := _noWireReaderPool.Get().(*bufio.Reader)
+	buffered.Reset(r)
+	return buffered, func() {
+		buffered.Reset(nil)
+		_noWireReaderPool.Put(buffered)
+	}
 }
 
 // NoWireClient is a generic Thrift client for encoding/decoding using
@@ -170,21 +192,8 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 		return err
 	}
 
-	var responseReader io.Reader = tres.Body
-	// Memory-backed responses such as pooled TChannel bodies support seeking.
-	// Preserve that capability so the protocol can skip fields without copying.
-	if _, ok := responseReader.(io.Seeker); !ok {
-		// Stream protocols make many small reads. Batch those reads before they
-		// reach the transport, avoiding HTTP/2 locks and flow-control flushes on
-		// each field. The buffer belongs to this decode, not to the transport.
-		buffered := _responseReaderPool.Get().(*bufio.Reader)
-		buffered.Reset(responseReader)
-		defer func() {
-			buffered.Reset(nil)
-			_responseReaderPool.Put(buffered)
-		}()
-		responseReader = buffered
-	}
+	responseReader, release := bufferNoWireReader(tres.Body)
+	defer release()
 
 	sr := proto.Reader(responseReader)
 	defer sr.Close()
