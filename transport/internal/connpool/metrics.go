@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/zap"
@@ -85,7 +86,40 @@ type Metrics struct {
 	// dialFailuresTotal counts every dial attempt that failed, aggregated
 	// across all peers.
 	dialFailuresTotal *metrics.Counter
+	// closedConnectionsTotal counts connections the pool closed after they sat
+	// idle for IdleTimeout, aggregated across all peers. Unlike scaleDownTotal,
+	// which counts connections marked for draining (and those can be
+	// reactivated), this says how many connections actually went away.
+	closedConnectionsTotal *metrics.Counter
+	// activeStreams is the number of in-flight streams/requests, summed
+	// across all connections of all peers.
+	activeStreams *metrics.Gauge
+	// streamsTotal counts every stream/request started on a pooled
+	// connection, aggregated across all peers.
+	streamsTotal *metrics.Counter
+	// scaleUpBlockedTotal counts scale-up attempts that were skipped because
+	// the pool was already at MaxConnections.
+	scaleUpBlockedTotal *metrics.Counter
+	// connectionStreams is the distribution of in-flight streams per active
+	// connection, sampled by the scaling monitor.
+	connectionStreams *metrics.Histogram
+	// connectionUtilization is the distribution of in-flight streams per
+	// active connection as a percentage of MaxConcurrentStreams, sampled by
+	// the scaling monitor.
+	connectionUtilization *metrics.Histogram
 }
+
+// Histogram buckets. The histograms record plain integers, not durations, so
+// they use the smallest unit and IncBucket.
+var (
+	// connectionStreamsBuckets spans an idle connection up to the common
+	// HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS values (100, 250).
+	connectionStreamsBuckets = []int64{0, 1, 2, 5, 10, 25, 50, 100, 150, 200, 250, 500}
+	// connectionUtilizationBuckets are percentages of MaxConcurrentStreams,
+	// dense around the default scale-up threshold. The catch-all bucket holds
+	// connections over their configured limit.
+	connectionUtilizationBuckets = []int64{0, 10, 25, 50, 70, 80, 90, 100}
+)
 
 // metricsKey identifies one set of registered metrics. go.uber.org/net/metrics
 // rejects a second registration of the same name and tags in a registry, so a
@@ -260,7 +294,7 @@ func newMetrics(p MetricsParams) *Metrics {
 }
 
 // metricsCount is how many handles registerMetrics registers.
-const metricsCount = 8
+const metricsCount = 14
 
 // registerMetrics registers the metric handles on p.Meter, calling warn for
 // each one that fails to register and leaving that handle nil.
@@ -347,6 +381,68 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 		warn("failed to create dial failures counter", err)
 	}
 
+	m.closedConnectionsTotal, err = p.Meter.Counter(metrics.Spec{
+		Name:      prefix + "_closed_connections_total",
+		Help:      "Total number of connections the pool closed after they sat idle, aggregated across all peers.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		warn("failed to create closed connections counter", err)
+	}
+
+	m.activeStreams, err = p.Meter.Gauge(metrics.Spec{
+		Name:      prefix + "_active_streams",
+		Help:      "Number of in-flight streams across all pooled connections, aggregated across all peers.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		warn("failed to create active streams gauge", err)
+	}
+
+	m.streamsTotal, err = p.Meter.Counter(metrics.Spec{
+		Name:      prefix + "_streams_total",
+		Help:      "Total number of streams started on pooled connections, aggregated across all peers.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		warn("failed to create streams counter", err)
+	}
+
+	m.scaleUpBlockedTotal, err = p.Meter.Counter(metrics.Spec{
+		Name:      prefix + "_scale_up_blocked_total",
+		Help:      "Total number of scale-up attempts skipped because the pool was at its maximum connections, aggregated across all peers.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		warn("failed to create scale up blocked counter", err)
+	}
+
+	m.connectionStreams, err = p.Meter.Histogram(metrics.HistogramSpec{
+		Spec: metrics.Spec{
+			Name:      prefix + "_connection_streams",
+			Help:      "Distribution of in-flight streams per active connection, sampled by the scaling monitor across all peers.",
+			ConstTags: tags,
+		},
+		Unit:    time.Nanosecond,
+		Buckets: connectionStreamsBuckets,
+	})
+	if err != nil {
+		warn("failed to create connection streams histogram", err)
+	}
+
+	m.connectionUtilization, err = p.Meter.Histogram(metrics.HistogramSpec{
+		Spec: metrics.Spec{
+			Name:      prefix + "_connection_stream_utilization_percent",
+			Help:      "Distribution of in-flight streams per active connection as a percentage of the maximum concurrent streams, sampled by the scaling monitor across all peers.",
+			ConstTags: tags,
+		},
+		Unit:    time.Nanosecond,
+		Buckets: connectionUtilizationBuckets,
+	})
+	if err != nil {
+		warn("failed to create connection stream utilization histogram", err)
+	}
+
 	return m
 }
 
@@ -404,6 +500,47 @@ func (m *Metrics) incDialFailure() {
 		return
 	}
 	m.dialFailuresTotal.Inc()
+}
+
+func (m *Metrics) incClosed() {
+	if m == nil || m.closedConnectionsTotal == nil {
+		return
+	}
+	m.closedConnectionsTotal.Inc()
+}
+
+func (m *Metrics) addActiveStreams(delta int64) {
+	if m == nil || m.activeStreams == nil || delta == 0 {
+		return
+	}
+	m.activeStreams.Add(delta)
+}
+
+func (m *Metrics) incStreams() {
+	if m == nil || m.streamsTotal == nil {
+		return
+	}
+	m.streamsTotal.Inc()
+}
+
+func (m *Metrics) incScaleUpBlocked() {
+	if m == nil || m.scaleUpBlockedTotal == nil {
+		return
+	}
+	m.scaleUpBlockedTotal.Inc()
+}
+
+// observeConnection records one active connection's in-flight stream count and
+// its utilization, as a percentage of maxStreams, in the sampled histograms.
+// The utilization is skipped when maxStreams is not positive.
+func (m *Metrics) observeConnection(streams, maxStreams int32) {
+	if m == nil {
+		return
+	}
+	m.connectionStreams.IncBucket(int64(streams))
+	if maxStreams > 0 {
+		m.connectionUtilization.IncBucket(int64(streams) * 100 / int64(maxStreams))
+	}
 }
 
 // Reporter applies a single pool's connection-state counts to the shared,
@@ -478,6 +615,49 @@ func (r *Reporter) IncDial() {
 		return
 	}
 	r.shared.incDial()
+}
+
+// IncClosed records that a pool closed a connection after it sat idle.
+func (r *Reporter) IncClosed() {
+	if r == nil {
+		return
+	}
+	r.shared.incClosed()
+}
+
+// IncScaleUpBlocked records that a pool needed another connection but was at
+// MaxConnections.
+func (r *Reporter) IncScaleUpBlocked() {
+	if r == nil {
+		return
+	}
+	r.shared.incScaleUpBlocked()
+}
+
+// streamStarted records a stream starting on one of the pool's connections.
+func (r *Reporter) streamStarted() {
+	if r == nil {
+		return
+	}
+	r.shared.addActiveStreams(1)
+	r.shared.incStreams()
+}
+
+// streamFinished records a stream ending on one of the pool's connections.
+func (r *Reporter) streamFinished() {
+	if r == nil {
+		return
+	}
+	r.shared.addActiveStreams(-1)
+}
+
+// ObserveConnection records one active connection's stream load in the
+// sampled distributions.
+func (r *Reporter) ObserveConnection(streams, maxStreams int32) {
+	if r == nil {
+		return
+	}
+	r.shared.observeConnection(streams, maxStreams)
 }
 
 // IncDialFailure records that a pool's dial attempt failed.

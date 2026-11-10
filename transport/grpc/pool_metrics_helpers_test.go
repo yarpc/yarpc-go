@@ -41,7 +41,7 @@ type poolMetricSample struct {
 }
 
 var (
-	promTypeLine   = regexp.MustCompile(`^# TYPE (conn_pool_\w+) (gauge|counter)$`)
+	promTypeLine   = regexp.MustCompile(`^# TYPE (conn_pool_\w+) (gauge|counter|histogram)$`)
 	promSampleLine = regexp.MustCompile(`^(conn_pool_\w+)(?:\{([^}]*)\})? (\S+)$`)
 	promLabelPair  = regexp.MustCompile(`(\w+)="([^"]*)"`)
 )
@@ -58,14 +58,16 @@ func scrapePoolMetrics(tb testing.TB, root *metrics.Root) []poolMetricSample {
 	require.Equal(tb, http.StatusOK, rec.Code)
 
 	kinds := make(map[string]string)
+	histograms := make(map[string]bool)
 	var samples []poolMetricSample
 	for _, line := range strings.Split(rec.Body.String(), "\n") {
 		if m := promTypeLine.FindStringSubmatch(line); m != nil {
 			kinds[m[1]] = m[2]
+			histograms[m[1]] = m[2] == "histogram"
 			continue
 		}
 		m := promSampleLine.FindStringSubmatch(line)
-		if m == nil {
+		if m == nil || isHistogramSeries(m[1], histograms) {
 			continue
 		}
 		f, err := strconv.ParseFloat(m[3], 64)
@@ -77,6 +79,17 @@ func scrapePoolMetrics(tb testing.TB, root *metrics.Root) []poolMetricSample {
 		samples = append(samples, poolMetricSample{name: m[1], kind: kinds[m[1]], labels: labels, value: int64(f)})
 	}
 	return samples
+}
+
+// isHistogramSeries reports whether name is a _bucket, _sum or _count series
+// of one of the histograms, which this helper's gauge/counter samples leave out.
+func isHistogramSeries(name string, histograms map[string]bool) bool {
+	for _, suffix := range []string{"_bucket", "_sum", "_count"} {
+		if base, ok := strings.CutSuffix(name, suffix); ok && histograms[base] {
+			return true
+		}
+	}
+	return false
 }
 
 // poolMetricValues returns the current conn_pool_* gauge and counter values

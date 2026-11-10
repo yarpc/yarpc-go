@@ -90,6 +90,20 @@ func (p *Pool[T]) EvaluateScaling() {
 	}
 	p.CleanupIdleConns()
 	p.MaybeScaleDown()
+	p.sampleStreamMetrics()
+}
+
+// sampleStreamMetrics records each active connection's in-flight stream count
+// and utilization in the aggregate distributions. It runs once per monitor
+// pass, after scaling decisions, so every pool contributes the same number of
+// samples per interval per connection rather than one weighted by scale events.
+func (p *Pool[T]) sampleStreamMetrics() {
+	maxStreams := p.Config().MaxConcurrentStreams
+	for _, c := range p.LoadConns() {
+		if c.IsActive() {
+			p.metrics.ObserveConnection(c.StreamCount(), maxStreams)
+		}
+	}
 }
 
 // StartMonitor starts the background scale-down/idle/min-fill loop if it is
@@ -342,6 +356,7 @@ func (p *Pool[T]) CleanupIdleConns() {
 		if !c.TransitionState(StateIdle, StateClosing) {
 			continue
 		}
+		p.metrics.IncClosed()
 		// Info: closing an idle connection shrinks the pool, so surface it in
 		// logs for scaling debuggability (metrics are not tagged by peer).
 		p.Logger.Info(p.LogPrefix+": scaling down connection pool; closing idle connection after timeout",
@@ -439,6 +454,7 @@ func (p *Pool[T]) TryScaleUp(leastLoadedConn *Wrapper[T]) {
 		// No idle connection available; dial a new one if below the cap.
 		// connCount is maintained atomically -- no mutex needed for this check.
 		if int(p.connCount.Load()) >= cfg.MaxConnections {
+			p.metrics.IncScaleUpBlocked()
 			if p.atMaxConnectionsLogged.CompareAndSwap(false, true) {
 				p.Logger.Info(p.LogPrefix+": cannot scale up connection pool; at max connections",
 					zap.String("peer", p.ID),

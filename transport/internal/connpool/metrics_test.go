@@ -435,9 +435,9 @@ func TestMetrics_RegistrationErrorsAreLogged(t *testing.T) {
 	require.Zero(t, logs.Len(), "first registration must not log")
 
 	// The second registration on the same scope and tags fails for each of the
-	// eight handles, and each failure is logged.
+	// fourteen handles, and each failure is logged.
 	_ = newMetrics(params)
-	assert.Equal(t, 8, logs.Len(), "expected one warning per duplicate metric registration")
+	assert.Equal(t, metricsCount, logs.Len(), "expected one warning per duplicate metric registration")
 	for _, e := range logs.All() {
 		assert.Equal(t, zap.WarnLevel, e.Level)
 	}

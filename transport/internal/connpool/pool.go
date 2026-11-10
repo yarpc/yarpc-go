@@ -235,6 +235,7 @@ func (p *Pool[T]) AddConn() (*Wrapper[T], error) {
 	}
 	p.metrics.IncDial()
 	w := newWrapper(p.ctx, conn)
+	w.metrics = p.metrics
 
 	// Enter the critical window: increment addingCount so the teardown
 	// goroutine's spin waits for us to either bail or call connWg.Add(1).
