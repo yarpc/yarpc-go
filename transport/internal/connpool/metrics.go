@@ -114,9 +114,10 @@ type Metrics struct {
 	// The metrics below are real HTTP/2 stream counts read from the
 	// connections themselves, so unlike the in-flight ones they never exceed
 	// what the peer allows. They are reported only by transports whose
-	// connections can say how many streams are open (see Pool.StreamState)
-	// and are sampled by the scaling monitor, so they lag by up to its
-	// interval.
+	// connections can say how many streams are open (see Pool.StreamState),
+	// which today is HTTP/2 only: grpc-go does not expose this, so gRPC reports
+	// the in-flight metrics alone. They are sampled by the scaling monitor, so
+	// they lag by up to its interval.
 
 	// activeStreams is the number of streams open on the wire, summed across
 	// all connections of all peers.
@@ -471,7 +472,7 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 
 	m.activeStreams, err = p.Meter.Gauge(metrics.Spec{
 		Name:      prefix + "_active_streams",
-		Help:      "Number of streams open on pooled HTTP/2 connections, aggregated across all peers and sampled by the scaling monitor.",
+		Help:      "Number of streams open on pooled HTTP/2 connections, aggregated across all peers and sampled by the scaling monitor. HTTP/2 only; not reported for gRPC.",
 		ConstTags: tags,
 	})
 	if err != nil {
@@ -480,7 +481,7 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 
 	m.pendingRequests, err = p.Meter.Gauge(metrics.Spec{
 		Name:      prefix + "_pending_requests",
-		Help:      "Number of requests waiting for a free stream on pooled HTTP/2 connections at the peer's stream limit, aggregated across all peers and sampled by the scaling monitor.",
+		Help:      "Number of requests waiting for a free stream on pooled HTTP/2 connections at the peer's stream limit, aggregated across all peers and sampled by the scaling monitor. HTTP/2 only; not reported for gRPC.",
 		ConstTags: tags,
 	})
 	if err != nil {
@@ -490,7 +491,7 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 	m.connectionStreams, err = p.Meter.Histogram(metrics.HistogramSpec{
 		Spec: metrics.Spec{
 			Name:      prefix + "_connection_streams",
-			Help:      "Distribution of streams open per active HTTP/2 connection, sampled by the scaling monitor across all peers.",
+			Help:      "Distribution of streams open per active HTTP/2 connection, sampled by the scaling monitor across all peers. HTTP/2 only; not reported for gRPC.",
 			ConstTags: tags,
 		},
 		Unit:    time.Nanosecond,

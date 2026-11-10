@@ -98,7 +98,9 @@ type Pool[T Conn] struct {
 	// real stream metrics. Unlike the pool's in-flight count, which includes
 	// requests still queued, active never exceeds what the peer allows. Leave
 	// it nil for transports whose connections cannot report this, which then
-	// report only the in-flight metrics.
+	// report only the in-flight metrics. Today only HTTP/2 sets it; grpc-go
+	// does not expose per-connection stream counts, so gRPC reports in-flight
+	// requests only.
 	StreamState func(conn T) (active, pending int, ok bool)
 
 	// Config returns the pool's current tuning parameters. It is called on
