@@ -907,6 +907,110 @@ func TestInboundH2CShutdownServesStreamOpenedBeforePingAck(t *testing.T) {
 	}
 }
 
+// TestInboundH2CShutdownWithLargePayloads stops an inbound while a large body
+// is in flight on an h2c stream, so that the GOAWAY frames land between the
+// HEADERS and the DATA frames of the stream: of the request, while the client
+// is still sending it, or of the response, while the server waits for the
+// client to open its flow-control window. The stream must outlive the GOAWAY
+// frames and be processed in full.
+func TestInboundH2CShutdownWithLargePayloads(t *testing.T) {
+	const (
+		// The flow-control windows the client leaves to their initial size.
+		initialWindowSize = 65535
+		// Larger than the initial window and than the largest frame, so that
+		// bodies span several DATA frames, but within the 1MiB windows the
+		// server sets.
+		payloadSize = 256 << 10
+		// Sent before Stop, within the initial window.
+		firstChunkSize = 16 << 10
+	)
+	payload := make([]byte, payloadSize)
+	for i := range payload {
+		// Not a divisor of the frame size, so that reordered frames show.
+		payload[i] = byte(i % 251)
+	}
+
+	t.Run("request body", func(t *testing.T) {
+		inbound, h := startBlockingInbound(t)
+		c := dialManualPingH2C(t, inbound.Addr().String())
+		c.writeHeaders(t, 1, h2cRequestHeaders("block"))
+		c.writeBody(t, 1, payload[:firstChunkSize], false)
+		h.awaitEntered(t)
+
+		stopErr := make(chan error, 1)
+		go func() { stopErr <- inbound.Stop() }()
+
+		assert.Equal(t, uint32(math.MaxInt32), c.nextGoAway(t),
+			"first GOAWAY must reserve the whole stream ID space")
+		c.ackPing(t, c.nextPing(t))
+		assert.Equal(t, uint32(1), c.nextGoAway(t),
+			"second GOAWAY must carry the stream whose body is in flight")
+
+		// The client read the server's SETTINGS and WINDOW_UPDATE frames
+		// before the GOAWAY frames, so may send the rest at once.
+		c.writeBody(t, 1, payload[firstChunkSize:], true)
+		h.releaseAll()
+		c.openWindow(t, 1, payloadSize)
+		body := c.responses(t, 1)[1]
+		assert.Equal(t, payloadSize, len(body), "stream 1 must be processed in full")
+		assert.True(t, string(payload) == body, "stream 1 must echo its whole request body")
+		require.NoError(t, c.conn.Close())
+
+		select {
+		case err := <-stopErr:
+			require.NoError(t, err, "Stop must succeed once connections have drained")
+		case <-time.After(5 * testtime.Second):
+			require.FailNow(t, "Stop did not return after the connection drained")
+		}
+	})
+
+	t.Run("response body", func(t *testing.T) {
+		inbound, h := startBlockingInbound(t)
+		c := dialManualPingH2C(t, inbound.Addr().String())
+		c.ping(t) // for the server's windows, before sending more than the initial ones
+		c.openStream(t, 1, h2cRequestHeaders("block"), payload)
+		h.awaitEntered(t)
+		h.releaseAll()
+
+		// The server writes the response HEADERS, then DATA frames until the
+		// client's window is full.
+		f := c.next(t)
+		headers, ok := f.(*http2.MetaHeadersFrame)
+		require.True(t, ok && headers.StreamID == 1, "want the response HEADERS, got %v", f)
+		assert.Equal(t, "200", headers.PseudoValue("status"))
+		var body []byte
+		for len(body) < initialWindowSize {
+			f := c.next(t)
+			data, ok := f.(*http2.DataFrame)
+			require.True(t, ok && data.StreamID == 1, "want a DATA frame, got %v", f)
+			require.False(t, data.StreamEnded(), "response ended within the initial window")
+			body = append(body, data.Data()...)
+		}
+
+		stopErr := make(chan error, 1)
+		go func() { stopErr <- inbound.Stop() }()
+
+		assert.Equal(t, uint32(math.MaxInt32), c.nextGoAway(t),
+			"first GOAWAY must reserve the whole stream ID space")
+		c.ackPing(t, c.nextPing(t))
+		assert.Equal(t, uint32(1), c.nextGoAway(t),
+			"second GOAWAY must carry the stream whose response is in flight")
+
+		c.openWindow(t, 1, payloadSize)
+		body = append(body, c.responses(t, 1)[1]...)
+		assert.Equal(t, payloadSize, len(body), "stream 1 must be processed in full")
+		assert.True(t, bytes.Equal(payload, body), "stream 1 must echo its whole request body")
+		require.NoError(t, c.conn.Close())
+
+		select {
+		case err := <-stopErr:
+			require.NoError(t, err, "Stop must succeed once connections have drained")
+		case <-time.After(5 * testtime.Second):
+			require.FailNow(t, "Stop did not return after the connection drained")
+		}
+	})
+}
+
 // manualPingH2CConn is a frame-level h2c client that, unlike
 // http2test.RawH2CConn, leaves the server's PING frames for the test to
 // acknowledge, or not. It reads and writes on the test goroutine.
@@ -935,6 +1039,13 @@ func dialManualPingH2C(t *testing.T, addr string) *manualPingH2CConn {
 
 // openStream writes a POST request on a new stream, ending it with body.
 func (c *manualPingH2CConn) openStream(t *testing.T, streamID uint32, headers map[string]string, body []byte) {
+	c.writeHeaders(t, streamID, headers)
+	c.writeBody(t, streamID, body, true)
+}
+
+// writeHeaders writes the headers of a POST request on a new stream, leaving
+// it open for its body.
+func (c *manualPingH2CConn) writeHeaders(t *testing.T, streamID uint32, headers map[string]string) {
 	c.encBuf.Reset()
 	fields := []hpack.HeaderField{
 		{Name: ":method", Value: "POST"},
@@ -953,7 +1064,36 @@ func (c *manualPingH2CConn) openStream(t *testing.T, streamID uint32, headers ma
 		BlockFragment: c.encBuf.Bytes(),
 		EndHeaders:    true,
 	}), "failed to open stream %d", streamID)
-	require.NoError(t, c.framer.WriteData(streamID, true, body), "failed to write stream %d", streamID)
+}
+
+// writeBody writes body on streamID, in DATA frames of at most the default
+// maximum frame size, and ends the stream with the last if endStream.
+func (c *manualPingH2CConn) writeBody(t *testing.T, streamID uint32, body []byte, endStream bool) {
+	const maxFrameSize = 16 << 10
+	for {
+		n := min(len(body), maxFrameSize)
+		require.NoError(t, c.framer.WriteData(streamID, endStream && n == len(body), body[:n]),
+			"failed to write stream %d", streamID)
+		if body = body[n:]; len(body) == 0 {
+			return
+		}
+	}
+}
+
+// ping writes a PING and waits for its ACK, reading the frames the server
+// wrote before it: its SETTINGS and WINDOW_UPDATE frames, at least.
+func (c *manualPingH2CConn) ping(t *testing.T) {
+	data := [8]byte{'c', 'l', 'i', 'e', 'n', 't'}
+	require.NoError(t, c.framer.WritePing(false, data), "failed to write a PING")
+	f := c.next(t)
+	ping, ok := f.(*http2.PingFrame)
+	require.True(t, ok && ping.IsAck() && ping.Data == data, "want a PING ACK, got %v", f)
+}
+
+// openWindow lets the server send n more bytes of DATA on streamID.
+func (c *manualPingH2CConn) openWindow(t *testing.T, streamID, n uint32) {
+	require.NoError(t, c.framer.WriteWindowUpdate(0, n), "failed to open the connection window")
+	require.NoError(t, c.framer.WriteWindowUpdate(streamID, n), "failed to open the window of stream %d", streamID)
 }
 
 // next returns the next frame other than SETTINGS, which it acknowledges, and
