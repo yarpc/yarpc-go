@@ -172,6 +172,7 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		)
 		pool.LogPrefix = "http2"
 		pool.OnConnAdded = p.watchH2Conn
+		pool.StreamState = h2StreamState
 		// initialConnCount is 0, not the pool's minimum: unlike gRPC's Dial,
 		// a raw HTTP/2 dial can fail synchronously on a genuinely down
 		// destination, and Pool.Start cancels (permanently disables) the pool
@@ -474,4 +475,14 @@ func (p *httpPeer) sleep(delay time.Duration) (completed bool) {
 		<-p.timer.C
 	}
 	return false
+}
+
+// h2StreamState reports the streams open on an HTTP/2 connection and the
+// requests waiting for a free one because it is at the peer's stream limit.
+func h2StreamState(c *http2.ClientConn) (active, pending int, ok bool) {
+	st := c.State()
+	if st.Closed {
+		return 0, 0, false
+	}
+	return st.StreamsActive, st.StreamsPending, true
 }

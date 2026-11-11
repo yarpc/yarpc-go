@@ -91,6 +91,18 @@ type Pool[T Conn] struct {
 	// w.Context().Done().
 	OnConnAdded func(*Wrapper[T])
 
+	// StreamState, if set, reports how many streams are open on a connection
+	// and how many requests are waiting for a free one because the connection
+	// is at the peer's stream limit; ok is false when the connection cannot say
+	// (for example it is closed). The scaling monitor samples it to report the
+	// real stream metrics. Unlike the pool's in-flight count, which includes
+	// requests still queued, active never exceeds what the peer allows. Leave
+	// it nil for transports whose connections cannot report this, which then
+	// report only the in-flight metrics. Today only HTTP/2 sets it; grpc-go
+	// does not expose per-connection stream counts, so gRPC reports in-flight
+	// requests only.
+	StreamState func(conn T) (active, pending int, ok bool)
+
 	// Config returns the pool's current tuning parameters. It is called on
 	// every scaling decision, so a changed return value takes effect on the
 	// next decision. It must be safe for concurrent use and return a complete,
@@ -199,6 +211,9 @@ func (p *Pool[T]) Start(initialConnCount int, startMonitor bool) error {
 		// values on the shared gauges.
 		if p.metrics != nil {
 			p.metrics.SetCounts(0, 0, 0)
+			p.metrics.SetStreams(0, 0)
+			p.metrics.SetLoadBands(nil, nil)
+			p.metrics.SetStreamBands(nil)
 		}
 		close(p.stoppedC)
 	}()
@@ -235,6 +250,7 @@ func (p *Pool[T]) AddConn() (*Wrapper[T], error) {
 	}
 	p.metrics.IncDial()
 	w := newWrapper(p.ctx, conn)
+	w.metrics = p.metrics
 
 	// Enter the critical window: increment addingCount so the teardown
 	// goroutine's spin waits for us to either bail or call connWg.Add(1).

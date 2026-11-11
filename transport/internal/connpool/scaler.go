@@ -90,6 +90,45 @@ func (p *Pool[T]) EvaluateScaling() {
 	}
 	p.CleanupIdleConns()
 	p.MaybeScaleDown()
+	p.sampleStreamMetrics()
+}
+
+// sampleStreamMetrics records the aggregate load metrics once per monitor pass,
+// after scaling decisions, so every pool contributes the same number of samples
+// per interval per connection rather than one weighted by scale events.
+//
+// Each active connection's in-flight request count and utilization are banded
+// and published to the shared per-band gauges. When the pool has a StreamState,
+// the streams open and requests pending on every connection (draining ones
+// still carry streams) are published to the shared gauges, and each active
+// connection's open streams are banded and published as well.
+func (p *Pool[T]) sampleStreamMetrics() {
+	maxStreams := p.Config().MaxConcurrentStreams
+	var streams, pending int64
+	var inFlight []int32
+	var open []int
+	for _, c := range p.LoadConns() {
+		if c.IsActive() {
+			inFlight = append(inFlight, c.StreamCount())
+		}
+		if p.StreamState == nil {
+			continue
+		}
+		active, queued, ok := p.StreamState(c.Conn)
+		if !ok {
+			continue
+		}
+		streams += int64(active)
+		pending += int64(queued)
+		if c.IsActive() {
+			open = append(open, active)
+		}
+	}
+	p.metrics.SetLoadBands(LoadBands(inFlight, maxStreams))
+	if p.StreamState != nil {
+		p.metrics.SetStreams(streams, pending)
+		p.metrics.SetStreamBands(StreamBands(open))
+	}
 }
 
 // StartMonitor starts the background scale-down/idle/min-fill loop if it is
@@ -342,6 +381,7 @@ func (p *Pool[T]) CleanupIdleConns() {
 		if !c.TransitionState(StateIdle, StateClosing) {
 			continue
 		}
+		p.metrics.IncClosed()
 		// Info: closing an idle connection shrinks the pool, so surface it in
 		// logs for scaling debuggability (metrics are not tagged by peer).
 		p.Logger.Info(p.LogPrefix+": scaling down connection pool; closing idle connection after timeout",
@@ -439,6 +479,7 @@ func (p *Pool[T]) TryScaleUp(leastLoadedConn *Wrapper[T]) {
 		// No idle connection available; dial a new one if below the cap.
 		// connCount is maintained atomically -- no mutex needed for this check.
 		if int(p.connCount.Load()) >= cfg.MaxConnections {
+			p.metrics.IncScaleUpBlocked()
 			if p.atMaxConnectionsLogged.CompareAndSwap(false, true) {
 				p.Logger.Info(p.LogPrefix+": cannot scale up connection pool; at max connections",
 					zap.String("peer", p.ID),

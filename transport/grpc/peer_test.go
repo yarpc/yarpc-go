@@ -23,6 +23,7 @@ package grpc
 import (
 	"context"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -270,7 +271,15 @@ func assertConnPoolMetricTags(t *testing.T, root *metrics.Root, serviceName stri
 	samples := scrapePoolMetrics(t, root)
 	require.NotEmpty(t, samples)
 	for _, s := range samples {
-		assert.Equal(t, want, s.labels, "series %s", s.name)
+		labels := make(map[string]string, len(s.labels))
+		for k, v := range s.labels {
+			// The per-band connection gauges carry one extra variable tag.
+			if k == "band" && strings.Contains(s.name, "_connections_by_") {
+				continue
+			}
+			labels[k] = v
+		}
+		assert.Equal(t, want, labels, "series %s", s.name)
 	}
 }
 
