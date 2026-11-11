@@ -109,9 +109,24 @@ func TestFrameScanner(t *testing.T) {
 	add(rawFrame(xhttp2.FramePing, 0, 0, []byte{1, 2, 3}), frameHeaderLen) // malformed: payload not kept
 	add(goAwayFrame(3), frameHeaderLen)
 
+	// No other frame may go between the frames of a header block.
+	var inHeaderBlock []int
+	addToHeaderBlock := func(frame []byte) {
+		add(frame, frameHeaderLen)
+		inHeaderBlock = append(inHeaderBlock, len(stream))
+	}
+	addToHeaderBlock(rawFrame(xhttp2.FrameHeaders, 0, 3, []byte{0x82}))
+	addToHeaderBlock(rawFrame(xhttp2.FrameContinuation, 0, 3, []byte{0x86}))
+	add(rawFrame(xhttp2.FrameContinuation, xhttp2.FlagContinuationEndHeaders, 3, []byte{0x84}), frameHeaderLen)
+	addToHeaderBlock(rawFrame(xhttp2.FramePushPromise, 0, 3, []byte{0, 0, 0, 2, 0x82}))
+	add(rawFrame(xhttp2.FrameContinuation, xhttp2.FlagContinuationEndHeaders, 3, []byte{0x84}), frameHeaderLen)
+
 	boundaries := map[int]bool{len(stream): true}
 	for _, w := range want {
 		boundaries[w.start] = true
+	}
+	for _, off := range inHeaderBlock {
+		delete(boundaries, off)
 	}
 
 	t.Run("zero value at boundary", func(t *testing.T) {

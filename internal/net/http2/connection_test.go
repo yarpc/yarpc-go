@@ -21,17 +21,21 @@
 package http2
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	xhttp2 "golang.org/x/net/http2"
+	"golang.org/x/net/http2/hpack"
 )
 
 var errWrite = errors.New("great sadness")
@@ -578,6 +582,8 @@ func TestTrackedConnWrite(t *testing.T) {
 	}
 	var errGoAway bytes.Buffer
 	require.NoError(t, xhttp2.NewFramer(&errGoAway, nil).WriteGoAway(3, xhttp2.ErrCodeProtocol, nil))
+	headerBlockStart := rawFrame(xhttp2.FrameHeaders, 0, 1, []byte{0x82})
+	headerBlockEnd := rawFrame(xhttp2.FrameContinuation, xhttp2.FlagContinuationEndHeaders, 1, []byte{0x84})
 	cat := func(frames ...[]byte) []byte { return bytes.Join(frames, nil) }
 
 	t.Run("untracked", func(t *testing.T) {
@@ -711,6 +717,17 @@ func TestTrackedConnWrite(t *testing.T) {
 			writes: [][]byte{cat(data[5:], serverGoAway)},
 			want:   cat(data, firstGoAway(), serverGoAway),
 		},
+		{
+			desc: "second GOAWAY pending in a header block",
+			before: func(tc *TrackedConn) {
+				require.NoError(t, tc.advance(goAwayFirst))
+				_, err := tc.Write(headerBlockStart)
+				require.NoError(t, err)
+				secondGoAway(tc)
+			},
+			writes: [][]byte{headerBlockEnd},
+			want:   cat(firstGoAway(), headerBlockStart, headerBlockEnd, serverGoAway),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
@@ -744,6 +761,52 @@ func TestTrackedConnWrite(t *testing.T) {
 			assert.Equal(t, failWrite, conn.writes, "must stop writing on error")
 		}
 	})
+}
+
+// TestTrackedConnWriteHeaderBlock writes a response header block too large
+// for one frame the way the HTTP/2 server does, through its 4KiB write buffer
+// and in 16KiB fragments, whatever the client's SETTINGS_MAX_FRAME_SIZE. A
+// shutdown starting between its HEADERS and CONTINUATION frames must leave it
+// whole, and only write the first GOAWAY after it.
+func TestTrackedConnWriteHeaderBlock(t *testing.T) {
+	const fragmentSize = 16 << 10
+	var block bytes.Buffer
+	enc := hpack.NewEncoder(&block)
+	require.NoError(t, enc.WriteField(hpack.HeaderField{Name: ":status", Value: "200"}))
+	require.NoError(t, enc.WriteField(hpack.HeaderField{Name: "x-large", Value: strings.Repeat("x", 2*fragmentSize)}))
+	require.Greater(t, block.Len(), fragmentSize, "header block must span several frames")
+
+	for _, shutdown := range []bool{false, true} {
+		t.Run(fmt.Sprintf("shutdown=%v", shutdown), func(t *testing.T) {
+			tc, conn := newTrackedFakeConn(t, &recordingHelper{})
+			bw := bufio.NewWriterSize(tc, 4<<10)
+			fr := xhttp2.NewFramer(bw, nil)
+			require.NoError(t, fr.WriteHeaders(xhttp2.HeadersFrameParam{
+				StreamID:      1,
+				BlockFragment: block.Bytes()[:fragmentSize],
+				EndStream:     true,
+			}))
+			want := []byte{}
+			if shutdown {
+				require.NoError(t, tc.advance(goAwayFirst))
+				want = firstGoAway()
+			}
+			require.NoError(t, fr.WriteContinuation(1, true, block.Bytes()[fragmentSize:]))
+			require.NoError(t, bw.Flush())
+
+			written := bytes.NewReader(conn.written.Bytes())
+			client := xhttp2.NewFramer(nil, written)
+			client.ReadMetaHeaders = hpack.NewDecoder(4096, nil)
+			f, err := client.ReadFrame()
+			require.NoError(t, err, "client must read the header block whole: %v", client.ErrorDetail())
+			headers, ok := f.(*xhttp2.MetaHeadersFrame)
+			require.True(t, ok, "want the header block, got %v", f)
+			assert.Equal(t, "200", headers.PseudoValue("status"))
+			rest, err := io.ReadAll(written)
+			require.NoError(t, err)
+			assert.Equal(t, want, rest, "must write the first GOAWAY after the header block")
+		})
+	}
 }
 
 // h2Pipe connects a [TrackedConn], as the server side, to an HTTP/2 client.
