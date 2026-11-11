@@ -133,6 +133,7 @@ func TestCreateRequestContentLength(t *testing.T) {
 	payload := []byte("some-payload")
 	tests := []struct {
 		desc              string
+		http1             bool
 		body              io.Reader
 		bodySize          int
 		wantContentLength int64
@@ -167,11 +168,18 @@ func TestCreateRequestContentLength(t *testing.T) {
 			bodySize:          0,
 			wantContentLength: 0,
 		},
+		{
+			desc:              "http1: unsized ReadCloser does not use BodySize",
+			http1:             true,
+			body:              io.NopCloser(bytes.NewReader(payload)),
+			bodySize:          len(payload),
+			wantContentLength: 0,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			o := &Outbound{urlTemplate: defaultURLTemplate}
+			o := &Outbound{urlTemplate: defaultURLTemplate, useHTTP2: !tt.http1}
 			hreq, err := o.createRequest(&transport.Request{
 				Body:     tt.body,
 				BodySize: tt.bodySize,
@@ -1244,6 +1252,53 @@ func TestCallOneWayFailWithCtxCancelled(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, yarpcerrors.CodeCancelled, yarpcerrors.FromError(err).Code())
 	require.Nil(t, ack)
+}
+
+func TestHTTP2OutboundLifecycleErrorCodes(t *testing.T) {
+	newRequest := func(t *testing.T) (*http.Request, *transport.Request, context.Context, context.CancelFunc) {
+		t.Helper()
+		hreq, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:1", strings.NewReader("world"))
+		require.NoError(t, err)
+		treq := &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "hello",
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		return hreq, treq, ctx, cancel
+	}
+
+	t.Run("peer released is unavailable", func(t *testing.T) {
+		tr := NewTransport()
+		require.NoError(t, tr.Start())
+		t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+		out := tr.NewSingleOutbound("http://127.0.0.1:1", UseHTTP2())
+		p := newPeer("127.0.0.1:1", tr)
+		p.Release()
+		hreq, treq, ctx, cancel := newRequest(t)
+		defer cancel()
+
+		_, err := out.doWithPeer(ctx, hreq, treq, time.Now(), testtime.Second, p, nil)
+		require.Error(t, err)
+		assert.Equal(t, yarpcerrors.CodeUnavailable, yarpcerrors.FromError(err).Code())
+		assert.ErrorIs(t, err, errH2PeerReleased)
+	})
+
+	t.Run("transport stopping is failed precondition", func(t *testing.T) {
+		tr := NewTransport()
+		require.NoError(t, tr.Start())
+		out := tr.NewSingleOutbound("http://127.0.0.1:1", UseHTTP2())
+		p := newPeer("127.0.0.1:1", tr)
+		require.NoError(t, tr.Stop())
+		hreq, treq, ctx, cancel := newRequest(t)
+		defer cancel()
+
+		_, err := out.doWithPeer(ctx, hreq, treq, time.Now(), testtime.Second, p, nil)
+		require.Error(t, err)
+		assert.Equal(t, yarpcerrors.CodeFailedPrecondition, yarpcerrors.FromError(err).Code())
+		assert.ErrorIs(t, err, errH2TransportStopping)
+	})
 }
 
 func TestAddReservedHeader(t *testing.T) {
