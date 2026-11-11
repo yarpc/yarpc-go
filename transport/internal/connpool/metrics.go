@@ -21,11 +21,12 @@
 package connpool
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/zap"
@@ -42,6 +43,7 @@ const (
 	componentTag   = "component"
 	serviceTag     = "service"
 	transportTag   = "transport"
+	bandTag        = "band"
 	componentYarpc = "yarpc"
 )
 
@@ -103,13 +105,15 @@ type Metrics struct {
 	// scaleUpBlockedTotal counts scale-up attempts that were skipped because
 	// the pool was already at MaxConnections.
 	scaleUpBlockedTotal *metrics.Counter
-	// connectionInFlight is the distribution of in-flight requests per active
-	// connection, sampled by the scaling monitor.
-	connectionInFlight *metrics.Histogram
-	// connectionInFlightUtilization is the distribution of in-flight requests
-	// per active connection as a percentage of MaxConcurrentStreams, sampled by
-	// the scaling monitor. Above 100 means requests are queued.
-	connectionInFlightUtilization *metrics.Histogram
+	// connectionsByInFlight holds, per band of connectionLoadBuckets, how many
+	// active connections currently carry that many in-flight requests. It is
+	// sampled by the scaling monitor. Index i is the band labelled
+	// bandLabels(connectionLoadBuckets)[i]; the last band is the overflow.
+	connectionsByInFlight []*metrics.Gauge
+	// connectionsByUtilization is connectionsByInFlight for in-flight requests
+	// as a percentage of MaxConcurrentStreams, banded by
+	// connectionInFlightUtilizationBuckets. Above 100 means requests are queued.
+	connectionsByUtilization []*metrics.Gauge
 
 	// The metrics below are real HTTP/2 stream counts read from the
 	// connections themselves, so unlike the in-flight ones they never exceed
@@ -126,13 +130,14 @@ type Metrics struct {
 	// because their connection is at the peer's stream limit, summed across
 	// all connections of all peers.
 	pendingRequests *metrics.Gauge
-	// connectionStreams is the distribution of open streams per active
-	// connection, sampled by the scaling monitor.
-	connectionStreams *metrics.Histogram
+	// connectionsByStreams holds, per band of connectionStreamsBuckets, how
+	// many active connections currently have that many streams open, sampled
+	// by the scaling monitor.
+	connectionsByStreams []*metrics.Gauge
 }
 
-// Histogram buckets. The histograms record plain integers, not durations, so
-// they use the smallest unit and IncBucket.
+// Band bounds. Each bound is the inclusive upper edge of a band, and anything
+// above the last bound falls into a final overflow band.
 var (
 	// connectionLoadBuckets spans an idle connection up to the common
 	// HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS values (100, 250). The 500
@@ -143,7 +148,7 @@ var (
 	// limit, so there is no bucket past the largest common limit.
 	connectionStreamsBuckets = []int64{0, 1, 2, 5, 10, 25, 50, 100, 150, 200, 250}
 	// connectionInFlightUtilizationBuckets are percentages of MaxConcurrentStreams,
-	// dense around the default scale-up threshold. The catch-all bucket holds
+	// dense around the default scale-up threshold. The overflow band holds
 	// connections over their configured limit.
 	connectionInFlightUtilizationBuckets = []int64{0, 10, 25, 50, 70, 80, 90, 100}
 )
@@ -444,30 +449,22 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 		warn("failed to create scale up blocked counter", err)
 	}
 
-	m.connectionInFlight, err = p.Meter.Histogram(metrics.HistogramSpec{
-		Spec: metrics.Spec{
-			Name:      prefix + "_connection_in_flight_requests",
-			Help:      "Distribution of in-flight requests per active connection, including any queued behind the stream limit, sampled by the scaling monitor across all peers.",
-			ConstTags: tags,
-		},
-		Unit:    time.Nanosecond,
-		Buckets: connectionLoadBuckets,
-	})
+	m.connectionsByInFlight, err = registerBandGauges(p.Meter, metrics.Spec{
+		Name:      prefix + "_connections_by_in_flight_requests",
+		Help:      "Number of active connections per band of in-flight requests (including any queued behind the stream limit), sampled by the scaling monitor across all peers. The band tag is a whole-number range such as 3-5.",
+		ConstTags: tags,
+	}, connectionLoadBuckets)
 	if err != nil {
-		warn("failed to create connection in-flight requests histogram", err)
+		warn("failed to create connections by in-flight requests gauges", err)
 	}
 
-	m.connectionInFlightUtilization, err = p.Meter.Histogram(metrics.HistogramSpec{
-		Spec: metrics.Spec{
-			Name:      prefix + "_connection_in_flight_utilization_percent",
-			Help:      "Distribution of in-flight requests per active connection as a percentage of the maximum concurrent streams (above 100 means requests are queued), sampled by the scaling monitor across all peers.",
-			ConstTags: tags,
-		},
-		Unit:    time.Nanosecond,
-		Buckets: connectionInFlightUtilizationBuckets,
-	})
+	m.connectionsByUtilization, err = registerBandGauges(p.Meter, metrics.Spec{
+		Name:      prefix + "_connections_by_in_flight_utilization_percent",
+		Help:      "Number of active connections per band of in-flight requests as a percentage of the maximum concurrent streams (over-100 means requests are queued), sampled by the scaling monitor across all peers. The band tag is a whole-number percentage range such as 51-70.",
+		ConstTags: tags,
+	}, connectionInFlightUtilizationBuckets)
 	if err != nil {
-		warn("failed to create connection in-flight utilization histogram", err)
+		warn("failed to create connections by in-flight utilization gauges", err)
 	}
 
 	m.activeStreams, err = p.Meter.Gauge(metrics.Spec{
@@ -488,17 +485,13 @@ func registerMetrics(p MetricsParams, warn func(msg string, err error)) *Metrics
 		warn("failed to create pending requests gauge", err)
 	}
 
-	m.connectionStreams, err = p.Meter.Histogram(metrics.HistogramSpec{
-		Spec: metrics.Spec{
-			Name:      prefix + "_connection_streams",
-			Help:      "Distribution of streams open per active HTTP/2 connection, sampled by the scaling monitor across all peers. HTTP/2 only; not reported for gRPC.",
-			ConstTags: tags,
-		},
-		Unit:    time.Nanosecond,
-		Buckets: connectionStreamsBuckets,
-	})
+	m.connectionsByStreams, err = registerBandGauges(p.Meter, metrics.Spec{
+		Name:      prefix + "_connections_by_streams",
+		Help:      "Number of active HTTP/2 connections per band of open streams, sampled by the scaling monitor across all peers. The band tag is a whole-number range such as 3-5. HTTP/2 only; not reported for gRPC.",
+		ConstTags: tags,
+	}, connectionStreamsBuckets)
 	if err != nil {
-		warn("failed to create connection streams histogram", err)
+		warn("failed to create connections by streams gauges", err)
 	}
 
 	return m
@@ -602,26 +595,59 @@ func (m *Metrics) addPendingRequests(delta int64) {
 	m.pendingRequests.Add(delta)
 }
 
-// observeInFlight records one active connection's in-flight request count and
-// its utilization, as a percentage of maxStreams, in the sampled histograms.
-// The utilization is skipped when maxStreams is not positive.
-func (m *Metrics) observeInFlight(inFlight, maxStreams int32) {
-	if m == nil {
-		return
+// bandLabels names the bands of bounds as whole-number ranges: "0", "1",
+// "3-5", ..., and "over-<last>" for the overflow band. Values are integers, so
+// a band's lower edge is one above the previous bound.
+func bandLabels(bounds []int64) []string {
+	labels := make([]string, 0, len(bounds)+1)
+	for i, hi := range bounds {
+		lo := int64(0)
+		if i > 0 {
+			lo = bounds[i-1] + 1
+		}
+		if lo >= hi {
+			labels = append(labels, strconv.FormatInt(hi, 10))
+		} else {
+			labels = append(labels, fmt.Sprintf("%d-%d", lo, hi))
+		}
 	}
-	m.connectionInFlight.IncBucket(int64(inFlight))
-	if maxStreams > 0 {
-		m.connectionInFlightUtilization.IncBucket(int64(inFlight) * 100 / int64(maxStreams))
-	}
+	return append(labels, "over-"+strconv.FormatInt(bounds[len(bounds)-1], 10))
 }
 
-// observeStreams records one active connection's open stream count in the
-// sampled histogram.
-func (m *Metrics) observeStreams(streams int) {
+// bandIndex returns the band of bounds that value falls in; len(bounds) is the
+// overflow band.
+func bandIndex(bounds []int64, value int64) int {
+	return sort.Search(len(bounds), func(i int) bool { return value <= bounds[i] })
+}
+
+// registerBandGauges registers one gauge per band of bounds under spec, tagged
+// "band". Every band is registered up front so each reports 0 until used.
+func registerBandGauges(meter *metrics.Scope, spec metrics.Spec, bounds []int64) ([]*metrics.Gauge, error) {
+	spec.VarTags = []string{bandTag}
+	vec, err := meter.GaugeVector(spec)
+	if err != nil {
+		return nil, err
+	}
+	labels := bandLabels(bounds)
+	gauges := make([]*metrics.Gauge, len(labels))
+	for i, label := range labels {
+		if gauges[i], err = vec.Get(bandTag, label); err != nil {
+			return nil, err
+		}
+	}
+	return gauges, nil
+}
+
+// addBands applies per-band deltas to a set of band gauges.
+func (m *Metrics) addBands(gauges []*metrics.Gauge, deltas []int64) {
 	if m == nil {
 		return
 	}
-	m.connectionStreams.IncBucket(int64(streams))
+	for i, d := range deltas {
+		if d != 0 && i < len(gauges) && gauges[i] != nil {
+			gauges[i].Add(d)
+		}
+	}
 }
 
 // Reporter applies a single pool's connection-state counts to the shared,
@@ -639,6 +665,11 @@ type Reporter struct {
 	lastIdle     int64
 	lastStreams  int64
 	lastPending  int64
+	// lastInFlightBands and lastUtilizationBands are the per-band connection
+	// counts this pool last published.
+	lastInFlightBands    []int64
+	lastUtilizationBands []int64
+	lastStreamBands      []int64
 }
 
 // NewReporter creates a Reporter that feeds the shared Metrics.
@@ -734,22 +765,80 @@ func (r *Reporter) streamFinished() {
 	r.shared.addInFlightRequests(-1)
 }
 
-// ObserveInFlight records one active connection's in-flight request count in
-// the sampled distributions.
-func (r *Reporter) ObserveInFlight(inFlight, maxStreams int32) {
+// SetLoadBands publishes how many of this pool's active connections fall in
+// each in-flight and utilization band (see LoadBands), applying the difference
+// from the previously reported counts to the shared gauges, as SetCounts does
+// for connection counts. Nil counts withdraw the pool's contribution. Safe for
+// concurrent use.
+func (r *Reporter) SetLoadBands(inFlight, utilization []int64) {
 	if r == nil {
 		return
 	}
-	r.shared.observeInFlight(inFlight, maxStreams)
+	r.mu.Lock()
+	dInFlight := bandDeltas(&r.lastInFlightBands, inFlight)
+	dUtilization := bandDeltas(&r.lastUtilizationBands, utilization)
+	r.mu.Unlock()
+
+	r.shared.addBands(r.shared.connectionsByInFlight, dInFlight)
+	r.shared.addBands(r.shared.connectionsByUtilization, dUtilization)
 }
 
-// ObserveStreams records one active connection's open stream count in the
-// sampled distribution.
-func (r *Reporter) ObserveStreams(streams int) {
+// LoadBands bands each active connection's in-flight request count, and that
+// count as a percentage of maxStreams, for SetLoadBands. Utilization is left at
+// zero connections when maxStreams is not positive.
+func LoadBands(inFlight []int32, maxStreams int32) (byInFlight, byUtilization []int64) {
+	byInFlight = make([]int64, len(connectionLoadBuckets)+1)
+	byUtilization = make([]int64, len(connectionInFlightUtilizationBuckets)+1)
+	for _, n := range inFlight {
+		byInFlight[bandIndex(connectionLoadBuckets, int64(n))]++
+		if maxStreams > 0 {
+			byUtilization[bandIndex(connectionInFlightUtilizationBuckets, int64(n)*100/int64(maxStreams))]++
+		}
+	}
+	return byInFlight, byUtilization
+}
+
+// bandDeltas returns now minus *last for every band and stores now as the new
+// *last. Bands missing from now count as zero.
+func bandDeltas(last *[]int64, now []int64) []int64 {
+	n := max(len(*last), len(now))
+	deltas := make([]int64, n)
+	next := make([]int64, n)
+	for i := range n {
+		if i < len(now) {
+			next[i] = now[i]
+		}
+		deltas[i] = next[i]
+		if i < len(*last) {
+			deltas[i] -= (*last)[i]
+		}
+	}
+	*last = next
+	return deltas
+}
+
+// SetStreamBands publishes how many of this pool's active connections fall in
+// each open-stream band (see StreamBands), as SetLoadBands does for in-flight
+// load. Nil counts withdraw the pool's contribution. Safe for concurrent use.
+func (r *Reporter) SetStreamBands(streams []int64) {
 	if r == nil {
 		return
 	}
-	r.shared.observeStreams(streams)
+	r.mu.Lock()
+	d := bandDeltas(&r.lastStreamBands, streams)
+	r.mu.Unlock()
+
+	r.shared.addBands(r.shared.connectionsByStreams, d)
+}
+
+// StreamBands bands each active connection's open stream count for
+// SetStreamBands.
+func StreamBands(open []int) []int64 {
+	counts := make([]int64, len(connectionStreamsBuckets)+1)
+	for _, n := range open {
+		counts[bandIndex(connectionStreamsBuckets, int64(n))]++
+	}
+	return counts
 }
 
 // SetStreams publishes this pool's current open stream and pending request

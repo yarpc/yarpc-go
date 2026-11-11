@@ -97,17 +97,19 @@ func (p *Pool[T]) EvaluateScaling() {
 // after scaling decisions, so every pool contributes the same number of samples
 // per interval per connection rather than one weighted by scale events.
 //
-// Each active connection's in-flight request count and utilization go into the
-// in-flight distributions. When the pool has a StreamState, the streams open
-// and requests pending on every connection (draining ones still carry streams)
-// are published to the shared gauges, and each active connection's open streams
-// go into the stream distribution.
+// Each active connection's in-flight request count and utilization are banded
+// and published to the shared per-band gauges. When the pool has a StreamState,
+// the streams open and requests pending on every connection (draining ones
+// still carry streams) are published to the shared gauges, and each active
+// connection's open streams are banded and published as well.
 func (p *Pool[T]) sampleStreamMetrics() {
 	maxStreams := p.Config().MaxConcurrentStreams
 	var streams, pending int64
+	var inFlight []int32
+	var open []int
 	for _, c := range p.LoadConns() {
 		if c.IsActive() {
-			p.metrics.ObserveInFlight(c.StreamCount(), maxStreams)
+			inFlight = append(inFlight, c.StreamCount())
 		}
 		if p.StreamState == nil {
 			continue
@@ -119,11 +121,13 @@ func (p *Pool[T]) sampleStreamMetrics() {
 		streams += int64(active)
 		pending += int64(queued)
 		if c.IsActive() {
-			p.metrics.ObserveStreams(active)
+			open = append(open, active)
 		}
 	}
+	p.metrics.SetLoadBands(LoadBands(inFlight, maxStreams))
 	if p.StreamState != nil {
 		p.metrics.SetStreams(streams, pending)
+		p.metrics.SetStreamBands(StreamBands(open))
 	}
 }
 

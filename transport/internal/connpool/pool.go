@@ -212,6 +212,8 @@ func (p *Pool[T]) Start(initialConnCount int, startMonitor bool) error {
 		if p.metrics != nil {
 			p.metrics.SetCounts(0, 0, 0)
 			p.metrics.SetStreams(0, 0)
+			p.metrics.SetLoadBands(nil, nil)
+			p.metrics.SetStreamBands(nil)
 		}
 		close(p.stoppedC)
 	}()
