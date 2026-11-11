@@ -73,9 +73,10 @@ func pingFrame() []byte {
 // frameScanner follows HTTP/2 frame boundaries in a byte stream.
 // It only keeps frame headers, and the payload of PING frames.
 type frameScanner struct {
-	buf  [frameHeaderLen + 8]byte
-	n    int // bytes of buf filled
-	skip int // payload bytes left in the current frame
+	buf           [frameHeaderLen + 8]byte
+	n             int  // bytes of buf filled
+	skip          int  // payload bytes left in the current frame
+	inHeaderBlock bool // a header block started, but its last frame did not
 }
 
 // scan calls fn with every frame header completed in p, followed by its
@@ -103,16 +104,23 @@ func (s *frameScanner) scan(p []byte, fn func(start int, frame []byte)) {
 		if xhttp2.FrameType(s.buf[3]) == xhttp2.FramePing && length == len(pingData) && s.n < len(s.buf) {
 			continue
 		}
+		switch xhttp2.FrameType(s.buf[3]) {
+		case xhttp2.FrameHeaders, xhttp2.FramePushPromise, xhttp2.FrameContinuation:
+			// END_HEADERS is the same flag for all three.
+			s.inHeaderBlock = !xhttp2.Flags(s.buf[4]).Has(xhttp2.FlagHeadersEndHeaders)
+		}
 		fn(off-s.n, s.buf[:s.n])
 		s.skip = length - (s.n - frameHeaderLen)
 		s.n = 0
 	}
 }
 
-// atBoundary reports whether the scanner is at a frame boundary,
-// i.e., not in the middle of a frame.
+// atBoundary reports whether the scanner is at a frame boundary, i.e., not
+// in the middle of a frame, nor of a header block: its frames MUST be
+// contiguous, with no frame of another type or stream between them
+// (RFC 9113 §4.3).
 func (s *frameScanner) atBoundary() bool {
-	return s.n == 0 && s.skip == 0
+	return s.n == 0 && s.skip == 0 && !s.inHeaderBlock
 }
 
 // frameRead handles a fully read HTTP/2 frame.
@@ -227,8 +235,8 @@ func (tc *TrackedConn) goAwayFramesLocked(target goAwayState) []byte {
 }
 
 // atBoundaryLocked reports whether frames can be written now: between two
-// frames, once the server started its connection preface, as its SETTINGS
-// frame MUST come first (RFC 9113 §3.4).
+// frames outside a header block, once the server started its connection
+// preface, as its SETTINGS frame MUST come first (RFC 9113 §3.4).
 // Note: only thread-safe if tc.wmu is held.
 func (tc *TrackedConn) atBoundaryLocked() bool {
 	return tc.prefaceSent && tc.wscan.atBoundary()
