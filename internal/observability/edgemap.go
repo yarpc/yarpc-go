@@ -25,67 +25,60 @@ import (
 	"sync/atomic"
 )
 
-// edgeMap maps an edge key to its edge. Edges are only ever added, never
-// removed, and every call looks one up, so the map is tuned for reads.
+// edgeMap stores edges by key. Edges are never removed or replaced.
 //
-// A read takes no lock and performs no write to shared memory: it loads an
-// immutable snapshot and looks the key up in it. This matters because every
-// inbound and outbound call goes through it, and a sync.RWMutex read lock is
-// an atomic write to one cache line shared by all cores, which stops
-// scaling on hot edges.
+// Lookups first check an immutable snapshot without locking or writing to
+// shared memory. This avoids the shared counter updates of an RWMutex read
+// lock on every RPC.
 //
-// New edges are added to a mutex-protected dirty map that always holds every
-// edge. Lookups that find an edge only in the dirty map count as misses, and
-// once there have been as many misses as there are edges the dirty map is
-// copied into a fresh snapshot. This is the same amortisation sync.Map uses.
-// Copying is O(n), so insertion stays O(1) amortised.
+// A locked map holds all edges, including new ones not yet in the snapshot.
+// After enough lookups find an edge only in that map, it is copied into a
+// new snapshot. Published snapshots are never modified.
 //
 // The zero value is ready to use. It must not be copied after first use.
 type edgeMap struct {
-	// read is an immutable snapshot of a subset of dirty. The map it points to
-	// is never modified after being published.
+	// read contains a subset of dirty. Only the map is immutable, not the edges.
 	read atomic.Pointer[map[string]*edge]
 
-	mu sync.Mutex
-	// dirty holds every edge, including ones not yet in read.
+	// mu protects dirty and misses.
+	mu    sync.Mutex
 	dirty map[string]*edge
-	// misses counts lookups that missed read but hit dirty since read was last
-	// replaced.
+	// misses counts dirty hits since the last snapshot, excluding snapshot hits.
 	misses int
 }
 
-// load returns the edge for key from the snapshot, or nil. It never blocks and
-// does not allocate. A nil result does not mean that the edge does not exist,
-// only that it is not in the snapshot yet; use loadOrCreate to find out.
-func (m *edgeMap) load(key []byte) *edge {
+// getOrCreate returns the edge for key, creating it if absent. create runs
+// once per key, with the map locked. It must return a non-nil edge and must
+// not call back into this map. The caller may reuse key after this returns.
+func (m *edgeMap) getOrCreate(key []byte, create func() *edge) *edge {
+	if e := m.loadSnapshot(key); e != nil {
+		return e
+	}
+	return m.getOrCreateSlow(key, create)
+}
+
+// loadSnapshot returns nil if key is not yet in the snapshot.
+func (m *edgeMap) loadSnapshot(key []byte) *edge {
 	snap := m.read.Load()
 	if snap == nil {
 		return nil
 	}
-	return (*snap)[string(key)] // the compiler elides this string conversion
+	return (*snap)[string(key)] // A map lookup does not copy the key bytes.
 }
 
-// get returns the edge for key, or nil if there is none. Unlike load, it also
-// sees edges that are not in the snapshot yet.
-func (m *edgeMap) get(key []byte) *edge {
-	if e := m.load(key); e != nil {
+func (m *edgeMap) getOrCreateSlow(key []byte, create func() *edge) *edge {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Another goroutine may have published a snapshot while we waited.
+	if e := m.loadSnapshot(key); e != nil {
 		return e
 	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.dirty[string(key)]
-}
-
-// loadOrCreate returns the edge for key, calling create to make it if there is
-// none. create runs with the map locked, so it must not call back into the
-// map, and only runs once per key.
-func (m *edgeMap) loadOrCreate(key []byte, create func() *edge) *edge {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	if e, ok := m.dirty[string(key)]; ok {
-		// Found, but not in the snapshot or we would not be here.
 		m.misses++
+		// Copying n entries costs O(n). Waiting for n misses spreads that
+		// cost over those lookups: O(1) extra work per miss on average.
 		if m.misses >= len(m.dirty) {
 			m.promoteLocked()
 		}
@@ -96,26 +89,16 @@ func (m *edgeMap) loadOrCreate(key []byte, create func() *edge) *edge {
 	if m.dirty == nil {
 		m.dirty = make(map[string]*edge, _defaultGraphSize)
 	}
-	m.dirty[string(key)] = e
+	m.dirty[string(key)] = e // Copy the key; the caller may reuse its buffer.
 	return e
 }
 
-// len returns the number of edges.
-func (m *edgeMap) len() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return len(m.dirty)
-}
-
-// promoteLocked publishes a new snapshot containing every edge.
+// promoteLocked copies all edges into a new snapshot. The caller must hold mu.
 func (m *edgeMap) promoteLocked() {
-	m.misses = 0
-	if snap := m.read.Load(); snap != nil && len(*snap) == len(m.dirty) {
-		return
-	}
 	snap := make(map[string]*edge, len(m.dirty))
 	for k, e := range m.dirty {
 		snap[k] = e
 	}
 	m.read.Store(&snap)
+	m.misses = 0
 }

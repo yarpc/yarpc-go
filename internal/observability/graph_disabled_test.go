@@ -144,7 +144,7 @@ func TestDisabledMetricsUnary(t *testing.T) {
 			assert.Equal(t, tt.want, histogramNames(root))
 
 			// Counters keep working whatever is disabled.
-			edge := g.getEdge(mustKey(req, string(_directionInbound), transport.Unary))
+			edge := g.edges.lookup(mustKey(req, string(_directionInbound), transport.Unary))
 			require.NotNil(t, edge)
 			assert.EqualValues(t, 4, edge.calls.Load())
 			assert.EqualValues(t, 1, edge.successes.Load())
