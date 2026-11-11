@@ -95,6 +95,12 @@ type Config struct {
 	// metrics emitted by the middleware.
 	MetricTagsBlocklist []string
 
+	// DisabledMetrics lists histograms that are not emitted, by name. See
+	// DisableableMetrics for the supported names. Disabled histograms are
+	// never created, so they cost no CPU or memory. Unknown names are logged
+	// and ignored.
+	DisabledMetrics []string
+
 	// ContextExtractor Extracts request-scoped information from the context for logging.
 	ContextExtractor ContextExtractor
 
@@ -148,7 +154,7 @@ type DirectionalLevelsConfig struct {
 // NewMiddleware constructs an observability middleware with the provided
 // configuration.
 func NewMiddleware(cfg Config) *Middleware {
-	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor, cfg.MetricTagsBlocklist)}
+	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor, cfg.MetricTagsBlocklist, cfg.DisabledMetrics)}
 
 	// Apply the default levels
 	applyLogLevelsConfig(&m.graph.inboundLevels, &cfg.Levels.Default)

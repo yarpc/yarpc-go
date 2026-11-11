@@ -328,8 +328,10 @@ func (c call) endStats(
 ) {
 	c.edge.calls.Inc()
 
-	if deadlineTime, ok := c.ctx.Deadline(); ok {
-		c.edge.ttls.Observe(deadlineTime.Sub(c.started))
+	if c.edge.ttls != nil {
+		if deadlineTime, ok := c.ctx.Deadline(); ok {
+			c.edge.ttls.Observe(deadlineTime.Sub(c.started))
+		}
 	}
 
 	c.edge.requestPayloadSizes.IncBucket(int64(res.requestSize))
@@ -404,7 +406,7 @@ func (c call) endStatsFromFault(elapsed time.Duration, code yarpcerrors.Code, ap
 		); err == nil {
 			counter.Inc()
 		}
-		if code == yarpcerrors.CodeDeadlineExceeded {
+		if code == yarpcerrors.CodeDeadlineExceeded && c.edge.timeoutTtls != nil {
 			if deadlineTime, ok := c.ctx.Deadline(); ok {
 				c.edge.timeoutTtls.Observe(deadlineTime.Sub(c.started))
 			}
