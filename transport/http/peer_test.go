@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -96,8 +97,18 @@ func TestHTTPWithRoundRobin(t *testing.T) {
 	// the HTTP transport will not know until a request is attempted.
 	integrationtest.Call(ctx, c)
 	integrationtest.Call(ctx, c)
-	// All subsequent should succeed since the peer should be removed on
-	// connection fail.
+	// Subsequent calls should all succeed once the peer is removed after a
+	// connection failure. The removal is asynchronous (the peer's connection
+	// management goroutine probes it and then notifies the peer list), so poll
+	// for it instead of assuming it already happened.
+	require.Eventually(t, func() bool {
+		for i := 0; i < 10; i++ {
+			if integrationtest.Call(ctx, c) != nil {
+				return false
+			}
+		}
+		return true
+	}, testtime.Second, 5*time.Millisecond, "failed peer was not removed from the peer list")
 	integrationtest.Blast(ctx, t, c)
 
 	// Restore the server on the temporary port.

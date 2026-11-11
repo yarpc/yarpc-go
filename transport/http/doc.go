@@ -51,6 +51,42 @@
 // Note that stopping an HTTP transport does NOT immediately terminate ongoing
 // requests. Connections will remain open until all clients have disconnected.
 //
+// By default, peers retained through the same Transport are shared across
+// outbounds that resolve to the same address. To give a logical outbound its
+// own peers, and therefore its own connections, isolated from any other
+// outbound retaining the same address, build its chooser with an isolated
+// Dialer:
+//
+//	myChooser := peer.NewSingle(
+//		hostport.Identify("127.0.0.1:8080"),
+//		httpTransport.NewDialer().WithConnectionIsolation(),
+//	)
+//	myserviceOutbound := httpTransport.NewOutbound(myChooser)
+//
+// Outbounds built by the transport itself, with NewSingleOutbound or from
+// configuration, have no chooser for the caller to build. Construct the
+// transport with IsolateConnectionsPerOutbound(true) to give each of those
+// outbounds its own peers, as above.
+//
+// # HTTP/2 Connection Pool
+//
+// Each peer of an outbound that uses UseHTTP2 owns a pool of HTTP/2
+// connections instead of a single one, because a connection carries at most
+// SETTINGS_MAX_CONCURRENT_STREAMS requests at a time. The pool dials its first
+// connection on the peer's first request, opens another when every connection
+// reaches ScaleUpThreshold of MaxConcurrentStreams, and drains and closes
+// connections again as load falls, between MinConnections and MaxConnections.
+// It is tuned with the MaxConcurrentStreams, ScaleUpThreshold, ScaleDownGap,
+// MinConnections, MaxConnections, ConnIdleTimeout, ScalingMonitorInterval and
+// WithDynamicConnectionScaling options, with the clientConnectionPool section
+// of TransportConfig and OutboundConfig, and at runtime with
+// WithGlobalLiveConnectionPoolProvider. A pool is never shared between peers,
+// so use an isolated Dialer (above) when two outbounds to one address must
+// not share connections; an outbound with its own clientConnectionPool section
+// or a live provider from WithOutboundLiveConnectionPoolProvider is isolated
+// automatically. These behave
+// the same as the options of the same name in the gRPC transport.
+//
 // # Configuration
 //
 // An HTTP Transport may be configured using YARPC's configuration system. See

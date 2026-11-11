@@ -224,12 +224,18 @@ func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 //
 // The URLTemplate option has no effect in this form.
 func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
+	return t.newSingleOutbound(uri, t.outboundPeerTransport(), opts...)
+}
+
+// newSingleOutbound builds NewSingleOutbound's outbound, retaining its one
+// peer through peerTransport: the Transport itself, or a Dialer decorating it.
+func (t *Transport) newSingleOutbound(uri string, peerTransport peer.Transport, opts ...OutboundOption) *Outbound {
 	parsedURL, err := url.Parse(uri)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
+	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), peerTransport)
 	opts = append(opts, URLTemplate(uri))
 	o := t.NewOutbound(chooser, opts...)
 	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
@@ -475,10 +481,13 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	// net/http only infers Content-Length for *bytes.Buffer, *bytes.Reader and
 	// *strings.Reader bodies. Encodings that hand over any other reader (for
 	// example the Thrift no-wire client's pooled-buffer ReadCloser) would
-	// otherwise be sent with chunked transfer encoding on HTTP/1.1 and without a
-	// content-length on HTTP/2, which some proxies cannot relay. Use the size
-	// the encoding already recorded on the request when it is known.
-	if hreq.ContentLength == 0 && treq.BodySize > 0 {
+	// otherwise be sent without a content-length on HTTP/2, which some proxies
+	// cannot relay. Use the size the encoding already recorded on the request
+	// when it is known.
+	//
+	// Only HTTP/2 outbounds do this. On HTTP/1.1, net/http falls back to chunked
+	// transfer encoding, which every intermediary already handles.
+	if o.useHTTP2 && hreq.ContentLength == 0 && treq.BodySize > 0 {
 		hreq.ContentLength = int64(treq.BodySize)
 	}
 
@@ -762,6 +771,12 @@ func (o *Outbound) doWithPeer(
 				yarpcerrors.CodeCancelled,
 				"client canceled request for procedure %q of service %q after %v",
 				treq.Procedure, treq.Service, end.Sub(start))
+		}
+		if yarpcerrors.IsStatus(err) {
+			if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeUnavailable && !errors.Is(err, errH2PeerReleased) {
+				p.onDisconnected()
+			}
+			return nil, err
 		}
 
 		// Note that the connection may have been lost so the peer connection

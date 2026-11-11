@@ -25,18 +25,19 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/transport/internal/connpool"
 )
 
-func baseTestPoolConfig() connPoolConfig {
-	return connPoolConfig{
-		dynamicScalingEnabled:  true,
-		maxConcurrentStreams:   250,
-		scaleUpThreshold:       0.8,
-		scaleDownGap:           0.1,
-		minConnections:         1,
-		maxConnections:         5,
-		idleTimeout:            15 * time.Minute,
-		scalingMonitorInterval: 30 * time.Second,
+func baseTestPoolConfig() connpool.Config {
+	return connpool.Config{
+		DynamicScalingEnabled:  true,
+		MaxConcurrentStreams:   250,
+		ScaleUpThreshold:       0.8,
+		ScaleDownGap:           0.1,
+		MinConnections:         1,
+		MaxConnections:         5,
+		IdleTimeout:            15 * time.Minute,
+		ScalingMonitorInterval: 30 * time.Second,
 	}
 }
 
@@ -65,15 +66,15 @@ func TestResolvedPoolConfig_OverrideTakesPriority(t *testing.T) {
 
 	got := d.resolvedPoolConfig(base)
 
-	assert.Equal(t, connPoolConfig{
-		dynamicScalingEnabled:  true,
-		maxConcurrentStreams:   50,
-		scaleUpThreshold:       0.5,
-		scaleDownGap:           0.05,
-		minConnections:         2,
-		maxConnections:         20,
-		idleTimeout:            5 * time.Minute,
-		scalingMonitorInterval: time.Minute,
+	assert.Equal(t, connpool.Config{
+		DynamicScalingEnabled:  true,
+		MaxConcurrentStreams:   50,
+		ScaleUpThreshold:       0.5,
+		ScaleDownGap:           0.05,
+		MinConnections:         2,
+		MaxConnections:         20,
+		IdleTimeout:            5 * time.Minute,
+		ScalingMonitorInterval: time.Minute,
 	}, got)
 }
 
@@ -88,7 +89,7 @@ func TestResolvedPoolConfig_PartialOverrideFallsBackToBase(t *testing.T) {
 	got := d.resolvedPoolConfig(base)
 
 	want := base
-	want.maxConnections = 20
+	want.MaxConnections = 20
 	assert.Equal(t, want, got, "fields left unset in the override must fall back to the common config")
 }
 
@@ -103,12 +104,12 @@ func TestResolvedPoolConfig_ExplicitDisable(t *testing.T) {
 
 	got := d.resolvedPoolConfig(base)
 
-	assert.False(t, got.dynamicScalingEnabled)
+	assert.False(t, got.DynamicScalingEnabled)
 }
 
 func TestResolvedPoolConfig_ExplicitEnable(t *testing.T) {
 	base := baseTestPoolConfig()
-	base.dynamicScalingEnabled = false
+	base.DynamicScalingEnabled = false
 	enabled := true
 	d := &dialOptions{
 		connPoolOverride: &ClientConnectionPoolConfig{
@@ -118,5 +119,5 @@ func TestResolvedPoolConfig_ExplicitEnable(t *testing.T) {
 
 	got := d.resolvedPoolConfig(base)
 
-	assert.True(t, got.dynamicScalingEnabled)
+	assert.True(t, got.DynamicScalingEnabled)
 }
