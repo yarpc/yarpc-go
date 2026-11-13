@@ -21,6 +21,7 @@
 package http
 
 import (
+	"context"
 	"io"
 	"net"
 	"net/http"
@@ -87,7 +88,7 @@ func benchmarkH2Connections(b *testing.B, conns int) {
 
 		// Dial up front so the timed section measures steady-state
 		// traffic, not connection setup.
-		_, err := p.h2Sender()
+		_, err := p.h2Sender(context.Background())
 		require.NoError(b, err)
 	}
 

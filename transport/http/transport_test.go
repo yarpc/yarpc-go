@@ -365,7 +365,7 @@ func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
 	for _, p := range []*httpPeer{p1, p2} {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, nil)
 		require.NoError(t, err)
-		sender, err := p.h2Sender()
+		sender, err := p.h2Sender(context.Background())
 		require.NoError(t, err)
 		res, err := sender.Do(req)
 		require.NoError(t, err)
@@ -412,7 +412,7 @@ func TestH2PoolMetricsTrackDialAndTeardown(t *testing.T) {
 
 	assert.EqualValues(t, 0, activeConnGauge(), "no connection dialed yet")
 
-	sender, err := p.h2Sender()
+	sender, err := p.h2Sender(context.Background())
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 	require.NoError(t, err)
@@ -447,7 +447,7 @@ func TestTransportStopStopsPeerH2Pools(t *testing.T) {
 
 	addr := strings.TrimPrefix(server.URL, "http://")
 	p := newPeer(addr, tr)
-	_, err := p.h2Sender()
+	_, err := p.h2Sender(context.Background())
 	require.NoError(t, err)
 
 	// Register the peer directly in the Transport's map, the way
@@ -533,7 +533,7 @@ func TestH2SenderReusesExistingConnection(t *testing.T) {
 	})
 
 	for range 2 {
-		sender, err := p.h2Sender()
+		sender, err := p.h2Sender(context.Background())
 		require.NoError(t, err)
 		req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 		require.NoError(t, err)
@@ -579,7 +579,7 @@ func TestH2SenderConcurrentFirstDial(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			_, errs[i] = p.h2Sender()
+			_, errs[i] = p.h2Sender(context.Background())
 		}(i)
 	}
 	wg.Wait()
@@ -631,7 +631,7 @@ func TestWatchH2ConnEvictsUnhealthyConnection(t *testing.T) {
 		}
 	})
 
-	sender, err := p.h2Sender()
+	sender, err := p.h2Sender(context.Background())
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 	require.NoError(t, err)
@@ -698,7 +698,7 @@ func TestWatchH2ConnKeepsSaturatedConnection(t *testing.T) {
 		}
 	})
 
-	sender, err := p.h2Sender()
+	sender, err := p.h2Sender(context.Background())
 	require.NoError(t, err)
 	inFlight := doAsync(t, sender, server.URL+"/slow")
 	<-slowStarted
@@ -757,11 +757,11 @@ func TestH2ActivePeersGauge(t *testing.T) {
 
 	assert.Zero(t, activePeersGauge(), "a bare httpPeer must not create an HTTP/2 pool")
 
-	_, err := p1.h2Sender()
+	_, err := p1.h2Sender(context.Background())
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, activePeersGauge(), "dialing a peer's first connection should count it as active")
 
-	_, err = p2.h2Sender()
+	_, err = p2.h2Sender(context.Background())
 	require.NoError(t, err)
 	assert.EqualValues(t, 2, activePeersGauge(),
 		"a second, independent peer for the same address must add its own count, not error on re-registration")
@@ -802,7 +802,7 @@ func TestH2ActivePeersGaugeIgnoresFailedDial(t *testing.T) {
 	}
 
 	p := newPeer(addr, tr)
-	_, err = p.h2Sender()
+	_, err = p.h2Sender(context.Background())
 	require.Error(t, err, "dialing a closed port must fail")
 	require.NotNil(t, p.loadH2Pool(), "the pool exists even though it has no connection")
 	assert.Zero(t, activePeersGauge(), "a failed dial must not count the peer")
