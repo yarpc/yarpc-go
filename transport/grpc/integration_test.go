@@ -63,6 +63,7 @@ import (
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
@@ -1824,5 +1825,46 @@ func TestConnectionPoolNoActiveConnectionsReturnsUnavailable(t *testing.T) {
 		require.Error(t, err)
 		assert.True(t, yarpcerrors.IsUnavailable(err),
 			"expected UnavailableErrorf when all connections are draining, got: %v", err)
+	})
+}
+
+// TestConnectionPoolPickConnSkipsConnectingConn verifies that the peer's pool
+// does not route requests to a connection it has just dialed while that
+// connection is still connecting, and returns to it once it is ready.
+func TestConnectionPoolPickConnSkipsConnectingConn(t *testing.T) {
+	t.Parallel()
+	te := testEnvOptions{
+		TransportOptions: []TransportOption{
+			WithDynamicConnectionScaling(true),
+			MinConnections(1),
+			MaxConnections(3),
+		},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		apiPeer, onFinish, err := e.Outbound.peerChooser.Choose(ctx, &transport.Request{})
+		require.NoError(t, err)
+		defer onFinish(nil)
+		p := apiPeer.(*grpcPeer)
+
+		ready := p.pool.LoadConns()[0]
+		require.Eventually(t, func() bool { return ready.Conn.GetState() == connectivity.Ready },
+			3*time.Second, 5*time.Millisecond)
+		// Load the ready connection so the new, idle one would win on stream count.
+		for range 5 {
+			ready.IncStreamCount()
+		}
+
+		fresh, err := p.pool.AddConn()
+		require.NoError(t, err)
+		if fresh.Conn.GetState() != connectivity.Ready {
+			assert.Same(t, ready, p.pickConn(), "a connecting connection must not be picked over a ready one")
+		}
+
+		require.Eventually(t, func() bool { return fresh.Conn.GetState() == connectivity.Ready },
+			3*time.Second, 5*time.Millisecond)
+		assert.Same(t, fresh, p.pickConn(), "once ready, the less-loaded connection is picked")
 	})
 }
