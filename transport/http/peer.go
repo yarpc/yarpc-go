@@ -65,12 +65,22 @@ type httpPeer struct {
 	// safe to call concurrently without holding h2DialMu.
 	h2Pool stdatomic.Pointer[connpool.Pool[*http2.ClientConn]]
 
-	// h2DialMu serializes both lazily creating h2Pool and the lazy first
-	// dial in h2Sender: nothing else calls h2Pool.AddConn today, so without
-	// this, concurrent requests to a cold peer could each create their own
-	// pool or dial their own connection, exceeding the pool's pinned
+	// h2DialMu serializes lazily creating h2Pool and guards the first-dial
+	// state below. It is never held across a dial: nothing else calls
+	// h2Pool.AddConn today, so without the single in-flight dial it guards,
+	// concurrent requests to a cold peer could each create their own pool or
+	// dial their own connection, exceeding the pool's pinned
 	// single-connection invariant.
 	h2DialMu sync.Mutex
+	// h2Dial is the peer's first-connection dial while one is in flight, nil
+	// otherwise. Every request that finds the pool empty waits on it instead
+	// of dialing. Guarded by h2DialMu.
+	h2Dial *h2Dial
+	// h2DialErr and h2DialFailedAt record the last failed first dial, so a
+	// destination that is down fails requests fast for h2DialFailureBackoff
+	// instead of every request dialing it again. Guarded by h2DialMu.
+	h2DialErr      error
+	h2DialFailedAt time.Time
 
 	// h2Counted records whether this peer is currently counted in the
 	// transport's h2ActivePeers gauge (set after its first successful dial,
@@ -127,6 +137,22 @@ var (
 	errH2PeerReleased      = errors.New("http2 peer released")
 )
 
+// h2DialFailureBackoff is how long after a failed first dial h2Sender keeps
+// returning that failure without dialing again. It keeps requests to a peer
+// that is down from each paying for a dial, while still retrying quickly once
+// the destination is back.
+const h2DialFailureBackoff = time.Second
+
+// h2Dial is one in-flight dial of a peer's first HTTP/2 connection. Requests
+// that arrive while it runs wait on done; w and err are valid once it is
+// closed.
+type h2Dial struct {
+	pool *connpool.Pool[*http2.ClientConn]
+	done chan struct{}
+	w    *connpool.Wrapper[*http2.ClientConn]
+	err  error
+}
+
 // loadH2Pool returns this peer's HTTP/2 connection pool, or nil if h2Sender
 // has never been called for this peer.
 func (p *httpPeer) loadH2Pool() *connpool.Pool[*http2.ClientConn] {
@@ -136,13 +162,37 @@ func (p *httpPeer) loadH2Pool() *connpool.Pool[*http2.ClientConn] {
 // h2Sender returns a sender that routes through this peer's HTTP/2
 // connection pool, creating the pool and dialing its first connection
 // lazily on demand.
-func (p *httpPeer) h2Sender() (sender, error) {
+//
+// The first dial runs once, off the request path. Requests that find the pool
+// empty wait for it, but only as long as their own ctx allows: a request with
+// a short deadline returns when that deadline passes instead of queueing for
+// the whole dial, and the dial carries on for the requests still waiting.
+func (p *httpPeer) h2Sender(ctx context.Context) (sender, error) {
 	if pool := p.loadH2Pool(); pool != nil {
 		if w := pool.PickConn(); w != nil {
 			return &h2ConnSender{wrapper: w, pool: pool}, nil
 		}
 	}
 
+	dial, err := p.joinH2Dial()
+	if err != nil {
+		return nil, err
+	}
+	select {
+	case <-dial.done:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	if dial.err != nil {
+		return nil, dial.err
+	}
+	return &h2ConnSender{wrapper: dial.w, pool: dial.pool}, nil
+}
+
+// joinH2Dial returns the dial a request should wait on: it creates the pool
+// if needed, then either finds a connection that is already there, joins the
+// dial in flight, fails fast on a recent dial failure, or starts the dial.
+func (p *httpPeer) joinH2Dial() (*h2Dial, error) {
 	p.h2DialMu.Lock()
 	defer p.h2DialMu.Unlock()
 
@@ -197,18 +247,50 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		}
 	}
 
-	// Re-check: another goroutine may have dialed the first connection while
-	// we were waiting for the lock.
+	// Re-check: another request may have dialed the first connection while
+	// this one was getting here.
 	if w := pool.PickConn(); w != nil {
-		return &h2ConnSender{wrapper: w, pool: pool}, nil
+		d := &h2Dial{pool: pool, done: make(chan struct{}), w: w}
+		close(d.done)
+		return d, nil
 	}
-	w, err := pool.AddConn()
-	if err != nil {
-		return nil, err
+	if p.h2Dial != nil {
+		return p.h2Dial, nil
 	}
-	p.countH2ActivePeer()
-	p.startH2Monitor(pool)
-	return &h2ConnSender{wrapper: w, pool: pool}, nil
+	if p.h2DialErr != nil && time.Since(p.h2DialFailedAt) < h2DialFailureBackoff {
+		return nil, p.h2DialErr
+	}
+
+	d := &h2Dial{pool: pool, done: make(chan struct{})}
+	p.h2Dial = d
+	go p.runH2Dial(d)
+	return d, nil
+}
+
+// runH2Dial dials the peer's first connection and publishes the outcome to
+// every request waiting on d. It runs outside any request: the dial is bound
+// to the pool's lifetime, so it is cancelled by releasing the peer or
+// stopping the transport, not by the request that happened to start it.
+func (p *httpPeer) runH2Dial(d *h2Dial) {
+	w, err := d.pool.AddConn()
+	if err == nil {
+		p.countH2ActivePeer()
+		p.startH2Monitor(d.pool)
+	}
+
+	p.h2DialMu.Lock()
+	p.h2Dial = nil
+	// A cancelled dial means the pool is shutting down, not that the
+	// destination is down, so it is not remembered as a failure.
+	if err != nil && !errors.Is(err, context.Canceled) {
+		p.h2DialErr, p.h2DialFailedAt = err, time.Now()
+	} else {
+		p.h2DialErr = nil
+	}
+	p.h2DialMu.Unlock()
+
+	d.w, d.err = w, err
+	close(d.done)
 }
 
 // startH2Monitor starts the pool's scaling monitor (scale-down, idle cleanup,
