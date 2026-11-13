@@ -32,6 +32,13 @@ import (
 // pool churn and are clamped at runtime.
 const defaultScalingMonitorInterval = 30 * time.Second
 
+// connectGracePeriod is how long a newly dialed connection that is not yet
+// Ready still counts as capacity on its way, so a scale-up does not dial more
+// connections while it connects. After this a connection that is still not
+// ready is treated as stuck (e.g. failing to connect) and no longer holds
+// back further scale-up.
+const connectGracePeriod = 10 * time.Second
+
 // runScalingMonitor runs as a background goroutine for the lifetime of the
 // pool. It periodically evaluates whether connections should be added or
 // removed. It exits when the pool's context is cancelled (via Stop).
@@ -136,6 +143,31 @@ func ScaleDownFloor(cfg Config) int {
 		return n
 	}
 	return 1
+}
+
+// hasConnectingConn reports whether a ready connection is serving traffic
+// while another active connection, dialed within connectGracePeriod, is still
+// connecting. That is the window in which PickConn routes around the new
+// connection and the ready ones stay over the scale-up threshold. It is false
+// when no connection is ready yet (everything is connecting, so there is no
+// load being carried to wait out) and always false when Ready is unset.
+func (p *Pool[T]) hasConnectingConn() bool {
+	if p.Ready == nil {
+		return false
+	}
+	var anyReady, connecting bool
+	for _, c := range p.LoadConns() {
+		if !c.IsActive() {
+			continue
+		}
+		switch {
+		case p.Ready(c.Conn):
+			anyReady = true
+		case time.Since(c.createdAt) < connectGracePeriod:
+			connecting = true
+		}
+	}
+	return anyReady && connecting
 }
 
 func (p *Pool[T]) activeConnCount() int {
@@ -382,6 +414,12 @@ func (p *Pool[T]) TryScaleUp(leastLoadedConn *Wrapper[T]) {
 	if !needMin && !needLoad {
 		return
 	}
+	// A connection that is still connecting will take load once it is ready.
+	// PickConn routes around it, so the ready connections stay over the
+	// threshold and would otherwise dial again on every request.
+	if !needMin && p.hasConnectingConn() {
+		return
+	}
 
 	// Set isScaling to 1 (from 0) to claim the scale-up slot.
 	// If another goroutine already holds it, bail out.
@@ -419,6 +457,12 @@ func (p *Pool[T]) TryScaleUp(leastLoadedConn *Wrapper[T]) {
 		}
 		threshold := int32(float64(cfg.MaxConcurrentStreams) * cfg.ScaleUpThreshold)
 		if leastLoadedConn.StreamCount() < threshold {
+			return
+		}
+
+		// Min-fill, or an earlier scale-up, may have left a connection still
+		// connecting; wait for it before adding another.
+		if p.hasConnectingConn() {
 			return
 		}
 
