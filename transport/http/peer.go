@@ -65,18 +65,29 @@ type httpPeer struct {
 	// safe to call concurrently without holding h2DialMu.
 	h2Pool stdatomic.Pointer[connpool.Pool[*http2.ClientConn]]
 
-	// h2DialMu serializes both lazily creating h2Pool and the lazy first
-	// dial in h2Sender: nothing else calls h2Pool.AddConn today, so without
-	// this, concurrent requests to a cold peer could each create their own
-	// pool or dial their own connection, exceeding the pool's pinned
+	// h2DialMu serializes lazily creating h2Pool and guards the first-dial
+	// state below. It is never held across a dial: nothing else calls
+	// h2Pool.AddConn today, so without the single in-flight dial it guards,
+	// concurrent requests to a cold peer could each create their own pool or
+	// dial their own connection, exceeding the pool's pinned
 	// single-connection invariant.
 	h2DialMu sync.Mutex
+	// h2Dial is the peer's first-connection dial while one is in flight, nil
+	// otherwise. Every request that finds the pool empty waits on it instead
+	// of dialing. Guarded by h2DialMu.
+	h2Dial *h2Dial
 
 	// h2Counted records whether this peer is currently counted in the
 	// transport's h2ActivePeers gauge (set after its first successful dial,
 	// cleared by Release), so the gauge is incremented and decremented at
 	// most once per peer.
 	h2Counted stdatomic.Bool
+
+	// h2Used is set the first time an HTTP/2 request is routed through this
+	// peer. Peers are retained by address, before any outbound is known, so
+	// this is the earliest the peer can tell it serves HTTP/2; until then it
+	// has no pool and is never warmed, so HTTP/1 peers cost nothing extra.
+	h2Used stdatomic.Bool
 }
 
 // newPeer creates a peer that uses the transport-wide pool config and the
@@ -127,6 +138,16 @@ var (
 	errH2PeerReleased      = errors.New("http2 peer released")
 )
 
+// h2Dial is one in-flight dial of a peer's first HTTP/2 connection. Requests
+// that arrive while it runs wait on done and share its outcome, success or
+// failure; w and err are valid once it is closed.
+type h2Dial struct {
+	pool *connpool.Pool[*http2.ClientConn]
+	done chan struct{}
+	w    *connpool.Wrapper[*http2.ClientConn]
+	err  error
+}
+
 // loadH2Pool returns this peer's HTTP/2 connection pool, or nil if h2Sender
 // has never been called for this peer.
 func (p *httpPeer) loadH2Pool() *connpool.Pool[*http2.ClientConn] {
@@ -136,13 +157,43 @@ func (p *httpPeer) loadH2Pool() *connpool.Pool[*http2.ClientConn] {
 // h2Sender returns a sender that routes through this peer's HTTP/2
 // connection pool, creating the pool and dialing its first connection
 // lazily on demand.
-func (p *httpPeer) h2Sender() (sender, error) {
+//
+// The first dial runs once, off the request path. Requests that find the pool
+// empty wait for it, but only as long as their own ctx allows: a request with
+// a short deadline returns when that deadline passes instead of queueing for
+// the whole dial, and the dial carries on for the requests still waiting.
+func (p *httpPeer) h2Sender(ctx context.Context) (sender, error) {
+	p.h2Used.Store(true)
 	if pool := p.loadH2Pool(); pool != nil {
 		if w := pool.PickConn(); w != nil {
 			return &h2ConnSender{wrapper: w, pool: pool}, nil
 		}
 	}
 
+	dial, err := p.joinH2Dial()
+	if err != nil {
+		return nil, err
+	}
+	select {
+	case <-dial.done:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	if dial.err != nil {
+		return nil, dial.err
+	}
+	return &h2ConnSender{wrapper: dial.w, pool: dial.pool}, nil
+}
+
+// joinH2Dial returns the dial a request should wait on: it creates the pool
+// if needed, then either finds a connection that is already there, joins the
+// dial in flight, or starts the dial.
+//
+// A failed dial is not remembered: the next request dials again. Keeping a
+// destination that is down out of rotation is the peer status's job (see
+// MaintainConn, which backs off between probes), not the request path's, and
+// at most one dial per peer is ever in flight.
+func (p *httpPeer) joinH2Dial() (*h2Dial, error) {
 	p.h2DialMu.Lock()
 	defer p.h2DialMu.Unlock()
 
@@ -197,18 +248,63 @@ func (p *httpPeer) h2Sender() (sender, error) {
 		}
 	}
 
-	// Re-check: another goroutine may have dialed the first connection while
-	// we were waiting for the lock.
+	// Re-check: another request may have dialed the first connection while
+	// this one was getting here.
 	if w := pool.PickConn(); w != nil {
-		return &h2ConnSender{wrapper: w, pool: pool}, nil
+		d := &h2Dial{pool: pool, done: make(chan struct{}), w: w}
+		close(d.done)
+		return d, nil
 	}
-	w, err := pool.AddConn()
-	if err != nil {
-		return nil, err
+	if p.h2Dial != nil {
+		return p.h2Dial, nil
 	}
-	p.countH2ActivePeer()
-	p.startH2Monitor(pool)
-	return &h2ConnSender{wrapper: w, pool: pool}, nil
+
+	d := &h2Dial{pool: pool, done: make(chan struct{})}
+	p.h2Dial = d
+	go p.runH2Dial(d)
+	return d, nil
+}
+
+// warmH2 dials the peer's HTTP/2 connection in the background, so the next
+// request finds it instead of paying for the dial. It does nothing until an
+// HTTP/2 request has used the peer (see h2Used), and shares the single in-flight
+// dial with requests, so it can never add a second connection. A failed warm-up
+// is dropped: the next request dials again, as it would have anyway.
+func (p *httpPeer) warmH2() {
+	if !p.h2Used.Load() {
+		return
+	}
+	select {
+	case <-p.released:
+		return
+	case <-p.transport.once.Stopping():
+		return
+	default:
+	}
+	go func() {
+		if d, err := p.joinH2Dial(); err == nil {
+			<-d.done
+		}
+	}()
+}
+
+// runH2Dial dials the peer's first connection and publishes the outcome to
+// every request waiting on d. It runs outside any request: the dial is bound
+// to the pool's lifetime, so it is cancelled by releasing the peer or
+// stopping the transport, not by the request that happened to start it.
+func (p *httpPeer) runH2Dial(d *h2Dial) {
+	w, err := d.pool.AddConn()
+	if err == nil {
+		p.countH2ActivePeer()
+		p.startH2Monitor(d.pool)
+	}
+
+	p.h2DialMu.Lock()
+	p.h2Dial = nil
+	p.h2DialMu.Unlock()
+
+	d.w, d.err = w, err
+	close(d.done)
 }
 
 // startH2Monitor starts the pool's scaling monitor (scale-down, idle cleanup,
@@ -287,6 +383,12 @@ func (p *httpPeer) watchH2Conn(w *connpool.Wrapper[*http2.ClientConn]) {
 			pool.RefreshMetrics()
 			close(w.StoppedC)
 			pool.ConnDone()
+			// An evicted connection (GOAWAY, idle timeout) can leave a busy
+			// peer with none; replace it now instead of on the next request.
+			// Not when the pool itself is stopping: that dial could only fail.
+			if !pool.Stopping() && pool.PickConn() == nil {
+				p.warmH2()
+			}
 			return
 		}
 	}
@@ -398,6 +500,8 @@ func (p *httpPeer) MaintainConn() {
 		// onSuspect.
 		if p.isAvailable() {
 			p.setStatus(peer.Available)
+			// Back from Connecting/Unavailable: have a connection ready.
+			p.warmH2()
 			// Reset on success
 			attempts = 0
 			if !p.waitForChange() {

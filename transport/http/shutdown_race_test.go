@@ -56,7 +56,7 @@ func TestConcurrentReleasePeerAndStop(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, _ = pi.(*httpPeer).h2Sender()
+			_, _ = pi.(*httpPeer).h2Sender(context.Background())
 			dialers[i] = d
 		}
 		start := make(chan struct{})
@@ -131,7 +131,7 @@ func TestH2SenderDoesNotCreatePoolDuringTransportStop(t *testing.T) {
 			}
 		}
 	})
-	_, err = aPeer.h2Sender()
+	_, err = aPeer.h2Sender(context.Background())
 	require.NoError(t, err)
 	require.Nil(t, bPeer.loadH2Pool())
 	stopStarted = true
@@ -142,7 +142,7 @@ func TestH2SenderDoesNotCreatePoolDuringTransportStop(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("shutdown did not start closing the first connection")
 	}
-	_, err = bPeer.h2Sender()
+	_, err = bPeer.h2Sender(context.Background())
 	require.ErrorIs(t, err, errH2TransportStopping)
 	assert.Nil(t, bPeer.loadH2Pool(), "shutdown must prevent a pool from escaping its snapshot")
 	assert.EqualValues(t, 1, dials.Load(), "a cold peer must not dial after shutdown starts")

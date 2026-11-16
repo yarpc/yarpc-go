@@ -155,7 +155,7 @@ type h2PeerSender struct {
 
 func (s *h2PeerSender) Do(req *http.Request) (*http.Response, error) {
 	for attempt := 0; ; attempt++ {
-		connSender, err := s.peer.h2Sender()
+		connSender, err := s.peer.h2Sender(req.Context())
 		if err != nil {
 			switch {
 			case errors.Is(err, errH2TransportStopping):
@@ -164,6 +164,11 @@ func (s *h2PeerSender) Do(req *http.Request) (*http.Response, error) {
 			case errors.Is(err, errH2PeerReleased):
 				return nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable,
 					"HTTP/2 peer %q was released: %w", s.peer.addr, err)
+			case req.Context().Err() != nil:
+				// The request's own deadline or cancellation ended its wait
+				// for the peer's first dial; return it as is so the outbound
+				// reports a timeout, not an unavailable peer.
+				return nil, req.Context().Err()
 			default:
 				return nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable,
 					"no HTTP/2 connection available for peer %q: %v", s.peer.addr, err)
