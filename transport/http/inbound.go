@@ -342,17 +342,17 @@ func (i *Inbound) start() error {
 		}
 	}
 
-	var noopSpan opentracing.Span
+	var skipSpanSetup bool
 	switch i.tracer.(type) {
 	case opentracing.NoopTracer, *opentracing.NoopTracer:
-		// NoopTracer returns a stateless span that can be shared across requests.
-		noopSpan = opentracing.NoopTracer{}.StartSpan("")
+		// The built-in no-op tracer discards span setup, so the handler skips it.
+		skipSpanSetup = true
 	}
 
 	var httpHandler http.Handler = handler{
 		router:                                   i.router,
 		tracer:                                   i.tracer,
-		noopSpan:                                 noopSpan,
+		skipSpanSetup:                            skipSpanSetup,
 		transport:                                i.transport,
 		grabHeaders:                              i.grabHeaders,
 		bothResponseError:                        i.bothResponseError,

@@ -132,7 +132,7 @@ func headerValue(headers http.Header, canonicalKey, lowerKey string) string {
 type handler struct {
 	router                                   transport.Router
 	tracer                                   opentracing.Tracer
-	noopSpan                                 opentracing.Span
+	skipSpanSetup                            bool
 	grabHeaders                              map[string]struct{}
 	bothResponseError                        bool
 	logger                                   *zap.Logger
@@ -352,10 +352,13 @@ func updateSpanWithErr(span opentracing.Span, err error) {
 	}
 }
 
+// noopSpan is stateless, so every request can share it.
+var noopSpan = opentracing.NoopTracer{}.StartSpan("")
+
 func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
-	if h.noopSpan != nil {
+	if h.skipSpanSetup {
 		// Keep a span in the context without building tags or span options.
-		return opentracing.ContextWithSpan(ctx, h.noopSpan), h.noopSpan
+		return opentracing.ContextWithSpan(ctx, noopSpan), noopSpan
 	}
 
 	// Extract opentracing etc baggage from headers
