@@ -453,9 +453,24 @@ func TestConvertAndWalk(t *testing.T) {
 		req := newMessage(t, "Req", annotatedMessageField(t, "actor", actor))
 		_, err := convertOf(t, req, actor)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "field Req.actor")
-		assert.Contains(t, err.Error(), "message Actor")
-		assert.Contains(t, err.Error(), "more than one string field path")
+		assert.Contains(t, err.Error(), "field svc.Req.actor")
+		assert.Contains(t, err.Error(), "message svc.Actor")
+		assert.Contains(t, err.Error(), "more than one string field path (actor.uuid, actor.name)")
+	})
+
+	t.Run("annotatedMessageWithTwoOneofStringsFails", func(t *testing.T) {
+		// Only one oneof member is set at runtime, but the accessor reads
+		// both, so each member is its own path.
+		uuid := stringField(t, "uuid", false)
+		email := stringField(t, "email", false)
+		uuid.FieldDescriptorProto.OneofIndex = proto.Int32(0)
+		email.FieldDescriptorProto.OneofIndex = proto.Int32(0)
+		who := newMessage(t, "Who", uuid, email)
+		who.DescriptorProto.OneofDecl = []*descriptor.OneofDescriptorProto{{Name: proto.String("kind")}}
+		req := newMessage(t, "Req", annotatedMessageField(t, "who", who))
+		_, err := convertOf(t, req, who)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "(who.uuid, who.email)")
 	})
 
 	t.Run("annotatedMessageWithDeepSecondStringFails", func(t *testing.T) {
@@ -469,7 +484,8 @@ func TestConvertAndWalk(t *testing.T) {
 		req := newMessage(t, "Req", annotatedMessageField(t, "user", userID))
 		_, err := convertOf(t, req, userID, uuid, meta)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "field Req.user")
+		assert.Contains(t, err.Error(), "field svc.Req.user")
+		assert.Contains(t, err.Error(), "(user.uuid.value, user.meta.label)")
 	})
 
 	t.Run("annotatedMessageWithTwoRoutesToOneStringFails", func(t *testing.T) {
@@ -483,7 +499,7 @@ func TestConvertAndWalk(t *testing.T) {
 		req := newMessage(t, "Req", annotatedMessageField(t, "pair", pair))
 		_, err := convertOf(t, req, pair, uuid)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "field Req.pair")
+		assert.Contains(t, err.Error(), "(pair.a.value, pair.b.value)")
 	})
 
 	t.Run("annotatedMapOfMultiStringMessagesFails", func(t *testing.T) {
@@ -495,7 +511,10 @@ func TestConvertAndWalk(t *testing.T) {
 		req := newMessage(t, "Req", mapField(t, "actors_by_role", entry, true))
 		_, err := convertOf(t, req, entry, actor)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "field Req.actors_by_role")
+		assert.Contains(t, err.Error(), "field svc.Req.actors_by_role")
+		assert.Contains(t, err.Error(), "message svc.Actor",
+			"the value message is named, not the synthetic map entry")
+		assert.Contains(t, err.Error(), "(actors_by_role.uuid, actors_by_role.name)")
 	})
 
 	t.Run("annotatedCycleTerminates", func(t *testing.T) {
@@ -528,7 +547,8 @@ func TestConvertAndWalk(t *testing.T) {
 		)
 		_, err := actorUUIDMethods(info)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "field Req.root")
+		assert.Contains(t, err.Error(), "field svc.Req.root")
+		assert.Contains(t, err.Error(), "(root.a.a.a.a.a.a.a.uuid, root.a.a.a.a.a.a.b.uuid)")
 	})
 
 	t.Run("annotatedMessageWithoutStringsYieldsNothing", func(t *testing.T) {

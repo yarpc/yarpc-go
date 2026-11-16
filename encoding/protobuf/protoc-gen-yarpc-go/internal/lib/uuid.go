@@ -22,6 +22,7 @@ package lib
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -334,7 +335,18 @@ func (c *uuidConverter) annotated(f *protoplugin.Field) (bool, error) {
 //
 // An annotated message must reach at most one string-valued field path,
 // at any depth: the validator receives bare values, so it could not tell
-// the actor UUID apart from any other collected string.
+// the actor UUID apart from any other collected string. In detail:
+//
+//   - Every string-valued field below f counts, annotated or not: the
+//     annotation on f declares the whole message to be the actor UUID.
+//   - Non-string fields are ignored; a message without any string field
+//     makes the annotation a no-op.
+//   - A single repeated or map string field is one path. Each member of
+//     a oneof is its own path, so two string members fail generation.
+//   - Well-known types follow their fields: StringValue yields value,
+//     Any yields type_url, FieldMask yields paths.
+//   - Recursive messages (e.g. google.protobuf.Struct) are read one level
+//     deep, since the walk does not follow a message back into itself.
 func (c *uuidConverter) convertChild(f *protoplugin.Field, msg *protoplugin.Message) (*protogen.Node, error) {
 	annotated, err := c.annotated(f)
 	if err != nil {
@@ -348,14 +360,29 @@ func (c *uuidConverter) convertChild(f *protoplugin.Field, msg *protoplugin.Mess
 		return nil, err
 	}
 	if !c.all {
-		if _, n := protogen.Walk(child, 1); n > 1 {
+		if paths, n := protogen.Walk(child, 1); n > 1 {
 			return nil, fmt.Errorf(
-				"field %s.%s is annotated with actor_uuid but its message %s reaches more than one string field path; "+
+				"field %s.%s is annotated with actor_uuid but its message %s reaches more than one string field path (%s, %s); "+
 					"annotate the string field that holds the actor UUID instead",
-				f.Message.GetName(), f.GetName(), msg.GetName())
+				trimFQMN(f.Message), f.GetName(), trimFQMN(msg),
+				pathString(f.GetName(), paths[0]), pathString(f.GetName(), paths[1]))
 		}
 	}
 	return child, nil
+}
+
+// trimFQMN returns m's fully-qualified name without the leading dot.
+func trimFQMN(m *protoplugin.Message) string {
+	return strings.TrimPrefix(m.FQMN(), ".")
+}
+
+// pathString renders p as a dotted field path starting at root.
+func pathString(root string, p *protogen.Path) string {
+	parts := []string{root}
+	for _, s := range p.Steps {
+		parts = append(parts, s.Name)
+	}
+	return strings.Join(parts, ".")
 }
 
 // convert returns the memoized Node for msg, building it (and,

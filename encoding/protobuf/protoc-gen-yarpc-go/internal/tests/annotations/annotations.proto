@@ -16,6 +16,10 @@ option go_package = "annotations";
 import "google/protobuf/descriptor.proto";
 
 extend google.protobuf.FieldOptions {
-  // actor_uuid marks the request field that carries the caller's UUID.
+  // actor_uuid marks the request field that carries the caller's UUID: a
+  // string, repeated string, or map<K, string> field, or a message-typed
+  // field whose message reaches exactly one string field, at any depth.
+  // See convertChild in protoc-gen-yarpc-go/internal/lib/uuid.go for the
+  // full rules.
   bool actor_uuid = 50001;
 }
