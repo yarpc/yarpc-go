@@ -65,6 +65,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -1851,20 +1852,35 @@ func TestConnectionPoolPickConnSkipsConnectingConn(t *testing.T) {
 
 		ready := p.pool.LoadConns()[0]
 		require.Eventually(t, func() bool { return ready.Conn.GetState() == connectivity.Ready },
-			3*time.Second, 5*time.Millisecond)
-		// Load the ready connection so the new, idle one would win on stream count.
+			3*time.Second, time.Millisecond)
+		// Load the ready connection so an idle one would win on stream count.
 		for range 5 {
 			ready.IncStreamCount()
 		}
 
+		// A listener that accepts connections at the TCP level but never
+		// completes the HTTP/2 handshake keeps a gRPC connection connecting,
+		// so the connecting state is held for as long as the test needs.
+		silent, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		defer silent.Close()
+
+		realDial := p.pool.Dial
+		p.pool.Dial = func(context.Context) (*grpc.ClientConn, error) {
+			//lint:ignore SA1019 grpc.Dial is deprecated
+			return grpc.Dial(silent.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+		}
+		connecting, err := p.pool.AddConn()
+		require.NoError(t, err)
+		require.NotEqual(t, connectivity.Ready, connecting.Conn.GetState())
+		assert.Same(t, ready, p.pickConn(), "a connecting connection must not be picked over a ready one")
+
+		// A connection to the real server becomes ready and, being idle, wins.
+		p.pool.Dial = realDial
 		fresh, err := p.pool.AddConn()
 		require.NoError(t, err)
-		if fresh.Conn.GetState() != connectivity.Ready {
-			assert.Same(t, ready, p.pickConn(), "a connecting connection must not be picked over a ready one")
-		}
-
 		require.Eventually(t, func() bool { return fresh.Conn.GetState() == connectivity.Ready },
-			3*time.Second, 5*time.Millisecond)
+			3*time.Second, time.Millisecond)
 		assert.Same(t, fresh, p.pickConn(), "once ready, the less-loaded connection is picked")
 	})
 }

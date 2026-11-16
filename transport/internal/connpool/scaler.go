@@ -37,7 +37,13 @@ const defaultScalingMonitorInterval = 30 * time.Second
 // connections while it connects. After this a connection that is still not
 // ready is treated as stuck (e.g. failing to connect) and no longer holds
 // back further scale-up.
-const connectGracePeriod = 10 * time.Second
+//
+// A healthy connect takes milliseconds, so this is far above the normal case.
+// It is deliberately short: while a new connection connects, the ready ones
+// keep serving, so waiting longer only delays scale-up when the new connection
+// is stuck, whereas too short lets a slow-but-healthy connect trigger extra
+// dials (bounded by MaxConnections).
+const connectGracePeriod = time.Second
 
 // runScalingMonitor runs as a background goroutine for the lifetime of the
 // pool. It periodically evaluates whether connections should be added or
