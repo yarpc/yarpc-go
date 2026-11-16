@@ -99,6 +99,45 @@ func newTestPoolLive(t *testing.T, lc *liveConfig) (*Pool[*fakeConn], *atomic.In
 	return p, &nextID
 }
 
+// connectingSet tracks which fake connections are still "connecting", the way
+// a gRPC connection is right after grpc.Dial returns.
+type connectingSet struct{ m sync.Map }
+
+func (s *connectingSet) add(c *fakeConn)    { s.m.Store(c, struct{}{}) }
+func (s *connectingSet) remove(c *fakeConn) { s.m.Delete(c) }
+func (s *connectingSet) ready(c *fakeConn) bool {
+	_, connecting := s.m.Load(c)
+	return !connecting
+}
+
+// newReadyTestPool returns a pool whose connections are ready unless added to
+// the returned set, configured to scale up as soon as a connection has any
+// stream.
+func newReadyTestPool(t *testing.T, minConns int) (*Pool[*fakeConn], *connectingSet) {
+	t.Helper()
+	cfg := baseConfig()
+	cfg.MaxConcurrentStreams = 10
+	cfg.ScaleUpThreshold = 0.1 // threshold = 1 stream
+	cfg.MinConnections = minConns
+	p, _ := newTestPool(t, cfg)
+	set := &connectingSet{}
+	p.Ready = set.ready
+	return p, set
+}
+
+// dialConnecting makes every connection p dials from now on start out
+// connecting.
+func dialConnecting(p *Pool[*fakeConn], set *connectingSet) {
+	dial := p.Dial
+	p.Dial = func(ctx context.Context) (*fakeConn, error) {
+		c, err := dial(ctx)
+		if err == nil {
+			set.add(c)
+		}
+		return c, err
+	}
+}
+
 func baseConfig() Config {
 	return Config{
 		DynamicScalingEnabled:  true,
@@ -158,6 +197,49 @@ func TestPool_PickConnIgnoresInactive(t *testing.T) {
 	picked := p.PickConn()
 	require.NotNil(t, picked)
 	assert.Same(t, conns[1], picked)
+}
+
+func TestPool_PickConnPrefersReadyOverIdleConnecting(t *testing.T) {
+	p, connecting := newReadyTestPool(t, 1)
+	require.NoError(t, p.Start(1, false))
+	defer func() { p.Stop(); p.Wait() }()
+
+	loaded := p.LoadConns()[0]
+	for range 5 {
+		loaded.IncStreamCount()
+	}
+	fresh, err := p.AddConn()
+	require.NoError(t, err)
+	connecting.add(fresh.Conn)
+
+	// The fresh connection has fewer streams but cannot serve yet.
+	assert.Same(t, loaded, p.PickConn())
+
+	connecting.remove(fresh.Conn)
+	assert.Same(t, fresh, p.PickConn(), "a ready connection competes on load again")
+}
+
+func TestPool_PickConnFallsBackWhenNoneReady(t *testing.T) {
+	p, connecting := newReadyTestPool(t, 1)
+	require.NoError(t, p.Start(2, false))
+	defer func() { p.Stop(); p.Wait() }()
+
+	conns := p.LoadConns()
+	connecting.add(conns[0].Conn)
+	connecting.add(conns[1].Conn)
+	conns[0].IncStreamCount()
+
+	assert.Same(t, conns[1], p.PickConn(), "least loaded of the connecting connections")
+}
+
+func TestPool_PickConnIgnoresReadyWhenUnset(t *testing.T) {
+	p, _ := newTestPool(t, baseConfig())
+	require.NoError(t, p.Start(2, false))
+	defer func() { p.Stop(); p.Wait() }()
+
+	conns := p.LoadConns()
+	conns[0].IncStreamCount()
+	assert.Same(t, conns[1], p.PickConn())
 }
 
 func TestPool_PickConnNilWhenEmpty(t *testing.T) {

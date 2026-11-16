@@ -109,6 +109,10 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	p.pool = connpool.NewPool(p.ctx, p.livePoolCfg, dial, t.options.logger, p.HostPort(), connpool.NewReporter(t.metrics))
 	p.pool.LogPrefix = "grpc"
 	p.pool.OnConnAdded = p.monitorConnWrapper
+	// grpc.Dial returns before the connection is usable, so a connection the
+	// pool has just dialed is still connecting. Keep requests off it until it
+	// is ready.
+	p.pool.Ready = func(conn *grpc.ClientConn) bool { return conn.GetState() == connectivity.Ready }
 
 	// All connections are created via the pool's AddConn -- no special primary
 	// connection. ScaleDownFloor is 1 when scaling is off and min capped by max

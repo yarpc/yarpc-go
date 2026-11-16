@@ -91,6 +91,14 @@ type Pool[T Conn] struct {
 	// w.Context().Done().
 	OnConnAdded func(*Wrapper[T])
 
+	// Ready, if set, reports whether a connection can carry requests right
+	// now. Set it for transports whose Dial returns before the connection is
+	// usable (gRPC's does: the new connection is still connecting), so the
+	// pool does not route traffic to a connection that cannot serve it yet.
+	// Leave it nil when Dial returns a usable connection. It is called on the
+	// request path and must be cheap and safe for concurrent use.
+	Ready func(conn T) bool
+
 	// Config returns the pool's current tuning parameters. It is called on
 	// every scaling decision, so a changed return value takes effect on the
 	// next decision. It must be safe for concurrent use and return a complete,
@@ -308,16 +316,31 @@ func (p *Pool[T]) ConnDone() { p.connWg.Done() }
 
 // PickConn returns the active connection with the fewest in-flight
 // streams/requests, or nil if the pool has no active connections.
+//
+// When Ready is set, ready connections are preferred: a connection that has
+// just been dialed has no streams, so without this it would win every pick and
+// absorb all traffic while still connecting, leaving the loaded ready
+// connections idle. If no active connection is ready, the least-loaded active
+// one is returned anyway so requests still queue behind a connecting peer.
 func (p *Pool[T]) PickConn() *Wrapper[T] {
 	conns := p.LoadConns()
-	var best *Wrapper[T]
+	var best, bestNotReady *Wrapper[T]
 	for _, c := range conns {
 		if !c.IsActive() {
+			continue
+		}
+		if p.Ready != nil && !p.Ready(c.Conn) {
+			if bestNotReady == nil || c.StreamCount() < bestNotReady.StreamCount() {
+				bestNotReady = c
+			}
 			continue
 		}
 		if best == nil || c.StreamCount() < best.StreamCount() {
 			best = c
 		}
+	}
+	if best == nil {
+		return bestNotReady
 	}
 	return best
 }

@@ -120,6 +120,92 @@ func TestScaler_TryScaleUpReactivatesIdleBeforeDialing(t *testing.T) {
 	assert.Equal(t, dialedBefore, nextID.Load())
 }
 
+// waitScaleUpSettled waits for any scale-up goroutine TryScaleUp started to
+// finish, so a test can assert that nothing was dialed without sleeping.
+func waitScaleUpSettled(t *testing.T, p *Pool[*fakeConn]) {
+	t.Helper()
+	require.Eventually(t, func() bool { return atomic.LoadInt32(&p.isScaling) == 0 },
+		time.Second, time.Millisecond)
+}
+
+func TestScaler_TryScaleUpWaitsForConnectingConn(t *testing.T) {
+	p, connecting := newReadyTestPool(t, 1)
+	require.NoError(t, p.Start(1, false))
+	defer func() { p.Stop(); p.Wait() }()
+
+	loaded := p.LoadConns()[0]
+	loaded.IncStreamCount()
+	loaded.IncStreamCount()
+
+	// First scale-up dials a connection that stays "connecting".
+	dialConnecting(p, connecting)
+	p.TryScaleUp(loaded)
+	require.Eventually(t, func() bool { return len(p.LoadConns()) == 2 }, time.Second, time.Millisecond)
+	waitScaleUpSettled(t, p)
+
+	// The loaded connection is still over the threshold on every request, but
+	// the pool must not keep dialing while the new connection connects.
+	for range 50 {
+		p.TryScaleUp(p.PickConn())
+	}
+	waitScaleUpSettled(t, p)
+	assert.Len(t, p.LoadConns(), 2, "no further dials while a connection is connecting")
+}
+
+func TestScaler_TryScaleUpResumesOnceConnectionReady(t *testing.T) {
+	p, connecting := newReadyTestPool(t, 1)
+	require.NoError(t, p.Start(1, false))
+	defer func() { p.Stop(); p.Wait() }()
+
+	loaded := p.LoadConns()[0]
+	loaded.IncStreamCount()
+	loaded.IncStreamCount()
+	dialConnecting(p, connecting)
+	p.TryScaleUp(loaded)
+	require.Eventually(t, func() bool { return len(p.LoadConns()) == 2 }, time.Second, time.Millisecond)
+	waitScaleUpSettled(t, p)
+
+	fresh := p.LoadConns()[1]
+	connecting.remove(fresh.Conn)
+	fresh.IncStreamCount()
+	fresh.IncStreamCount() // both ready connections are now over the threshold
+	p.TryScaleUp(p.PickConn())
+	require.Eventually(t, func() bool { return len(p.LoadConns()) == 3 }, time.Second, time.Millisecond)
+}
+
+func TestScaler_TryScaleUpIgnoresStuckConnectingConn(t *testing.T) {
+	p, connecting := newReadyTestPool(t, 1)
+	require.NoError(t, p.Start(2, false))
+	defer func() { p.Stop(); p.Wait() }()
+
+	conns := p.LoadConns()
+	stuck := conns[1]
+	connecting.add(stuck.Conn)
+	stuck.createdAt = time.Now().Add(-2 * connectGracePeriod)
+	conns[0].IncStreamCount()
+	conns[0].IncStreamCount()
+
+	p.TryScaleUp(conns[0])
+	require.Eventually(t, func() bool { return len(p.LoadConns()) == 3 }, time.Second, time.Millisecond,
+		"a connection stuck connecting past the grace period must not block scale-up")
+}
+
+func TestScaler_TryScaleUpDialsWhenNothingIsReadyYet(t *testing.T) {
+	p, connecting := newReadyTestPool(t, 1)
+	require.NoError(t, p.Start(1, false))
+	defer func() { p.Stop(); p.Wait() }()
+
+	only := p.LoadConns()[0]
+	connecting.add(only.Conn)
+	only.IncStreamCount()
+	only.IncStreamCount()
+
+	// No connection is ready, so no load is being carried that a connecting
+	// connection could take over: scale-up behaves as it did before Ready.
+	p.TryScaleUp(only)
+	require.Eventually(t, func() bool { return len(p.LoadConns()) == 2 }, time.Second, time.Millisecond)
+}
+
 func TestScaler_MaybeScaleDownHysteresis(t *testing.T) {
 	cfg := baseConfig()
 	cfg.MaxConcurrentStreams = 100
