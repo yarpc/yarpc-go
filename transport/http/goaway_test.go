@@ -291,7 +291,9 @@ func (s *h2cGoAwayServer) handleConn(conn net.Conn) {
 
 	// Send GOAWAY to any LastStreamID (-1) or LastStreamID <= s.rejectBefore so
 	// net/http2 considers stream "not processed" and replays it on a new connection.
-	if s.rejectBefore == -1 || s.requests.Add(1) <= s.rejectBefore {
+	// Count every request, including those of a reject-all server, so tests
+	// can observe how many attempts reached it.
+	if n := s.requests.Add(1); s.rejectBefore == -1 || n <= s.rejectBefore {
 		_ = framer.WriteGoAway(0, http2.ErrCodeNo, nil)
 		return
 	}

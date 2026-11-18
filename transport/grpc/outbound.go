@@ -219,8 +219,8 @@ func (o *Outbound) invoke(
 	if conn == nil {
 		return yarpcerrors.UnavailableErrorf("no available connections for peer %s", grpcPeer.HostPort())
 	}
-	conn.incStreamCount()
-	defer conn.decStreamCount()
+	conn.IncStreamCount()
+	defer conn.DecStreamCount()
 	grpcPeer.tryScaleUp(conn)
 
 	tracer := o.t.options.tracer
@@ -239,7 +239,7 @@ func (o *Outbound) invoke(
 
 	err = transport.UpdateSpanWithErr(
 		span,
-		conn.clientConn.Invoke(
+		conn.Conn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
 			fullMethod,
 			msg,
@@ -366,11 +366,11 @@ func (o *Outbound) stream(
 		onFinish(yarpcerrors.UnavailableErrorf("no available connections for peer %s", grpcPeer.HostPort()))
 		return nil, yarpcerrors.UnavailableErrorf("no available connections for peer %s", grpcPeer.HostPort())
 	}
-	conn.incStreamCount()
+	conn.IncStreamCount()
 	// Wrap the release callback so stream count is decremented when
 	// the stream actually closes, not when stream() returns.
 	release := func(err error) {
-		conn.decStreamCount()
+		conn.DecStreamCount()
 		onFinish(err)
 	}
 	grpcPeer.tryScaleUp(conn)
@@ -391,7 +391,7 @@ func (o *Outbound) stream(
 	}
 
 	streamCtx := metadata.NewOutgoingContext(ctx, md)
-	clientStream, err := conn.clientConn.NewStream(
+	clientStream, err := conn.Conn.NewStream(
 		streamCtx,
 		&grpc.StreamDesc{
 			ClientStreams: true,

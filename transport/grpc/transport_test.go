@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -400,7 +401,7 @@ func TestOutboundConnectionPoolOverride(t *testing.T) {
 	require.NoError(t, err)
 	sp, ok := sharedPeer.(*grpcPeer)
 	require.True(t, ok)
-	assert.Equal(t, 9, sp.startupPool.maxConnections, "override applies to peers retained through this Dialer")
+	assert.Equal(t, 9, sp.startupPool.MaxConnections, "override applies to peers retained through this Dialer")
 
 	isolatedDialer := transport.NewDialer(OutboundConnectionPool(ClientConnectionPoolConfig{
 		MaxConnections: 9,
@@ -409,7 +410,7 @@ func TestOutboundConnectionPoolOverride(t *testing.T) {
 	require.NoError(t, err)
 	ip, ok := isolatedPeer.(*grpcPeer)
 	require.True(t, ok)
-	assert.Equal(t, 9, ip.startupPool.maxConnections)
+	assert.Equal(t, 9, ip.startupPool.MaxConnections)
 	assert.NotSame(t, sp, ip)
 
 	require.NoError(t, sharedDialer.ReleasePeer(id, idSubscriber{1}))
@@ -583,4 +584,54 @@ func TestRetainDuplicatePeers(t *testing.T) {
 	assert.Len(t, trans.peers, 1)
 	require.NoError(t, trans.ReleasePeer(testIdentifier{address + "#2"}, sub))
 	assert.Empty(t, trans.peers)
+}
+
+// A process may build several transports on one meter and service name (for
+// example one per dispatcher). Each used to register the same pool metrics, so
+// every transport after the first logged a warning per metric and reported
+// nothing. They must register once, quietly, and share the aggregate, however
+// each transport's meter was derived from the registry.
+func TestMultipleTransportsShareConnPoolMetrics(t *testing.T) {
+	staging := metrics.Tags{"env": "staging"}
+	tests := []struct {
+		name string
+		// meters returns the meter each transport is built with.
+		meters func(root *metrics.Root) []*metrics.Scope
+	}{
+		{"same scope", func(r *metrics.Root) []*metrics.Scope {
+			return []*metrics.Scope{r.Scope(), r.Scope(), r.Scope()}
+		}},
+		{"separately tagged copies", func(r *metrics.Root) []*metrics.Scope {
+			return []*metrics.Scope{r.Scope().Tagged(staging), r.Scope().Tagged(staging), r.Scope().Tagged(staging)}
+		}},
+		{"different tag names", func(r *metrics.Root) []*metrics.Scope {
+			return []*metrics.Scope{r.Scope(), r.Scope().Tagged(staging), r.Scope().Tagged(metrics.Tags{"zone": "a"})}
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			core, logs := observer.New(zapcore.WarnLevel)
+			root := metrics.New() // fresh per case, so cases cannot share metrics
+			meters := tt.meters(root)
+
+			var peers []*grpcPeer
+			for i, meter := range meters {
+				tr := NewTransport(Logger(zap.New(core)), ServiceName("probe"), Meter(meter))
+				p, err := tr.newPeer(fmt.Sprintf("127.0.0.1:%d", i+1), emptyDialOpts)
+				require.NoError(t, err)
+				peers = append(peers, p)
+			}
+			t.Cleanup(func() {
+				for _, p := range peers {
+					p.stop()
+					p.wait()
+				}
+			})
+
+			assert.Zero(t, logs.Len(), "metric registration must not warn: %v", logs.All())
+			gauges, _ := poolMetricValues(t, root)
+			assert.Equal(t, int64(len(meters)), gauges["conn_pool_active_connections"],
+				"every transport's connections must be reported")
+		})
+	}
 }

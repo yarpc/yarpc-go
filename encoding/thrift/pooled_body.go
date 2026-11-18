@@ -44,8 +44,8 @@ var errRequestBodyChanged = errors.New("request changed during the call, so it c
 // Read puts the buffer back.
 //
 // The end reason is the answer to every later Read. A drained body answers
-// io.EOF. The transport reads once more after ContentLength bytes and expects
-// io.EOF. A closed body answers errRequestBodyReleased. This error stops the
+// io.EOF. When it declares a Content-Length, the transport reads once more
+// after that many bytes and expects io.EOF. A closed body answers errRequestBodyReleased. This error stops the
 // transport from ending the stream cleanly on a truncated request.
 //
 // To send the request again, the transport calls GetBody. GetBody encodes the
@@ -59,8 +59,8 @@ type pooledBody struct {
 	// calls it. It never changes, so GetBody can read it without the mutex.
 	encode func() (*bufferpool.Buffer, error)
 
-	// size is the length of the first encode. The transport declares it as
-	// the Content-Length.
+	// size is the length of the first encode. An HTTP/2 transport declares it
+	// as the Content-Length.
 	size int
 
 	// ended is nil while the body can still be read.
