@@ -1815,7 +1815,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 	for _, tt := range tests {
 		validate := func(mw *Middleware, direction string, rpcType transport.Type) {
 			key, free := getKey(req, direction, rpcType)
-			edge := mw.graph.getEdge(key)
+			edge := mw.graph.edges.lookup(key)
 			free()
 			assert.EqualValues(t, tt.wantCalls, edge.calls.Load(), "expected calls mismatch")
 			assert.EqualValues(t, tt.wantSuccesses, edge.successes.Load(), "expected successes mismatch")

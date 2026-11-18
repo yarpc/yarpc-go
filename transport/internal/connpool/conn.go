@@ -73,6 +73,12 @@ type Wrapper[T Conn] struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
+	// metrics, when set by the Pool, aggregates this connection's stream
+	// starts and finishes into the transport-wide stream metrics. It is kept
+	// on the wrapper so a stream that outlives its pool's teardown still
+	// decrements the shared gauge.
+	metrics *Reporter
+
 	streamCount int32 // accessed atomically
 	state       int32 // accessed atomically; holds a State
 
@@ -107,10 +113,16 @@ func (w *Wrapper[T]) Context() context.Context { return w.ctx }
 func (w *Wrapper[T]) Cancel() { w.cancel() }
 
 // IncStreamCount atomically increments the in-flight request/stream count.
-func (w *Wrapper[T]) IncStreamCount() { atomic.AddInt32(&w.streamCount, 1) }
+func (w *Wrapper[T]) IncStreamCount() {
+	atomic.AddInt32(&w.streamCount, 1)
+	w.metrics.streamStarted()
+}
 
 // DecStreamCount atomically decrements the in-flight request/stream count.
-func (w *Wrapper[T]) DecStreamCount() { atomic.AddInt32(&w.streamCount, -1) }
+func (w *Wrapper[T]) DecStreamCount() {
+	atomic.AddInt32(&w.streamCount, -1)
+	w.metrics.streamFinished()
+}
 
 // StreamCount returns the current in-flight request/stream count.
 func (w *Wrapper[T]) StreamCount() int32 { return atomic.LoadInt32(&w.streamCount) }

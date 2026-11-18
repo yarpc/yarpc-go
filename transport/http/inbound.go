@@ -41,7 +41,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 const (
@@ -342,9 +341,17 @@ func (i *Inbound) start() error {
 		}
 	}
 
+	var skipSpanSetup bool
+	switch i.tracer.(type) {
+	case opentracing.NoopTracer, *opentracing.NoopTracer:
+		// The built-in no-op tracer discards span setup, so the handler skips it.
+		skipSpanSetup = true
+	}
+
 	var httpHandler http.Handler = handler{
 		router:                                   i.router,
 		tracer:                                   i.tracer,
+		skipSpanSetup:                            skipSpanSetup,
 		transport:                                i.transport,
 		grabHeaders:                              i.grabHeaders,
 		bothResponseError:                        i.bothResponseError,
@@ -371,7 +378,7 @@ func (i *Inbound) start() error {
 	i.server.Handler = httpHandler
 	if !i.disableHTTP2 {
 		h2s := &http2.Server{}
-		i.server.Handler = h2c.NewHandler(i.server.Handler, h2s)
+		i.server.Handler = newBufferedH2CHandler(i.server.Handler, h2s)
 		err := http2.ConfigureServer(i.server.Server, h2s)
 		if err != nil {
 			return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
