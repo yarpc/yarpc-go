@@ -157,6 +157,23 @@ type MetricsConfig struct {
 	// TagsBlocklist enlists tags' keys that should be suppressed from all the metrics
 	// emitted from w/in YARPC middleware.
 	TagsBlocklist []string
+	// DisabledMetrics lists histograms that YARPC does not emit, by metric
+	// name. Histograms cost the most to emit: each call records into several
+	// of them, and every one multiplies the number of series by its bucket
+	// count. A disabled histogram is never created, so it costs no CPU per
+	// call, per push, or memory.
+	//
+	// The names that can be disabled are: success_latency_ms,
+	// caller_failure_latency_ms, server_failure_latency_ms, ttl_ms,
+	// timeout_ttl_ms, request_payload_size_bytes, response_payload_size_bytes,
+	// stream_duration_ms, stream_request_payload_size_bytes and
+	// stream_response_payload_size_bytes. Counters (calls, successes, panics,
+	// caller_failures, server_failures and the stream counters) cannot be
+	// disabled. Unknown names are logged and ignored.
+	//
+	// Anything that reads a disabled histogram, such as a dashboard or alert,
+	// will stop receiving data.
+	DisabledMetrics []string
 }
 
 func (c MetricsConfig) scope(name string, logger *zap.Logger) (*metrics.Scope, context.CancelFunc) {
