@@ -40,7 +40,6 @@ import (
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
-	"golang.org/x/net/http2"
 )
 
 const (
@@ -377,10 +376,7 @@ func (i *Inbound) start() error {
 
 	i.server.Handler = httpHandler
 	if !i.disableHTTP2 {
-		h2s := &http2.Server{}
-		i.server.Handler = newBufferedH2CHandler(i.server.Handler, h2s)
-		err := http2.ConfigureServer(i.server.Server, h2s)
-		if err != nil {
+		if err := i.configureHTTP2(); err != nil {
 			return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
 		}
 	}
