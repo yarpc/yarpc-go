@@ -384,6 +384,36 @@ func TestH2PeerSenderNoConnectionAvailable(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeUnavailable, yarpcerrors.FromError(err).Code())
 }
 
+func TestH2PeerSenderLifecycleErrors(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:1", nil)
+	require.NoError(t, err)
+
+	t.Run("peer released", func(t *testing.T) {
+		tr := NewTransport()
+		require.NoError(t, tr.Start())
+		t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+		p := newPeer("127.0.0.1:1", tr)
+		p.Release()
+
+		_, err := (&h2PeerSender{peer: p}).Do(req)
+		require.Error(t, err)
+		assert.Equal(t, yarpcerrors.CodeUnavailable, yarpcerrors.FromError(err).Code())
+		assert.ErrorIs(t, err, errH2PeerReleased)
+	})
+
+	t.Run("transport stopping", func(t *testing.T) {
+		tr := NewTransport()
+		require.NoError(t, tr.Start())
+		require.NoError(t, tr.Stop())
+		p := newPeer("127.0.0.1:1", tr)
+
+		_, err := (&h2PeerSender{peer: p}).Do(req)
+		require.Error(t, err)
+		assert.Equal(t, yarpcerrors.CodeFailedPrecondition, yarpcerrors.FromError(err).Code())
+		assert.ErrorIs(t, err, errH2TransportStopping)
+	})
+}
+
 // newTestH2Pool builds a pool of HTTP/2 connections to addr whose per-
 // connection watcher only does the teardown half of httpPeer.watchH2Conn, so
 // the tests below control connection health themselves.
@@ -613,6 +643,54 @@ func TestH2PeerSenderBackoffEndsWithRequestContext(t *testing.T) {
 	_, err = sender.Do(req)
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	assert.Less(t, time.Since(start), 10*time.Second, "must not wait out the backoff")
+}
+
+// TestH2PeerSenderDefaultBackoff covers the production backoff (no injected
+// function): the second retry waits for h2RetryBackoff, which is at least a
+// second.
+//
+// It is driven by events rather than by a short deadline, which would expire
+// during the first attempts on a slow machine and pass without ever reaching
+// the backoff. Once the server has seen both attempts the sender must sit in
+// the backoff: not return and not send a third request. The quiet period is
+// far below the minimum backoff and slowness can only lengthen it, so a
+// correct sender cannot fail it. Cancelling the context then ends the wait.
+func TestH2PeerSenderDefaultBackoff(t *testing.T) {
+	server := newH2CGoAwayServer(t, -1)
+	p := newBackoffTestPeer(t, server.addr())
+	sender := &h2PeerSender{peer: p}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+server.addr(), nil)
+	require.NoError(t, err)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := sender.Do(req)
+		done <- err
+	}()
+
+	// The first retry is immediate, so the second attempt reaches the server
+	// and then the sender backs off.
+	require.Eventually(t, func() bool { return server.requests.Load() >= 2 },
+		10*testtime.Second, 5*testtime.Millisecond, "the retry never reached the server")
+
+	// Real time, deliberately not testtime: the backoff is not scaled either.
+	select {
+	case err := <-done:
+		t.Fatalf("returned during the backoff: %v", err)
+	case <-time.After(250 * time.Millisecond):
+	}
+	assert.EqualValues(t, 2, server.requests.Load(), "no attempt may be made during the backoff")
+
+	cancel()
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(10 * time.Second):
+		t.Fatal("cancelling the context did not end the backoff")
+	}
 }
 
 func TestH2RetryBackoff(t *testing.T) {

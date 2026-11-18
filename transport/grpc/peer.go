@@ -22,12 +22,11 @@ package grpc
 
 import (
 	"context"
-	"runtime"
-	"sync"
 	"sync/atomic"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/yarpc/transport/internal/connpool"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -36,79 +35,28 @@ import (
 type grpcPeer struct {
 	*abstractpeer.Peer
 
-	t        *Transport
-	ctx      context.Context
-	cancel   context.CancelFunc
-	stoppedC chan struct{}
+	t *Transport
 
-	// grpcDialOpts are stored so that additional pooled connections can be
-	// dialled with the same parameters as the initial connection.
-	grpcDialOpts []grpc.DialOption
+	// ctx/cancel are the peer's own lifetime context. It is the parent of the
+	// pool's context, so cancelling it cascades to the pool and, transitively,
+	// to every connection wrapper -- the same single context tree this peer has
+	// always had. It is also read directly by monitorConnWrapper to tell "the
+	// whole peer is shutting down" apart from "just this connection was
+	// evicted" (see the abstractlist.stop() deadlock note there).
+	ctx    context.Context
+	cancel context.CancelFunc
 
-	// isScaling is set to 1 (via CAS) while a background scale-up goroutine is
-	// running.  This prevents multiple concurrent scale-up operations.
-	isScaling int32 // accessed atomically
-
-	// atMaxConnectionsLogged is set after logging the first scale-up attempt while
-	// at maxConnections; cleared when the pool drops below the cap.
-	atMaxConnectionsLogged atomic.Bool
-
-	// connWg tracks background pool goroutines: monitorConnWrapper,
-	// runScalingMonitor, and tryScaleUp workers. stoppedC closes once they have
-	// all finished and this peer's metric contribution has been zeroed.
-	connWg sync.WaitGroup
-
-	// metrics reports this peer's connection-state counts and scaling events
-	// into the transport-wide shared metrics (which are not tagged by peer).
-	metrics *peerPoolReporter
-
-	// connsPtr holds a pointer to the current immutable connection slice.
-	// Readers (pickConn, recomputeConnectionStatus, refreshPoolMetrics, etc.)
-	// do a single atomic.Pointer.Load() — no lock acquired on the read path.
-	// Writers (addConn, removeConn) use a CAS loop: load the current pointer,
-	// build the new slice, and CompareAndSwap. connCount is updated after a
-	// successful CAS.
-	connsPtr atomic.Pointer[[](*grpcClientConnWrapper)]
-
-	// addingCount tracks goroutines that have passed their entry point but
-	// have not yet called connWg.Add(1) or bailed (addConn, startScalingMonitor,
-	// tryScaleUp). The lifecycle goroutine spins on this counter after setting
-	// shutdownStarted so connWg.Wait is not called before any racing Add completes.
-	addingCount atomic.Int32
-
-	// shutdownStarted is set to true when the peer begins shutting down.
-	// Callers check this after incrementing addingCount to avoid calling
-	// connWg.Add(1) after the lifecycle goroutine has passed its spin.
-	shutdownStarted atomic.Bool
-
-	// connCount mirrors len(loadConns()) atomically so tryScaleUp can check the
-	// pool size without a full slice load.
-	connCount atomic.Int32
+	// pool owns this peer's gRPC connections: dialing, dynamic scaling, idle
+	// cleanup, and the pool metrics/logging for those events. The per-connection
+	// health watch is plugged in through pool.OnConnAdded.
+	pool *connpool.Pool[*grpc.ClientConn]
 
 	// startupPool is the snapshot at peer creation (TransportOptions, YAML,
 	// outbound overlay). livePoolCfg() overlays the live provider on top.
-	startupPool          connPoolConfig
+	startupPool          connpool.Config
 	outboundLiveProvider LiveConnectionPoolProvider // per-outbound hook; nil uses the global hook
-	lastValidLivePool    atomic.Value               // connPoolConfig, last snapshot that passed validation
+	lastValidLivePool    atomic.Value               // connpool.Config, last snapshot that passed validation
 	invalidLiveWarned    atomic.Bool                // warn once per invalid live streak; skip later ticks until valid again
-	monitorStarted       atomic.Bool                // runScalingMonitor started once from newPeer
-	intervalClampWarned  atomic.Bool                // warn once while live/startup interval stays below 30s
-}
-
-// loadConns returns the current immutable connection snapshot.
-// Safe to call from any goroutine without holding any lock.
-func (p *grpcPeer) loadConns() []*grpcClientConnWrapper {
-	ptr := p.connsPtr.Load()
-	if ptr == nil {
-		return nil
-	}
-	return *ptr
-}
-
-// storeConns atomically publishes a new connection slice and updates connCount.
-func (p *grpcPeer) storeConns(conns []*grpcClientConnWrapper) {
-	p.connsPtr.Store(&conns)
-	p.connCount.Store(int32(len(conns)))
 }
 
 func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, error) {
@@ -138,135 +86,87 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		t:                    t,
 		ctx:                  ctx,
 		cancel:               cancel,
-		stoppedC:             make(chan struct{}),
-		grpcDialOpts:         dialOptions,
-		metrics:              newPeerPoolReporter(t.metrics),
 		startupPool:          startupPool,
 		outboundLiveProvider: options.poolConfigProvider,
 	}
 	p.lastValidLivePool.Store(p.startupPool)
 	t.options.logger.Debug("grpc: connection pool config resolved",
 		zap.String("peer", address),
-		zap.Bool("dynamicScalingEnabled", p.startupPool.dynamicScalingEnabled),
-		zap.Int("minConnections", p.startupPool.minConnections),
-		zap.Int("maxConnections", p.startupPool.maxConnections),
-		zap.Int32("maxConcurrentStreams", p.startupPool.maxConcurrentStreams),
-		zap.Float64("scaleUpThreshold", p.startupPool.scaleUpThreshold),
-		zap.Float64("scaleDownGap", p.startupPool.scaleDownGap),
-		zap.Duration("idleTimeout", p.startupPool.idleTimeout),
-		zap.Duration("scalingMonitorInterval", p.startupPool.scalingMonitorInterval),
+		zap.Bool("dynamicScalingEnabled", p.startupPool.DynamicScalingEnabled),
+		zap.Int("minConnections", p.startupPool.MinConnections),
+		zap.Int("maxConnections", p.startupPool.MaxConnections),
+		zap.Int32("maxConcurrentStreams", p.startupPool.MaxConcurrentStreams),
+		zap.Float64("scaleUpThreshold", p.startupPool.ScaleUpThreshold),
+		zap.Float64("scaleDownGap", p.startupPool.ScaleDownGap),
+		zap.Duration("idleTimeout", p.startupPool.IdleTimeout),
+		zap.Duration("scalingMonitorInterval", p.startupPool.ScalingMonitorInterval),
 	)
-	// Publish an empty slice so loadConns() never returns nil before the first
-	// addConn() call.
-	p.storeConns(nil)
 
-	// All connections are created via addConn — no special primary connection.
-	// scaleDownFloor is 1 when scaling is off and min capped by max when on,
-	// so an invalid MinConnections > MaxConnections cannot over-dial.
-	initialConnCount := scaleDownFloor(p.startupPool)
-	for i := 0; i < initialConnCount; i++ {
-		if err := p.addConn(); err != nil {
-			p.cancel()
-			return nil, err
-		}
+	dial := func(context.Context) (*grpc.ClientConn, error) {
+		//lint:ignore SA1019 grpc.Dial is deprecated
+		return grpc.Dial(address, dialOptions...)
 	}
+	p.pool = connpool.NewPool(p.ctx, p.livePoolCfg, dial, t.options.logger, p.HostPort(), connpool.NewReporter(t.metrics))
+	p.pool.LogPrefix = "grpc"
+	p.pool.OnConnAdded = p.monitorConnWrapper
 
-	// Start the monitor when scaling is on at create, or when a live hook
-	// may enable it later (and to wind extras down if live turns scaling off).
-	if p.startupPool.dynamicScalingEnabled || p.liveProvider() != nil {
-		p.startScalingMonitor()
+	// All connections are created via the pool's AddConn -- no special primary
+	// connection. ScaleDownFloor is 1 when scaling is off and min capped by max
+	// when on, so an invalid MinConnections > MaxConnections cannot over-dial.
+	initialConnCount := connpool.ScaleDownFloor(p.startupPool)
+
+	// Start the monitor when scaling is on at create, or when a live hook may
+	// enable it later (and to wind extras down if live turns scaling off).
+	startMonitor := p.startupPool.DynamicScalingEnabled || p.liveProvider() != nil
+
+	if err := p.pool.Start(initialConnCount, startMonitor); err != nil {
+		p.cancel()
+		return nil, err
 	}
-
-	// Close stoppedC once all pool goroutines have finished. shutdownStarted
-	// gates new connWg.Add(1) calls; addingCount waits for any in-flight
-	// addConn / startScalingMonitor / tryScaleUp before Wait.
-	go func() {
-		<-p.ctx.Done()
-		p.shutdownStarted.Store(true)
-		for p.addingCount.Load() > 0 {
-			runtime.Gosched()
-		}
-		p.connWg.Wait()
-		// Zero this peer's contribution after every pool goroutine has stopped so
-		// a late refreshPoolMetrics snapshot cannot leave residual values on the
-		// transport-wide shared gauges.
-		if p.metrics != nil {
-			p.metrics.setCounts(0, 0, 0)
-		}
-		close(p.stoppedC)
-	}()
 
 	return p, nil
 }
 
-// addConn dials a new connection to the peer's address using the same options
-// as the initial connection, appends the wrapper to the pool, and starts its
-// monitor goroutine.
-func (p *grpcPeer) addConn() error {
-	//lint:ignore SA1019 grpc.Dial is deprecated
-	clientConn, err := grpc.Dial(p.Peer.Identifier(), p.grpcDialOpts...)
-	if err != nil {
-		return err
-	}
-	w := newConnWrapper(p.ctx, clientConn)
-
-	// Enter the critical window: increment addingCount so the lifecycle
-	// goroutine's spin waits for us to either bail or call connWg.Add(1).
-	p.addingCount.Add(1)
-	if p.ctx.Err() != nil || p.shutdownStarted.Load() {
-		p.addingCount.Add(-1)
-		_ = clientConn.Close()
-		return p.ctx.Err()
-	}
-	p.connWg.Add(1)
-	p.addingCount.Add(-1)
-
-	// CAS loop: copy the slice, append the new wrapper, publish atomically.
-	for {
-		old := p.connsPtr.Load()
-		var oldSlice []*grpcClientConnWrapper
-		if old != nil {
-			oldSlice = *old
-		}
-		next := make([]*grpcClientConnWrapper, len(oldSlice)+1)
-		copy(next, oldSlice)
-		next[len(oldSlice)] = w
-		if p.connsPtr.CompareAndSwap(old, &next) {
-			p.connCount.Store(int32(len(next)))
-			break
-		}
-	}
-
-	go p.monitorConnWrapper(w)
-	p.refreshPoolMetrics()
-	return nil
+// pickConn returns the active connection in the pool with the lowest current
+// stream count. Returns nil if the pool contains no active connections.
+func (p *grpcPeer) pickConn() *connpool.Wrapper[*grpc.ClientConn] {
+	return p.pool.PickConn()
 }
 
-// monitorConnWrapper runs the per-connection health loop: it watches gRPC
+// tryScaleUp triggers a background goroutine to satisfy the need for more
+// connection capacity if leastLoadedConn -- the connection with the fewest
+// active streams, as selected by pickConn -- is over the scale-up threshold.
+func (p *grpcPeer) tryScaleUp(leastLoadedConn *connpool.Wrapper[*grpc.ClientConn]) {
+	p.pool.TryScaleUp(leastLoadedConn)
+}
+
+// monitorConnWrapper is the pool's OnConnAdded callback, which the pool runs in
+// its own goroutine. It runs the per-connection health loop: it watches gRPC
 // connectivity state changes, keeps the peer status up to date, and triggers
-// reconnection when a connection goes idle.  It cleans up when the wrapper's
+// reconnection when a connection goes idle. It cleans up when the wrapper's
 // context is cancelled (i.e. when the peer is stopped or the connection is
-// evicted by the pool).
-func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
+// evicted by the pool), and per the OnConnAdded contract must call Remove and
+// then ConnDone exactly once.
+func (p *grpcPeer) monitorConnWrapper(w *connpool.Wrapper[*grpc.ClientConn]) {
 	defer func() {
-		_ = w.clientConn.Close()
-		p.removeConn(w)
+		_ = w.Conn.Close()
+		p.pool.Remove(w)
 		// Skip status notification during peer shutdown: NotifyStatusChanged
 		// acquires list.lock, but the caller (abstractlist.stop) already holds
 		// it while waiting on p.wait() — deadlock. Metrics are safe to update.
 		if p.ctx.Err() == nil {
 			p.recomputeConnectionStatus()
 		}
-		p.refreshPoolMetrics()
-		// Close stoppedC after metrics are updated so that any goroutine
-		// waiting on stoppedC (e.g. tests) observes a consistent metric state.
-		close(w.stoppedC)
-		p.connWg.Done()
+		p.pool.RefreshMetrics()
+		// Close StoppedC after metrics are updated so that any goroutine
+		// waiting on StoppedC (e.g. tests) observes a consistent metric state.
+		close(w.StoppedC)
+		p.pool.ConnDone()
 	}()
 
 	var grpcStatus connectivity.State
 	for {
-		grpcStatus = w.clientConn.GetState()
+		grpcStatus = w.Conn.GetState()
 
 		// When a connection falls back to IDLE, no automatic reconnection
 		// happens. There are two options:
@@ -276,7 +176,7 @@ func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 		// - Reconnect manually so the connection is ready before the next call.
 		// We choose the second option.
 		if grpcStatus == connectivity.Idle {
-			w.clientConn.Connect()
+			w.Conn.Connect()
 		}
 
 		// If this connection is Ready the peer is Available regardless of
@@ -291,7 +191,7 @@ func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 		}
 		p.recomputeConnectionStatus()
 
-		if !w.clientConn.WaitForStateChange(w.ctx, grpcStatus) {
+		if !w.Conn.WaitForStateChange(w.Context(), grpcStatus) {
 			break
 		}
 	}
@@ -303,13 +203,13 @@ func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 // connecting (and none are Ready), and Unavailable if the pool is empty or
 // all connections are in a terminal/unknown state.
 func (p *grpcPeer) recomputeConnectionStatus() {
-	conns := p.loadConns()
+	conns := p.pool.LoadConns()
 	best := peer.Unavailable
 	for _, c := range conns {
-		if !c.isActive() {
+		if !c.IsActive() {
 			continue
 		}
-		s := grpcStatusToYARPCStatus(c.clientConn.GetState())
+		s := grpcStatusToYARPCStatus(c.Conn.GetState())
 		if s == peer.Available {
 			best = peer.Available
 			break
@@ -319,52 +219,6 @@ func (p *grpcPeer) recomputeConnectionStatus() {
 		}
 	}
 	p.setConnectionStatus(best)
-}
-
-// removeConn removes a wrapper from the peer's connection pool.
-// Lock-free: uses a CAS loop to atomically publish the new slice.
-func (p *grpcPeer) removeConn(w *grpcClientConnWrapper) {
-	for {
-		old := p.connsPtr.Load()
-		if old == nil {
-			return
-		}
-		oldSlice := *old
-		idx := -1
-		for i, c := range oldSlice {
-			if c == w {
-				idx = i
-				break
-			}
-		}
-		if idx < 0 {
-			return
-		}
-		next := make([]*grpcClientConnWrapper, len(oldSlice)-1)
-		copy(next, oldSlice[:idx])
-		copy(next[idx:], oldSlice[idx+1:])
-		if p.connsPtr.CompareAndSwap(old, &next) {
-			p.connCount.Store(int32(len(next)))
-			return
-		}
-	}
-}
-
-// pickConn returns the active connection in the pool with the lowest current
-// stream count.  Returns nil if the pool contains no active connections.
-// Lock-free: reads the immutable snapshot via a single atomic.Pointer.Load().
-func (p *grpcPeer) pickConn() *grpcClientConnWrapper {
-	conns := p.loadConns()
-	var best *grpcClientConnWrapper
-	for _, c := range conns {
-		if !c.isActive() {
-			continue
-		}
-		if best == nil || c.getStreamCount() < best.getStreamCount() {
-			best = c
-		}
-	}
-	return best
 }
 
 func (p *grpcPeer) setConnectionStatus(status peer.ConnectionStatus) {
@@ -393,7 +247,7 @@ func (p *grpcPeer) stop() {
 }
 
 func (p *grpcPeer) wait() {
-	<-p.stoppedC
+	p.pool.Wait()
 }
 
 func grpcStatusToYARPCStatus(grpcStatus connectivity.State) peer.ConnectionStatus {

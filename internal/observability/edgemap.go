@@ -21,6 +21,7 @@
 package observability
 
 import (
+	"maps"
 	"sync"
 	"sync/atomic"
 )
@@ -95,10 +96,7 @@ func (m *edgeMap) getOrCreateSlow(key []byte, create func() *edge) *edge {
 
 // promoteLocked copies all edges into a new snapshot. The caller must hold mu.
 func (m *edgeMap) promoteLocked() {
-	snap := make(map[string]*edge, len(m.dirty))
-	for k, e := range m.dirty {
-		snap[k] = e
-	}
+	snap := maps.Clone(m.dirty)
 	m.read.Store(&snap)
 	m.misses = 0
 }

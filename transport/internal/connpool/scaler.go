@@ -92,6 +92,14 @@ func (p *Pool[T]) EvaluateScaling() {
 	p.MaybeScaleDown()
 }
 
+// StartMonitor starts the background scale-down/idle/min-fill loop if it is
+// not already running. It is for pools whose first connection is dialed
+// lazily after Start (Start(0, false)): starting the monitor only once that
+// connection exists keeps the monitor's immediate min-fill pass from dialing
+// concurrently with the caller's own first dial. It is a no-op once the pool
+// is stopping or the monitor has already started.
+func (p *Pool[T]) StartMonitor() { p.startScalingMonitor() }
+
 // startScalingMonitor starts the background scale-down/idle/min-fill loop once.
 func (p *Pool[T]) startScalingMonitor() {
 	p.addingCount.Add(1)

@@ -204,16 +204,29 @@ func TestThriftMetrics(t *testing.T) {
 				testutils.AssertClientAndServerCounters(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
 			})
 			t.Run("inbound histograms", func(t *testing.T) {
-				wantHistograms := []testutils.HistogramAssertion{
-					{Name: "caller_failure_latency_ms"},
-					{Name: "request_payload_size_bytes", Value: []int64{16}},
-					{Name: "response_payload_size_bytes", Value: []int64{16}},
-					{Name: "server_failure_latency_ms"},
-					{Name: "success_latency_ms", IgnoreValueCompare: true, ValueLength: 1},
-					{Name: "timeout_ttl_ms"},
-					{Name: "ttl_ms", Value: []int64{1000}},
+				wantHistograms := func(requestSize int64) []testutils.HistogramAssertion {
+					return []testutils.HistogramAssertion{
+						{Name: "caller_failure_latency_ms"},
+						{Name: "request_payload_size_bytes", Value: []int64{requestSize}},
+						{Name: "response_payload_size_bytes", Value: []int64{16}},
+						{Name: "server_failure_latency_ms"},
+						{Name: "success_latency_ms", IgnoreValueCompare: true, ValueLength: 1},
+						{Name: "timeout_ttl_ms"},
+						{Name: "ttl_ms", Value: []int64{1000}},
+					}
 				}
-				testutils.AssertClientAndServerHistograms(t, wantHistograms, clientMetricsRoot, serverMetricsRoot)
+
+				// HTTP/1.1 sends the NoWire body chunked, so the inbound records 0.
+				wantInboundRequestSize := int64(16)
+				if trans == http.TransportName {
+					wantInboundRequestSize = 0
+				}
+				t.Run("inbound", func(t *testing.T) {
+					testutils.AssertHistograms(t, wantHistograms(wantInboundRequestSize), serverMetricsRoot.Snapshot().Histograms)
+				})
+				t.Run("outbound", func(t *testing.T) {
+					testutils.AssertHistograms(t, wantHistograms(16), clientMetricsRoot.Snapshot().Histograms)
+				})
 			})
 		})
 	}
