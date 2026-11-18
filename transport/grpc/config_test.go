@@ -147,16 +147,18 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	tests := []test{
+		// Inbound cases use port 0 so the OS picks a free port. Fixed ports in
+		// the ephemeral range collide with other tests' listeners.
 		{
 			desc:        "simple inbound",
-			inboundCfg:  attrs{"address": ":54567", "tls": attrs{"mode": "enforced"}},
-			wantInbound: &wantInbound{Address: ":54567", TLSMode: yarpctls.Enforced},
+			inboundCfg:  attrs{"address": ":0", "tls": attrs{"mode": "enforced"}},
+			wantInbound: &wantInbound{TLSMode: yarpctls.Enforced},
 		},
 		{
 			desc:        "inbound interpolation",
 			inboundCfg:  attrs{"address": "${HOST:}:${PORT}"},
-			env:         map[string]string{"HOST": "127.0.0.1", "PORT": "54568"},
-			wantInbound: &wantInbound{Address: "127.0.0.1:54568"},
+			env:         map[string]string{"HOST": "127.0.0.1", "PORT": "0"},
+			wantInbound: &wantInbound{Address: "127.0.0.1:"},
 		},
 		{
 			desc:       "bad inbound address",
@@ -256,9 +258,8 @@ func TestTransportSpec(t *testing.T) {
 				"clientMaxSendMsgSize":    "8192",
 				"clientMaxHeaderListSize": "16384",
 			},
-			inboundCfg: attrs{"address": ":54571"},
+			inboundCfg: attrs{"address": ":0"},
 			wantInbound: &wantInbound{
-				Address:                 ":54571",
 				ServerMaxRecvMsgSize:    1024,
 				ServerMaxSendMsgSize:    2048,
 				ServerMaxHeaderListSize: 32768,
@@ -281,7 +282,7 @@ func TestTransportSpec(t *testing.T) {
 		{
 			desc: "TLS enabled on an inbound",
 			inboundCfg: attrs{
-				"address": "localhost:54569",
+				"address": "localhost:0",
 				"tls": attrs{
 					"enabled":  true,
 					"certFile": "testdata/cert",
@@ -289,14 +290,14 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 			wantInbound: &wantInbound{
-				Address: "127.0.0.1:54569",
+				Address: "127.0.0.1:",
 				TLS:     true,
 			},
 		},
 		{
 			desc: "TLS enabled on an inbound with invalid config",
 			inboundCfg: attrs{
-				"address": "localhost:54713",
+				"address": "localhost:0",
 				"tls": attrs{
 					"enabled": true,
 				},
@@ -1032,12 +1033,12 @@ func TestTransportSpec(t *testing.T) {
 					if wantOutbound.PoolMaxConnections > 0 {
 						gp, ok := peer.(*grpcPeer)
 						require.True(t, ok, "expected *grpcPeer, got %T", peer)
-						assert.Equal(t, wantOutbound.PoolMaxConnections, gp.startupPool.maxConnections)
+						assert.Equal(t, wantOutbound.PoolMaxConnections, gp.startupPool.MaxConnections)
 					}
 					if wantOutbound.PoolDynamicScaling != nil {
 						gp, ok := peer.(*grpcPeer)
 						require.True(t, ok, "expected *grpcPeer, got %T", peer)
-						assert.Equal(t, *wantOutbound.PoolDynamicScaling, gp.startupPool.dynamicScalingEnabled)
+						assert.Equal(t, *wantOutbound.PoolDynamicScaling, gp.startupPool.DynamicScalingEnabled)
 					}
 				}
 			}
@@ -1086,13 +1087,13 @@ func TestContextDialerOptionUsage(t *testing.T) {
 	require.True(t, ok, "expected a gRPC peer")
 
 	for {
-		state := grpcPeer.loadConns()[0].clientConn.GetState()
+		state := grpcPeer.pool.LoadConns()[0].Conn.GetState()
 		if state == connectivity.Ready {
 			break
 		}
-		grpcPeer.loadConns()[0].clientConn.WaitForStateChange(ctx, state)
+		grpcPeer.pool.LoadConns()[0].Conn.WaitForStateChange(ctx, state)
 	}
-	require.Equal(t, connectivity.Ready, grpcPeer.loadConns()[0].clientConn.GetState(), "expected gRPC connection in Ready state")
+	require.Equal(t, connectivity.Ready, grpcPeer.pool.LoadConns()[0].Conn.GetState(), "expected gRPC connection in Ready state")
 	require.Equal(t, 1, dialContextInvoked, "counter should increment by one from dialer invocation")
 }
 
@@ -1156,8 +1157,8 @@ func TestOutboundYAMLClientConnectionPoolMixed(t *testing.T) {
 	require.True(t, ok)
 	sharedGP, ok := sharedPeer.(*grpcPeer)
 	require.True(t, ok)
-	assert.Equal(t, 9, tunedGP.startupPool.maxConnections)
-	assert.Equal(t, 5, sharedGP.startupPool.maxConnections)
+	assert.Equal(t, 9, tunedGP.startupPool.MaxConnections)
+	assert.Equal(t, 5, sharedGP.startupPool.MaxConnections)
 
 	tunedDialer, ok := tunedSingle.Transport().(*Dialer)
 	require.True(t, ok)
@@ -1256,8 +1257,8 @@ func TestWithOutboundLiveConnectionPoolProvider_YAMLOutbounds(t *testing.T) {
 	require.True(t, ok)
 	sharedGP, ok := sharedPeer.(*grpcPeer)
 	require.True(t, ok)
-	assert.Equal(t, 11, tunedGP.livePoolCfg().maxConnections, "outbound provider replaces global")
-	assert.Equal(t, 7, sharedGP.livePoolCfg().maxConnections, "nil return keeps global")
+	assert.Equal(t, 11, tunedGP.livePoolCfg().MaxConnections, "outbound provider replaces global")
+	assert.Equal(t, 7, sharedGP.livePoolCfg().MaxConnections, "nil return keeps global")
 }
 
 func TestWithOutboundLiveConnectionPoolProvider_UsesOutboundKey(t *testing.T) {

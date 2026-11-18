@@ -26,6 +26,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -264,7 +265,7 @@ func TestTransport(t *testing.T) {
 
 			assert.Len(t, transport.peers, len(tt.expectedPeers))
 			for _, expectedPeerNode := range tt.expectedPeers {
-				p, ok := transport.peers[expectedPeerNode.id]
+				p, ok := transport.peers[peerKey{identifier: expectedPeerNode.id}]
 				assert.True(t, ok)
 
 				if assert.NotNil(t, p) {
@@ -305,6 +306,26 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 
 	assert.NotNil(t, transport.h1Transport)
 	assert.NotNil(t, transport.h2Transport)
+}
+
+// TestGetOrCreatePeerDoesNotDedupeSuffixedIdentifiers simulates what the
+// duplicate-peer-identifier support (layered on top of this transport)
+// produces: two distinct peer.Identifiers that resolve to the same real
+// address. getOrCreatePeer must not collapse them into one peer.
+func TestGetOrCreatePeerDoesNotDedupeSuffixedIdentifiers(t *testing.T) {
+	tr := NewTransport()
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	// getOrCreatePeer requires the write lock.
+	tr.lock.Lock()
+	p1, err := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#1"}, emptyDialOpts, nil)
+	require.NoError(t, err)
+	p2, err := tr.getOrCreatePeer(testIdentifier{"127.0.0.1:1234#2"}, emptyDialOpts, nil)
+	require.NoError(t, err)
+	tr.lock.Unlock()
+
+	require.NotSame(t, p1, p2, "duplicate identifiers must not collapse into one peer")
 }
 
 func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
@@ -359,6 +380,27 @@ func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
 		"each peer's dedicated http2.Transport should open its own connection instead of sharing one")
 }
 
+// scrapeGauge reads a gauge through root's Prometheus handler. Unlike
+// Root.Snapshot, which copies metric values non-atomically and so races with
+// pool goroutines that are still updating gauges (the scaling monitor samples
+// them every pass), the handler reads each value atomically, so it is safe to
+// call while a pool is live. It returns 0 when the gauge is not registered.
+func scrapeGauge(t *testing.T, root *metrics.Root, name string) int64 {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	root.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	require.Equal(t, http.StatusOK, rec.Code)
+	for _, line := range strings.Split(rec.Body.String(), "\n") {
+		if !strings.HasPrefix(line, name+"{") && !strings.HasPrefix(line, name+" ") {
+			continue
+		}
+		f, err := strconv.ParseFloat(line[strings.LastIndex(line, " ")+1:], 64)
+		require.NoError(t, err, "parsing %q", line)
+		return int64(f)
+	}
+	return 0
+}
+
 // TestH2PoolMetricsTrackDialAndTeardown is a regression test for the
 // leak-detection gap flagged in review on PR #2539 ("we are not emitting
 // any new metric with total live connections... worth doing it so we can
@@ -380,15 +422,7 @@ func TestH2PoolMetricsTrackDialAndTeardown(t *testing.T) {
 	addr := strings.TrimPrefix(server.URL, "http://")
 	p := newPeer(addr, tr)
 
-	activeConnGauge := func() int64 {
-		snap := root.Snapshot()
-		for _, g := range snap.Gauges {
-			if g.Name == "conn_pool_active_connections" {
-				return g.Value
-			}
-		}
-		return 0
-	}
+	activeConnGauge := func() int64 { return scrapeGauge(t, root, "conn_pool_active_connections") }
 
 	assert.EqualValues(t, 0, activeConnGauge(), "no connection dialed yet")
 
@@ -436,7 +470,7 @@ func TestTransportStopStopsPeerH2Pools(t *testing.T) {
 	// loop noticing Transport.once.Stopping, neither of which this test
 	// needs in order to exercise stopPeerH2Pools itself.
 	tr.lock.Lock()
-	tr.peers[addr] = p
+	tr.peers[peerKey{identifier: addr}] = p
 	tr.lock.Unlock()
 
 	require.NoError(t, tr.Stop())
@@ -567,6 +601,10 @@ func TestH2SenderConcurrentFirstDial(t *testing.T) {
 	for _, err := range errs {
 		assert.NoError(t, err)
 	}
+	// h2Sender returns once the client has dialed, but the server records the
+	// connection asynchronously, after accepting it.
+	require.Eventually(t, func() bool { return dials.Load() > 0 },
+		testtime.Second, testtime.Millisecond, "the server must see the dialed connection")
 	assert.EqualValues(t, 1, dials.Load(), "only one goroutine should dial the peer's first connection")
 }
 
@@ -694,6 +732,135 @@ func TestWatchH2ConnKeepsSaturatedConnection(t *testing.T) {
 	res := <-inFlight
 	require.NoError(t, res.err, "the in-flight request must complete")
 	require.NoError(t, res.resp.Body.Close())
+}
+
+// TestH2ActivePeersGauge pins two things about the h2ActivePeers gauge
+// (Transport.h2ActivePeers, incremented/decremented from peer.go's h2Sender
+// and Release):
+//
+//  1. It only reflects peers that actually hold a dedicated HTTP/2
+//     connection pool, not every httpPeer that exists -- newPeer alone (like
+//     RetainPeer alone) must not create a pool or move the gauge.
+//  2. It is registered exactly once per Transport and shared across
+//     multiple peers for the same address (as duplicate-peer identifiers or
+//     isolated Dialers produce), which go.uber.org/net/metrics would
+//     otherwise reject as a duplicate registration if it were created once
+//     per peer instead.
+func TestH2ActivePeersGauge(t *testing.T) {
+	server := newH2TestServer(nil)
+	defer server.Close()
+
+	root := metrics.New()
+	tr := NewTransport(Meter(root.Scope()), ServiceName("test-svc"))
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	activePeersGauge := func() int64 { return scrapeGauge(t, root, "http2_peer_dedicated_transports") }
+
+	addr := strings.TrimPrefix(server.URL, "http://")
+	p1 := newPeer(addr, tr)
+	p2 := newPeer(addr, tr)
+
+	assert.Zero(t, activePeersGauge(), "a bare httpPeer must not create an HTTP/2 pool")
+
+	_, err := p1.h2Sender()
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, activePeersGauge(), "dialing a peer's first connection should count it as active")
+
+	_, err = p2.h2Sender()
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, activePeersGauge(),
+		"a second, independent peer for the same address must add its own count, not error on re-registration")
+
+	pool1 := p1.loadH2Pool()
+	p1.Release()
+	pool1.Wait()
+	assert.EqualValues(t, 1, activePeersGauge(), "releasing a peer with a pool should decrement the gauge")
+
+	pool2 := p2.loadH2Pool()
+	p2.Release()
+	pool2.Wait()
+	assert.Zero(t, activePeersGauge())
+}
+
+// TestH2ActivePeersGaugeIgnoresFailedDial pins that a peer whose dial fails
+// (so its pool exists but holds no connection) is not counted by the
+// h2ActivePeers gauge, and that releasing it does not decrement the gauge.
+func TestH2ActivePeersGaugeIgnoresFailedDial(t *testing.T) {
+	// Reserve an address nothing listens on.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := ln.Addr().String()
+	require.NoError(t, ln.Close())
+
+	root := metrics.New()
+	tr := NewTransport(Meter(root.Scope()), ServiceName("test-svc"))
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	activePeersGauge := func() int64 { return scrapeGauge(t, root, "http2_peer_dedicated_transports") }
+
+	p := newPeer(addr, tr)
+	_, err = p.h2Sender()
+	require.Error(t, err, "dialing a closed port must fail")
+	require.NotNil(t, p.loadH2Pool(), "the pool exists even though it has no connection")
+	assert.Zero(t, activePeersGauge(), "a failed dial must not count the peer")
+
+	pool := p.loadH2Pool()
+	p.Release()
+	pool.Wait()
+	assert.Zero(t, activePeersGauge(), "releasing a never-connected peer must not decrement the gauge")
+}
+
+// TestCountH2ActivePeerAfterRelease covers the race where Release runs between
+// a peer's successful dial and its count: the count must be undone so the
+// gauge does not leak.
+func TestCountH2ActivePeerAfterRelease(t *testing.T) {
+	root := metrics.New()
+	tr := NewTransport(Meter(root.Scope()), ServiceName("test-svc"))
+	require.NoError(t, tr.Start())
+	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
+
+	p := newPeer("127.0.0.1:1", tr)
+	p.Release() // closes p.released; no pool, so nothing was counted.
+	p.countH2ActivePeer()
+
+	assert.False(t, p.h2Counted.Load(), "a released peer must not stay counted")
+	for _, g := range root.Snapshot().Gauges {
+		if g.Name == "http2_peer_dedicated_transports" {
+			assert.Zero(t, g.Value)
+		}
+	}
+}
+
+// TestNewH2ActivePeersGaugeRegistrationFailure covers newH2ActivePeersGauge's
+// error branch: go.uber.org/net/metrics rejects registering a second gauge
+// with the same name and constant tag values, so pre-registering
+// "http2_peer_dedicated_transports" forces NewTransport's call to fail. A
+// nil gauge from that failure must not make h2Sender/Release panic (Gauge's
+// Inc/Dec are nil-safe), just silently no-op the metric.
+func TestNewH2ActivePeersGaugeRegistrationFailure(t *testing.T) {
+	root := metrics.New()
+	scope := root.Scope()
+
+	_, err := scope.Gauge(metrics.Spec{
+		Name: "http2_peer_dedicated_transports",
+		Help: "pre-registered to force a collision",
+		ConstTags: metrics.Tags{
+			"component": "yarpc",
+			"service":   "test-svc",
+			"transport": "http",
+		},
+	})
+	require.NoError(t, err)
+
+	tr := NewTransport(Meter(scope), ServiceName("test-svc"))
+	require.Nil(t, tr.h2ActivePeers, "a registration failure should leave the gauge nil")
+
+	assert.NotPanics(t, func() {
+		tr.h2ActivePeers.Inc()
+		tr.h2ActivePeers.Dec()
+	})
 }
 
 func TestDialContext(t *testing.T) {

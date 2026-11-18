@@ -33,6 +33,12 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
+// _hardcodedPort is used by cases that must bind a specific port instead of an
+// OS-assigned one. It is deliberately outside the Linux ephemeral range
+// (32768-60999) so that it can't collide with ports the OS hands out to other
+// tests' listeners and outgoing connections.
+const _hardcodedPort = 24321
+
 func TestServiceRouting(t *testing.T) {
 	p := NewPortProvider(t)
 	tests := []struct {
@@ -253,14 +259,14 @@ func TestServiceRouting(t *testing.T) {
 			services: Lifecycles(
 				TChannelService(
 					Name("myservice"),
-					Port(54321),
+					Port(_hardcodedPort),
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
 			requests: ConcurrentAction(
 				RepeatAction(
 					TChannelRequest(
-						Port(54321),
+						Port(_hardcodedPort),
 						Body("test body"),
 						Service("myservice"),
 						Procedure("echo"),
@@ -276,14 +282,14 @@ func TestServiceRouting(t *testing.T) {
 			services: Lifecycles(
 				TChannelService(
 					Name("myservice"),
-					Port(54321),
+					Port(_hardcodedPort),
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
 			requests: ConcurrentAction(
 				RepeatAction(
 					TChannelRequest(
-						Port(54321),
+						Port(_hardcodedPort),
 						Body("test body"),
 						Service("myservice"),
 						Procedure("echo"),
