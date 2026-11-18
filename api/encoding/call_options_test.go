@@ -45,3 +45,17 @@ func TestManyCallOptionsReflectEquals(t *testing.T) {
 	require.False(t, reflect.DeepEqual(opts1, opts3))
 	require.False(t, reflect.DeepEqual(opts2, opts3))
 }
+
+func TestZeroCallOptionIsNoop(t *testing.T) {
+	require.Equal(t, callOptionTypeUnknown, CallOption{}.t)
+	require.Equal(t, OutboundCall{}, *NewOutboundCall(CallOption{}))
+}
+
+// A callOptionType without a case in apply would silently drop the option.
+func TestCallOptionApplyHandlesEveryType(t *testing.T) {
+	var resHeaders map[string]string
+	for typ := callOptionTypeUnknown + 1; typ < callOptionTypeLastValueGuard; typ++ {
+		opt := CallOption{t: typ, key: "k", value: "v", responseHeaders: &resHeaders}
+		require.NotEqual(t, OutboundCall{}, *NewOutboundCall(opt), "apply ignores callOptionType %d", typ)
+	}
+}
