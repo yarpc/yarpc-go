@@ -44,7 +44,7 @@ func benchGraphRequest() *transport.Request {
 
 // BenchmarkGraphBegin measures finding the edge of a hot call from many cores.
 func BenchmarkGraphBegin(b *testing.B) {
-	g := newGraph(metrics.New().Scope(), zap.NewNop(), nil, nil)
+	g := newGraph(metrics.New().Scope(), zap.NewNop(), nil, nil, nil)
 	req := benchGraphRequest()
 	ctx := context.Background()
 
@@ -60,7 +60,22 @@ func BenchmarkGraphBegin(b *testing.B) {
 // from finding the edge to recording its stats, on one hot edge from many
 // cores.
 func BenchmarkGraphCall(b *testing.B) {
-	g := newGraph(metrics.New().Scope(), zap.NewNop(), nil, nil)
+	benchGraphCall(b, nil)
+}
+
+// BenchmarkGraphCallDisabled is BenchmarkGraphCall with the ttl and payload
+// size histograms disabled.
+func BenchmarkGraphCallDisabled(b *testing.B) {
+	benchGraphCall(b, []string{
+		"ttl_ms",
+		"timeout_ttl_ms",
+		"request_payload_size_bytes",
+		"response_payload_size_bytes",
+	})
+}
+
+func benchGraphCall(b *testing.B, disabled []string) {
+	g := newGraph(metrics.New().Scope(), zap.NewNop(), nil, nil, disabled)
 	req := benchGraphRequest()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -82,7 +97,7 @@ func BenchmarkGraphCall(b *testing.B) {
 func BenchmarkGraphCallManyEdges(b *testing.B) {
 	const edges = 1024
 
-	g := newGraph(metrics.New().Scope(), zap.NewNop(), nil, nil)
+	g := newGraph(metrics.New().Scope(), zap.NewNop(), nil, nil, nil)
 	reqs := make([]*transport.Request, edges)
 	for i := range reqs {
 		reqs[i] = benchGraphRequest()
