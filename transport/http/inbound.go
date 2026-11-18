@@ -341,9 +341,17 @@ func (i *Inbound) start() error {
 		}
 	}
 
+	var skipSpanSetup bool
+	switch i.tracer.(type) {
+	case opentracing.NoopTracer, *opentracing.NoopTracer:
+		// The built-in no-op tracer discards span setup, so the handler skips it.
+		skipSpanSetup = true
+	}
+
 	var httpHandler http.Handler = handler{
 		router:                                   i.router,
 		tracer:                                   i.tracer,
+		skipSpanSetup:                            skipSpanSetup,
 		transport:                                i.transport,
 		grabHeaders:                              i.grabHeaders,
 		bothResponseError:                        i.bothResponseError,
