@@ -26,6 +26,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -379,6 +380,27 @@ func TestPeersGetIndependentHTTP2Transports(t *testing.T) {
 		"each peer's dedicated http2.Transport should open its own connection instead of sharing one")
 }
 
+// scrapeGauge reads a gauge through root's Prometheus handler. Unlike
+// Root.Snapshot, which copies metric values non-atomically and so races with
+// pool goroutines that are still updating gauges (the scaling monitor samples
+// them every pass), the handler reads each value atomically, so it is safe to
+// call while a pool is live. It returns 0 when the gauge is not registered.
+func scrapeGauge(t *testing.T, root *metrics.Root, name string) int64 {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	root.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	require.Equal(t, http.StatusOK, rec.Code)
+	for _, line := range strings.Split(rec.Body.String(), "\n") {
+		if !strings.HasPrefix(line, name+"{") && !strings.HasPrefix(line, name+" ") {
+			continue
+		}
+		f, err := strconv.ParseFloat(line[strings.LastIndex(line, " ")+1:], 64)
+		require.NoError(t, err, "parsing %q", line)
+		return int64(f)
+	}
+	return 0
+}
+
 // TestH2PoolMetricsTrackDialAndTeardown is a regression test for the
 // leak-detection gap flagged in review on PR #2539 ("we are not emitting
 // any new metric with total live connections... worth doing it so we can
@@ -400,15 +422,7 @@ func TestH2PoolMetricsTrackDialAndTeardown(t *testing.T) {
 	addr := strings.TrimPrefix(server.URL, "http://")
 	p := newPeer(addr, tr)
 
-	activeConnGauge := func() int64 {
-		snap := root.Snapshot()
-		for _, g := range snap.Gauges {
-			if g.Name == "conn_pool_active_connections" {
-				return g.Value
-			}
-		}
-		return 0
-	}
+	activeConnGauge := func() int64 { return scrapeGauge(t, root, "conn_pool_active_connections") }
 
 	assert.EqualValues(t, 0, activeConnGauge(), "no connection dialed yet")
 
@@ -741,15 +755,7 @@ func TestH2ActivePeersGauge(t *testing.T) {
 	require.NoError(t, tr.Start())
 	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
 
-	activePeersGauge := func() int64 {
-		snap := root.Snapshot()
-		for _, g := range snap.Gauges {
-			if g.Name == "http2_peer_dedicated_transports" {
-				return g.Value
-			}
-		}
-		return 0
-	}
+	activePeersGauge := func() int64 { return scrapeGauge(t, root, "http2_peer_dedicated_transports") }
 
 	addr := strings.TrimPrefix(server.URL, "http://")
 	p1 := newPeer(addr, tr)
@@ -792,14 +798,7 @@ func TestH2ActivePeersGaugeIgnoresFailedDial(t *testing.T) {
 	require.NoError(t, tr.Start())
 	t.Cleanup(func() { assert.NoError(t, tr.Stop()) })
 
-	activePeersGauge := func() int64 {
-		for _, g := range root.Snapshot().Gauges {
-			if g.Name == "http2_peer_dedicated_transports" {
-				return g.Value
-			}
-		}
-		return 0
-	}
+	activePeersGauge := func() int64 { return scrapeGauge(t, root, "http2_peer_dedicated_transports") }
 
 	p := newPeer(addr, tr)
 	_, err = p.h2Sender()
