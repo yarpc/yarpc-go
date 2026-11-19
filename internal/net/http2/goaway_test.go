@@ -213,8 +213,13 @@ func TestTrackedConnFrameRead(t *testing.T) {
 			t.Run(tt.desc, func(t *testing.T) {
 				tc := newTestConn(&stubConn{})
 				tc.frameRead(0, tt.frame)
-				assert.Equal(t, tt.acked, isClosed(tc.pingAcked))
+				assert.Equal(t, tt.acked, tc.ackRead)
+				assert.False(t, isClosed(tc.pingAcked), "must only signal the PING ACK on the next Read")
 				assert.Zero(t, tc.lastStreamID, "PING must not change the last stream ID")
+
+				_, _ = tc.Read(make([]byte, 8))
+				assert.Equal(t, tt.acked, isClosed(tc.pingAcked))
+				assert.False(t, tc.ackRead)
 			})
 		}
 	})
@@ -226,6 +231,9 @@ func TestTrackedConnFrameRead(t *testing.T) {
 		var s frameScanner
 		assert.NotPanics(t, func() {
 			s.scan(append(append([]byte(nil), ack...), ack...), tc.frameRead)
+			_, _ = tc.Read(make([]byte, 8))
+			s.scan(ack, tc.frameRead)
+			_, _ = tc.Read(make([]byte, 8))
 		})
 		assert.True(t, isClosed(tc.pingAcked))
 	})

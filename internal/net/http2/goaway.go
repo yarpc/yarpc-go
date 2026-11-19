@@ -124,7 +124,13 @@ func (s *frameScanner) atBoundary() bool {
 }
 
 // frameRead handles a fully read HTTP/2 frame.
-// It updates the last stream ID.
+// It updates the last stream ID, and notes the PING ACK, which the next Read
+// signals: the reader may read ahead, as a [bufio.Reader] does, so the HTTP/2
+// server may not have processed the frames read with the ACK yet. The reader
+// only reads again once it consumed them, and the HTTP/2 server reads a frame
+// only once it processed the previous one: by then, it has seen every stream
+// the client opened before the ACK. The HTTP/2 server of x/net/http2 before
+// Go 1.27 drops streams it has not seen once its own GOAWAY is queued.
 func (tc *TrackedConn) frameRead(_ int, frame []byte) {
 	switch xhttp2.FrameType(frame[3]) {
 	case xhttp2.FrameHeaders:
@@ -136,7 +142,7 @@ func (tc *TrackedConn) frameRead(_ int, frame []byte) {
 	case xhttp2.FramePing:
 		if xhttp2.Flags(frame[4]).Has(xhttp2.FlagPingAck) &&
 			len(frame) == frameHeaderLen+len(pingData) && [8]byte(frame[frameHeaderLen:]) == pingData {
-			tc.ackOnce.Do(func() { close(tc.pingAcked) })
+			tc.ackRead = true
 		}
 	}
 }

@@ -55,6 +55,7 @@ type TrackedConn struct {
 	sniffed   int  // bytes of the HTTP/2 client preface read so far
 	untracked bool // not HTTP/2 with prior knowledge, or not tracked
 	rscan     frameScanner
+	ackRead   bool // the PING ACK was read, but pingAcked is only closed on the next Read
 
 	lmu     sync.Mutex // serializes the end of tracking with Close; protects untrack
 	untrack func()
@@ -140,6 +141,11 @@ func (tc *TrackedConn) isClosed() bool {
 // Read implements the [net.Conn] interface for [TrackedConn].
 // It sniffs the HTTP/2 client preface to only track HTTP/2 connections, then frame headers.
 func (tc *TrackedConn) Read(b []byte) (n int, err error) {
+	if tc.ackRead {
+		// The reader consumed what it read with the PING ACK: see frameRead.
+		tc.ackRead = false
+		tc.ackOnce.Do(func() { close(tc.pingAcked) })
+	}
 	n, err = tc.conn.Read(b)
 	if tc.untracked {
 		return n, err
