@@ -225,6 +225,10 @@ func (p *Pool[T]) Start(initialConnCount int, startMonitor bool) error {
 // to block until teardown completes.
 func (p *Pool[T]) Stop() { p.cancel() }
 
+// Stopping reports whether Stop has been called, so a caller that would
+// otherwise replace a lost connection can tell eviction from teardown.
+func (p *Pool[T]) Stopping() bool { return p.ctx.Err() != nil }
+
 // Wait blocks until the pool has fully torn down (all connections closed,
 // background goroutines exited) after Stop.
 func (p *Pool[T]) Wait() { <-p.stoppedC }
