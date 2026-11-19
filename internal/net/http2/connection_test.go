@@ -944,6 +944,44 @@ func TestTrackedConnShutdown(t *testing.T) {
 	})
 }
 
+// TestTrackedConnPingAckRead checks that the PING ACK is only signalled once
+// the reader consumed what it read with it: a reader that reads ahead, as a
+// bufio.Reader does, may not have handed those frames to the HTTP/2 server.
+func TestTrackedConnPingAckRead(t *testing.T) {
+	server, client := net.Pipe()
+	tc := newTrackedConn(server, (&recordingHelper{}).TrackConnection).(*TrackedConn)
+	t.Cleanup(func() {
+		_ = client.Close()
+		_ = tc.Close()
+	})
+
+	// A stream opened right before the PING ACK, read with it at once.
+	sent := bytes.Join([][]byte{
+		[]byte(xhttp2.ClientPreface),
+		headersFrame(3),
+		rawFrame(xhttp2.FramePing, xhttp2.FlagPingAck, 0, pingData[:]),
+	}, nil)
+	go func() { _, _ = client.Write(sent) }()
+	b := make([]byte, 1024)
+	n, err := tc.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, len(sent), n, "must read the stream and the PING ACK at once")
+	assert.Equal(t, uint32(3), tc.lastStreamID)
+	assert.False(t, isClosed(tc.pingAcked), "must wait for the reader to consume what it read with the PING ACK")
+
+	read := make(chan error, 1)
+	go func() {
+		_, err := tc.Read(b) // the client sends nothing more
+		read <- err
+	}()
+	require.Eventually(t, func() bool { return isClosed(tc.pingAcked) }, time.Second, time.Millisecond,
+		"must signal the PING ACK on the next Read")
+	assert.Empty(t, read, "must signal the PING ACK before the next Read blocks")
+
+	require.NoError(t, client.Close())
+	assert.ErrorIs(t, <-read, io.EOF)
+}
+
 func TestTrackedConnServerPreface(t *testing.T) {
 	t.Run("GOAWAY frames wait for it", func(t *testing.T) {
 		tc, conn := newTrackedFakeConnNoPreface(t, &recordingHelper{}, headersFrame(1))
