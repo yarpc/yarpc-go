@@ -1011,6 +1011,96 @@ func TestInboundH2CShutdownWithLargePayloads(t *testing.T) {
 	})
 }
 
+// TestInboundH2CStopRefusesNewConnections stops an inbound whose h2c client
+// holds the first phase of the shutdown open: new connections must be
+// refused from the start of Stop, which must still succeed.
+func TestInboundH2CStopRefusesNewConnections(t *testing.T) {
+	inbound, h := startBlockingInbound(t)
+	addr := inbound.Addr().String()
+	c := dialManualPingH2C(t, addr)
+	c.openStream(t, 1, h2cRequestHeaders("block"), []byte("payload"))
+	h.awaitEntered(t)
+
+	stopErr := make(chan error, 1)
+	go func() { stopErr <- inbound.Stop() }()
+
+	assert.Equal(t, uint32(math.MaxInt32), c.nextGoAway(t),
+		"first GOAWAY must reserve the whole stream ID space")
+	ping := c.nextPing(t)
+	_, err := net.Dial("tcp", addr)
+	assert.Error(t, err, "must refuse new connections once Stop began")
+
+	c.ackPing(t, ping)
+	assert.Equal(t, uint32(1), c.nextGoAway(t), "second GOAWAY must carry the last processed stream")
+	h.releaseAll()
+	assert.Equal(t, map[uint32]string{1: "payload"}, c.responses(t, 1), "in-flight stream 1 must complete")
+	require.NoError(t, c.conn.Close())
+
+	select {
+	case err := <-stopErr:
+		require.NoError(t, err, "Stop must succeed once connections have drained")
+	case <-time.After(5 * testtime.Second):
+		require.FailNow(t, "Stop did not return after the connection drained")
+	}
+}
+
+// TestInboundH2CShutdownWaitsForLatePreface stops an inbound with two h2c
+// connections: A holds the first phase open, while B, accepted before Stop,
+// only sends its preface then, and never acknowledges the PING sent with its
+// first GOAWAY. B must still get both GOAWAY frames, and the second only once
+// its own PING ACK timeout has passed, not as soon as A acknowledges.
+func TestInboundH2CShutdownWaitsForLatePreface(t *testing.T) {
+	// How long the HTTP/2 shutdown helper waits for the PING ACK.
+	const pingAckTimeout = time.Second
+
+	var conns serverConns
+	inbound, h := startBlockingInbound(t, conns.record())
+	addr := inbound.Addr().String()
+	a := dialManualPingH2C(t, addr)
+	a.openStream(t, 1, h2cRequestHeaders("block"), []byte("payload-a"))
+	h.awaitEntered(t)
+	b := dialManualPingH2CNoPreface(t, addr)
+	require.Eventually(t, func() bool {
+		conns.mu.Lock()
+		defer conns.mu.Unlock()
+		return len(conns.conns) == 2
+	}, 5*testtime.Second, time.Millisecond, "the inbound must accept both connections")
+
+	stopErr := make(chan error, 1)
+	go func() { stopErr <- inbound.Stop() }()
+
+	assert.Equal(t, uint32(math.MaxInt32), a.nextGoAway(t),
+		"first GOAWAY must reserve the whole stream ID space")
+	pingA := a.nextPing(t)
+
+	start := time.Now()
+	b.writePreface(t)
+	b.openStream(t, 1, h2cRequestHeaders("block"), []byte("payload-b"))
+	h.awaitEntered(t)
+	assert.Equal(t, uint32(math.MaxInt32), b.nextGoAway(t),
+		"first GOAWAY must reach the connection that sent its preface during the shutdown")
+	b.nextPing(t) // held back: never acknowledged
+
+	a.ackPing(t, pingA)
+	assert.Equal(t, uint32(1), a.nextGoAway(t), "second GOAWAY must carry the last processed stream")
+	assert.Equal(t, uint32(1), b.nextGoAway(t), "second GOAWAY must carry the last processed stream")
+	assert.GreaterOrEqual(t, time.Since(start), pingAckTimeout,
+		"second GOAWAY must wait for the connection's own PING ACK until it times out")
+
+	h.releaseAll()
+	assert.Equal(t, map[uint32]string{1: "payload-a"}, a.responses(t, 1), "in-flight stream must complete")
+	assert.Equal(t, map[uint32]string{1: "payload-b"}, b.responses(t, 1), "in-flight stream must complete")
+	require.NoError(t, a.conn.Close())
+	require.NoError(t, b.conn.Close())
+
+	select {
+	case err := <-stopErr:
+		require.NoError(t, err, "Stop must succeed once connections have drained")
+	case <-time.After(5 * testtime.Second):
+		require.FailNow(t, "Stop did not return after the connections drained")
+	}
+}
+
 // manualPingH2CConn is a frame-level h2c client that, unlike
 // http2test.RawH2CConn, leaves the server's PING frames for the test to
 // acknowledge, or not. It reads and writes on the test goroutine.
@@ -1023,6 +1113,14 @@ type manualPingH2CConn struct {
 }
 
 func dialManualPingH2C(t *testing.T, addr string) *manualPingH2CConn {
+	c := dialManualPingH2CNoPreface(t, addr)
+	c.writePreface(t)
+	return c
+}
+
+// dialManualPingH2CNoPreface dials addr, leaving the client preface for the
+// test to write.
+func dialManualPingH2CNoPreface(t *testing.T, addr string) *manualPingH2CConn {
 	conn, err := net.Dial("tcp", addr)
 	require.NoError(t, err, "failed to dial %v", addr)
 	t.Cleanup(func() { _ = conn.Close() })
@@ -1031,10 +1129,14 @@ func dialManualPingH2C(t *testing.T, addr string) *manualPingH2CConn {
 	c := &manualPingH2CConn{addr: addr, conn: conn, framer: http2.NewFramer(conn, conn)}
 	c.enc = hpack.NewEncoder(&c.encBuf)
 	c.framer.ReadMetaHeaders = hpack.NewDecoder(4096, nil)
-	_, err = io.WriteString(conn, http2.ClientPreface)
+	return c
+}
+
+// writePreface writes the client connection preface, and its SETTINGS.
+func (c *manualPingH2CConn) writePreface(t *testing.T) {
+	_, err := io.WriteString(c.conn, http2.ClientPreface)
 	require.NoError(t, err, "failed to write client preface")
 	require.NoError(t, c.framer.WriteSettings(), "failed to write client SETTINGS")
-	return c
 }
 
 // openStream writes a POST request on a new stream, ending it with body.
