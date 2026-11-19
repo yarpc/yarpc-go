@@ -22,7 +22,11 @@
 // This source file contains the implementation of a [net.Listener] wrapper.
 package http2
 
-import "net"
+import (
+	"net"
+	"sync"
+	"sync/atomic"
+)
 
 // WrapListener wraps a [net.Listener] to support two-phase graceful shutdown
 // with two HTTP/2 GOAWAY frames.
@@ -34,7 +38,17 @@ func WrapListener(l net.Listener, h ShutdownHelper) net.Listener {
 	if _, ok := h.(*noopHelper); ok {
 		return l
 	}
-	return newTrackingListener(l, h)
+	tl := newTrackingListener(l, h)
+	if lt, ok := h.(listenerTracker); ok {
+		lt.trackListener(tl)
+	}
+	return tl
+}
+
+// listenerTracker is a [ShutdownHelper] that stops accepting new connections
+// on the listeners wrapped with it, once it begins shutting down.
+type listenerTracker interface {
+	trackListener(tl *TrackingListener)
 }
 
 var _ net.Listener = (*TrackingListener)(nil)
@@ -44,11 +58,17 @@ var _ net.Listener = (*TrackingListener)(nil)
 type TrackingListener struct {
 	listener net.Listener
 	helper   ShutdownHelper
+
+	stopped    atomic.Bool   // listener closed by stopAccepting
+	closeOnce  sync.Once     // closes listener
+	closeErr   error         // what closing listener returned
+	closed     chan struct{} // closed by Close
+	closedOnce sync.Once     // closes closed
 }
 
 // newTrackingListener is the constructor for [TrackingListener].
-func newTrackingListener(l net.Listener, h ShutdownHelper) net.Listener {
-	return &TrackingListener{listener: l, helper: h}
+func newTrackingListener(l net.Listener, h ShutdownHelper) *TrackingListener {
+	return &TrackingListener{listener: l, helper: h, closed: make(chan struct{})}
 }
 
 // getTrackerFunc returns a ConnectionTrackerFunc that tracks connections using
@@ -66,9 +86,14 @@ func (tl *TrackingListener) getTrackerFunc() ConnectionTrackerFunc {
 }
 
 // Accept implements the [net.Listener] interface for [TrackingListener].
+// Once stopAccepting closed the listener, it only returns when Close is
+// invoked.
 func (tl *TrackingListener) Accept() (net.Conn, error) {
 	conn, err := tl.listener.Accept()
 	if err != nil {
+		if tl.stopped.Load() {
+			<-tl.closed
+		}
 		return nil, err
 	}
 	tc := newTrackedConn(conn, tl.getTrackerFunc())
@@ -76,8 +101,24 @@ func (tl *TrackingListener) Accept() (net.Conn, error) {
 }
 
 // Close implements the [net.Listener] interface for [TrackingListener].
+// It returns what closing the listener did, even if stopAccepting did it.
 func (tl *TrackingListener) Close() error {
-	return tl.listener.Close()
+	tl.closedOnce.Do(func() { close(tl.closed) })
+	return tl.closeListener()
+}
+
+// stopAccepting closes the listener, so that new connections are refused,
+// but leaves Accept blocking until Close is invoked: [net/http.Server.Serve]
+// fails with the error Accept returns, unless its Shutdown began.
+func (tl *TrackingListener) stopAccepting() {
+	tl.stopped.Store(true)
+	_ = tl.closeListener()
+}
+
+// closeListener closes the listener once, and returns what that did.
+func (tl *TrackingListener) closeListener() error {
+	tl.closeOnce.Do(func() { tl.closeErr = tl.listener.Close() })
+	return tl.closeErr
 }
 
 // Addr implements the [net.Listener] interface for [TrackingListener].

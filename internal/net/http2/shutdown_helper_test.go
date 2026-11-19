@@ -161,6 +161,8 @@ func TestGracefulShutdownHelperBeginShutdown(t *testing.T) {
 	for _, begin := range []string{"BeginShutdown", "ShutdownCallback"} {
 		t.Run(begin, func(t *testing.T) {
 			h := newGracefulShutdownHelper()
+			listener := &stubListener{}
+			WrapListener(listener, h)
 			a, _ := newHelperConn(t, h)
 			b, _ := newHelperConn(t, h)
 			closed := newTestConn(&stubConn{}) // closed before BeginShutdown, but not untracked yet
@@ -173,9 +175,14 @@ func TestGracefulShutdownHelperBeginShutdown(t *testing.T) {
 				h.ShutdownCallback()
 			}
 			assert.Equal(t, shutdownStarted, h.shutdownState())
+			assert.True(t, listener.closed, "must stop accepting new connections")
 			assert.True(t, a.shuttingDown.Load(), "must shut down every connection")
 			assert.True(t, b.shuttingDown.Load(), "must shut down every connection")
 			assert.False(t, closed.shuttingDown.Load(), "must not shut down an untracked connection")
+
+			late := &stubListener{}
+			WrapListener(late, h)
+			assert.True(t, late.closed, "must not accept new connections on a listener wrapped once shutting down")
 
 			// Later calls, such as net/http's to ShutdownCallback, are no-ops.
 			h.BeginShutdown()
@@ -227,6 +234,26 @@ func TestGracefulShutdownHelperIsShutdownReady(t *testing.T) {
 		late, _ := newHelperConn(t, h) // sent its preface once ready
 		assert.True(t, late.shuttingDown.Load(), "must shut down a connection tracked once ready")
 		assert.True(t, h.IsShutdownReady(context.Background()), "must not wait for a connection tracked once ready")
+	})
+
+	t.Run("connection tracked while waiting", func(t *testing.T) {
+		h := newGracefulShutdownHelper()
+		acked, _ := newHelperConn(t, h)
+		h.BeginShutdown()
+
+		result := make(chan bool, 1)
+		go func() { result <- h.IsShutdownReady(context.Background()) }()
+		assert.Never(t, func() bool { return len(result) > 0 }, 50*time.Millisecond, time.Millisecond,
+			"must wait for the PING ACK")
+
+		late, _ := newHelperConn(t, h) // accepted before BeginShutdown, sent its preface since
+		close(acked.pingAcked)
+		assert.Never(t, func() bool { return len(result) > 0 }, 50*time.Millisecond, time.Millisecond,
+			"must wait for a connection tracked while waiting")
+
+		close(late.pingAcked)
+		assert.True(t, <-result)
+		assert.Equal(t, shutdownReady, h.shutdownState())
 	})
 
 	t.Run("timeout", func(t *testing.T) {
@@ -298,14 +325,16 @@ func TestGracefulShutdownHelperIsShutdownComplete(t *testing.T) {
 }
 
 // startHTTP2Server serves HTTP/2 with prior knowledge through a listener
-// wrapped for h. Its handler waits until release is closed.
-func startHTTP2Server(t *testing.T, h ShutdownHelper) (addr string, release chan struct{}) {
+// wrapped for h, and returns its address, a channel to close for handlers to
+// respond, and one that receives every connection accepted.
+func startHTTP2Server(t *testing.T, h ShutdownHelper) (addr string, release chan struct{}, accepted chan net.Conn) {
 	inner, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	l := WrapListener(inner, h)
 	t.Cleanup(func() { _ = l.Close() })
 
 	release = make(chan struct{})
+	accepted = make(chan net.Conn, 1)
 	opts := &xhttp2.ServeConnOpts{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-release
 		_, _ = io.WriteString(w, "ok")
@@ -317,10 +346,23 @@ func startHTTP2Server(t *testing.T, h ShutdownHelper) (addr string, release chan
 			if err != nil {
 				return
 			}
+			select {
+			case accepted <- conn:
+			default:
+			}
 			go srv.ServeConn(conn, opts)
 		}
 	}()
-	return l.Addr().String(), release
+	return l.Addr().String(), release, accepted
+}
+
+// awaitAccepted waits for the server to accept a connection.
+func awaitAccepted(t *testing.T, accepted chan net.Conn) {
+	select {
+	case <-accepted:
+	case <-time.After(5 * time.Second):
+		require.FailNow(t, "the server did not accept the connection")
+	}
 }
 
 // h2Client is a raw HTTP/2 client with prior knowledge.
@@ -331,13 +373,22 @@ type h2Client struct {
 }
 
 func dialHTTP2(t *testing.T, addr string) *h2Client {
+	return startHTTP2Client(t, dialTCP(t, addr))
+}
+
+func dialTCP(t *testing.T, addr string) net.Conn {
 	conn, err := net.Dial("tcp", addr)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = conn.Close() })
+	return conn
+}
+
+// startHTTP2Client writes the client preface on conn, and reads the server's.
+func startHTTP2Client(t *testing.T, conn net.Conn) *h2Client {
 	require.NoError(t, conn.SetDeadline(time.Now().Add(5*time.Second)))
 
 	c := &h2Client{t: t, conn: conn, fr: xhttp2.NewFramer(conn, conn)}
-	_, err = io.WriteString(conn, xhttp2.ClientPreface)
+	_, err := io.WriteString(conn, xhttp2.ClientPreface)
 	require.NoError(t, err)
 	require.NoError(t, c.fr.WriteSettings())
 
@@ -434,7 +485,7 @@ func (w *bytesWriter) Write(p []byte) (int, error) {
 func TestGracefulShutdownHelperWithHTTP2Server(t *testing.T) {
 	t.Run("streams in flight", func(t *testing.T) {
 		h := NewShutdownHelper()
-		addr, release := startHTTP2Server(t, h)
+		addr, release, _ := startHTTP2Server(t, h)
 		c := dialHTTP2(t, addr)
 		c.get(1)
 		require.Eventually(t, func() bool {
@@ -453,12 +504,16 @@ func TestGracefulShutdownHelperWithHTTP2Server(t *testing.T) {
 		assert.True(t, h.IsShutdownComplete(ctx), "must complete once the client closed")
 	})
 
-	t.Run("connection opened during shutdown", func(t *testing.T) {
+	t.Run("preface sent during shutdown", func(t *testing.T) {
 		h := NewShutdownHelper()
-		addr, _ := startHTTP2Server(t, h)
+		addr, _, accepted := startHTTP2Server(t, h)
+		conn := dialTCP(t, addr)
+		awaitAccepted(t, accepted)
 		h.BeginShutdown()
+		_, err := net.Dial("tcp", addr)
+		assert.Error(t, err, "must refuse new connections")
 
-		c := dialHTTP2(t, addr) // checks the server SETTINGS come first
+		c := startHTTP2Client(t, conn) // checks the server SETTINGS come first
 		c.shutdownSequence(0, 0)
 		require.NoError(t, c.conn.Close())
 
@@ -467,15 +522,14 @@ func TestGracefulShutdownHelperWithHTTP2Server(t *testing.T) {
 		assert.True(t, h.IsShutdownComplete(ctx), "must complete once the client closed")
 	})
 
-	t.Run("connection opened once waiting", func(t *testing.T) {
+	t.Run("preface sent once waiting", func(t *testing.T) {
 		h := NewShutdownHelper()
-		addr, _ := startHTTP2Server(t, h)
+		addr, _, accepted := startHTTP2Server(t, h)
+		conn := dialTCP(t, addr)
+		awaitAccepted(t, accepted)
 		h.BeginShutdown()
 		require.True(t, h.IsShutdownComplete(context.Background()))
 
-		conn, err := net.Dial("tcp", addr)
-		require.NoError(t, err)
-		defer conn.Close()
 		require.NoError(t, conn.SetDeadline(time.Now().Add(5*time.Second)))
 		c := &h2Client{t: t, conn: conn, fr: xhttp2.NewFramer(conn, conn)}
 		_, _ = io.WriteString(conn, xhttp2.ClientPreface)
@@ -494,7 +548,7 @@ func TestGracefulShutdownHelperWithHTTP2Server(t *testing.T) {
 
 	t.Run("client never closes", func(t *testing.T) {
 		h := NewShutdownHelper()
-		addr, _ := startHTTP2Server(t, h)
+		addr, _, _ := startHTTP2Server(t, h)
 		c := dialHTTP2(t, addr)
 		require.Eventually(t, func() bool {
 			return len(h.(*gracefulShutdownHelper).trackedConns()) == 1
