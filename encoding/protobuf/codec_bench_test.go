@@ -62,6 +62,18 @@ func BenchmarkGRPCCodec_RoundTrip(b *testing.B) {
 				Value: strings.Repeat("x", 1024*1024), // ~1MB
 			},
 		},
+		{
+			name: "XLarge_2MB",
+			message: &testpb.TestMessage{
+				Value: strings.Repeat("x", 2*1024*1024), // ~2MB
+			},
+		},
+		{
+			name: "3XLarge_8MB",
+			message: &testpb.TestMessage{
+				Value: strings.Repeat("x", 8*1024*1024), // ~8MB
+			},
+		},
 	}
 
 	for _, sc := range scenarios {
