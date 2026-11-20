@@ -134,3 +134,30 @@ func TestUnmarshalBytesDoesNotAliasBuffer(t *testing.T) {
 	assert.Equal(t, payload, got.Value,
 		"decoded message must not alias the buffer passed to unmarshalBytes")
 }
+
+// TestPutBufferCap verifies that putBuffer pools buffers only up to
+// _maxPooledBufferCap. sync.Pool may drop a Put, so each case retries.
+func TestPutBufferCap(t *testing.T) {
+	t.Run("at cap is pooled", func(t *testing.T) {
+		b := make([]byte, 0, _maxPooledBufferCap)
+		buf := &b
+		pooled := false
+		for range 100 {
+			putBuffer(buf)
+			if getBuffer() == buf {
+				pooled = true
+				break
+			}
+		}
+		assert.True(t, pooled, "buffer at _maxPooledBufferCap must be pooled")
+	})
+
+	t.Run("over cap is dropped", func(t *testing.T) {
+		b := make([]byte, 0, _maxPooledBufferCap+1)
+		buf := &b
+		for range 100 {
+			putBuffer(buf)
+			require.NotSame(t, buf, getBuffer(), "buffer over _maxPooledBufferCap must not be pooled")
+		}
+	})
+}

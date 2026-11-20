@@ -31,6 +31,13 @@ import (
 	"go.uber.org/yarpc/internal/bufferpool"
 )
 
+// _maxPooledBufferCap is the largest buffer capacity returned to _bufferPool.
+// Larger buffers are left for the GC, so a large message does not keep a large
+// buffer alive in the pool (see https://github.com/golang/go/issues/23199).
+// 1 MiB is well above typical message sizes, so most buffers are still reused,
+// while no pooled buffer holds more than 1 MiB.
+const _maxPooledBufferCap = 1 << 20
+
 var (
 	_bufferPool = sync.Pool{
 		New: func() interface{} {
@@ -122,5 +129,8 @@ func getBuffer() *proto.Buffer {
 }
 
 func putBuffer(buf *proto.Buffer) {
+	if cap(buf.Bytes()) > _maxPooledBufferCap {
+		return
+	}
 	_bufferPool.Put(buf)
 }
