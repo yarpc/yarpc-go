@@ -378,6 +378,10 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 		return nil, err
 	}
 
+	// Every path below closes the body, here or in the caller, and the caller
+	// may stop reading before the response ends. See drainingBody.
+	response.Body = &drainingBody{ReadCloser: response.Body}
+
 	span.SetTag("http.status_code", response.StatusCode)
 
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
