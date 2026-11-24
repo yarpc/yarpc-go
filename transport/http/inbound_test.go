@@ -869,6 +869,57 @@ func TestInboundH2CShutdownWithPingAckHeldBack(t *testing.T) {
 	}
 }
 
+// TestInboundH2CStopTimesOutWithPingAckHeldBack stops an inbound whose
+// ShutdownTimeout is shorter than the PING ACK timeout, and whose h2c client
+// never acknowledges the PING sent with the first GOAWAY: Stop must wait for
+// the PING ACK until ShutdownTimeout, but not past it, then close the
+// connection and report that it timed out.
+func TestInboundH2CStopTimesOutWithPingAckHeldBack(t *testing.T) {
+	// How long the HTTP/2 shutdown helper waits for the PING ACK.
+	const pingAckTimeout = time.Second
+	// Not dilated into test time, like the PING ACK timeout, so that it ends
+	// first.
+	timeout := pingAckTimeout / 4
+
+	inbound, h := startBlockingInbound(t, ShutdownTimeout(timeout))
+	c := dialManualPingH2C(t, inbound.Addr().String())
+	c.ping(t) // for the server's SETTINGS, before Stop
+	c.openStream(t, 1, h2cRequestHeaders("block"), []byte("payload"))
+	h.awaitEntered(t)
+
+	start := time.Now()
+	stopErr := make(chan error, 1)
+	go func() { stopErr <- inbound.Stop() }()
+
+	assert.Equal(t, uint32(math.MaxInt32), c.nextGoAway(t),
+		"first GOAWAY must reserve the whole stream ID space")
+	c.nextPing(t) // held back: never acknowledged
+
+	// The second GOAWAY may not precede the close: the HTTP/2 server of
+	// x/net/http2 before Go 1.27 writes its own in its place as Stop closes
+	// the connection, which does not wait on a write in progress.
+	for {
+		f, err := c.framer.ReadFrame()
+		if err != nil {
+			assert.ErrorIs(t, err, io.EOF, "Stop must close the connection once ShutdownTimeout ends")
+			break
+		}
+		goAway, ok := f.(*http2.GoAwayFrame)
+		require.True(t, ok, "want the second GOAWAY or the connection closed, got %v", f)
+		assert.Equal(t, uint32(1), goAway.LastStreamID, "second GOAWAY must carry the last processed stream")
+	}
+	elapsed := time.Since(start)
+	assert.GreaterOrEqual(t, elapsed, timeout, "Stop must wait for the PING ACK until ShutdownTimeout")
+	assert.Less(t, elapsed, pingAckTimeout, "Stop must not wait for the PING ACK past ShutdownTimeout")
+
+	select {
+	case err := <-stopErr:
+		assert.ErrorIs(t, err, context.DeadlineExceeded, "Stop must report that the shutdown timed out")
+	case <-time.After(5 * testtime.Second):
+		require.FailNow(t, "Stop hung past ShutdownTimeout")
+	}
+}
+
 // TestInboundH2CShutdownServesStreamOpenedBeforePingAck stops an inbound
 // whose h2c client opens a stream after the first GOAWAY, but before it
 // acknowledges the PING sent with it: the client may have sent the stream
@@ -1267,6 +1318,31 @@ func (c *manualPingH2CConn) responses(t *testing.T, streamIDs ...uint32) map[uin
 		}
 	}
 	return bodies
+}
+
+// TestInboundDisableHTTP2ShutdownHelper checks which inbounds shut down with
+// the HTTP/2 shutdown helper: those serving HTTP/2, unless they opt out.
+func TestInboundDisableHTTP2ShutdownHelper(t *testing.T) {
+	tests := []struct {
+		name       string
+		opts       []InboundOption
+		wantHelper bool
+	}{
+		{name: "default", wantHelper: true},
+		{name: "enabled", opts: []InboundOption{DisableHTTP2ShutdownHelper(false)}, wantHelper: true},
+		{name: "disabled", opts: []InboundOption{DisableHTTP2ShutdownHelper(true)}},
+		{
+			name: "enabled without HTTP2",
+			opts: []InboundOption{DisableHTTP2(true), DisableHTTP2ShutdownHelper(false)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inbound, _ := startBlockingInbound(t, tt.opts...)
+			assert.Equal(t, tt.wantHelper, inbound.shutdownHelper != nil, "unexpected shutdown helper")
+			assert.NoError(t, inbound.Stop())
+		})
+	}
 }
 
 // TestInboundStopWithoutConnections guards against Stop blocking on HTTP/2
