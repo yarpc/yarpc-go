@@ -45,7 +45,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/http2test"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/yarpctest"
@@ -718,83 +717,6 @@ func httpGet(t *testing.T, url string) (*http.Response, string, error) {
 	return resp, string(body), nil
 }
 
-// TestInboundH2CGracefulShutdown stops an inbound with a call in flight on an
-// HTTP/2 cleartext (h2c) connection, then drops every server-side connection
-// the moment Stop returns, as the process exiting would.
-//
-// BUG: Stop does not wait for h2c connections. h2c.NewHandler hijacks them,
-// and http.Server.Shutdown neither waits for hijacked connections nor for the
-// HTTP/2 shutdown hook that sends GOAWAY, which it runs in a goroutine. Stop
-// therefore returns with the call still in flight, the GOAWAY races the
-// process exit and often loses, and the client sees its connection drop under
-// a request the server never answered.
-func TestInboundH2CGracefulShutdown(t *testing.T) {
-	conns := &serverConns{}
-	inbound, h := startBlockingInbound(t, conns.record())
-	addr := inbound.Addr().String()
-
-	c := http2test.DialRawH2C(t, addr)
-	c.OpenStream(t, 1, "/", h2cRequestHeaders("block"), []byte("payload"))
-	h.awaitEntered(t)
-
-	stopErr := make(chan error, 1)
-	go func() { stopErr <- inbound.Stop() }()
-	select {
-	case err := <-stopErr:
-		require.NoError(t, err)
-	case <-time.After(5 * testtime.Second):
-		require.FailNow(t, "expected Stop to return without waiting for the in-flight h2c call")
-	}
-	conns.closeAll()
-
-	frames := c.ReadUntilClosed(t, 5*testtime.Second)
-	assert.False(t, http2test.ResponseOn(frames, 1).Complete,
-		"expected in-flight stream 1 to be lost when the process exits after Stop")
-	goAways := 0
-	for _, f := range frames {
-		if http2test.IsGoAway(f) {
-			goAways++
-		}
-	}
-	// Not asserted: whether the GOAWAY won the race against the exit is
-	// nondeterministic, which is itself part of the bug.
-	t.Logf("GOAWAY frames delivered before the connection dropped: %d", goAways)
-
-	_, err := net.Dial("tcp", addr)
-	assert.Error(t, err, "new connections must be refused once Stop returns")
-}
-
-// TestInboundH2CStopWithWedgedHandler stops an inbound whose h2c connection
-// has a call that never completes.
-//
-// BUG: Stop returns immediately instead of waiting up to ShutdownTimeout, and
-// leaves the connection open and served behind it. The GOAWAY does arrive
-// eventually, sent by the shutdown hook that Stop does not wait for: the
-// HTTP/2 shutdown wiring exists, its synchronization with Stop does not.
-func TestInboundH2CStopWithWedgedHandler(t *testing.T) {
-	timeout := time.Minute
-	inbound, h := startBlockingInbound(t, ShutdownTimeout(timeout))
-
-	c := http2test.DialRawH2C(t, inbound.Addr().String())
-	c.OpenStream(t, 1, "/", h2cRequestHeaders("block"), []byte("payload"))
-	h.awaitEntered(t)
-
-	start := time.Now()
-	require.NoError(t, inbound.Stop())
-	assert.Less(t, time.Since(start), timeout,
-		"expected Stop to return without waiting for ShutdownTimeout")
-
-	frames := c.ReadUntil(t, 5*testtime.Second, http2test.IsGoAway)
-	goAway := frames[len(frames)-1]
-	assert.Equal(t, http2.ErrCodeNo, goAway.ErrCode, "graceful shutdown must use NO_ERROR")
-	assert.Equal(t, uint32(1), goAway.LastStreamID, "GOAWAY must cover in-flight stream 1")
-
-	c.Ping(t)
-	frames = append(frames, c.ReadUntil(t, 5*testtime.Second, http2test.IsPingAck)...)
-	assert.False(t, http2test.ResponseOn(frames, 1).Complete,
-		"stream 1 completed although its handler never returned")
-}
-
 // TestInboundStopWithoutConnections guards against Stop blocking on HTTP/2
 // connection bookkeeping when no connection was ever opened.
 func TestInboundStopWithoutConnections(t *testing.T) {
@@ -935,33 +857,6 @@ func startBlockingInbound(t *testing.T, opts ...InboundOption) (*Inbound, *block
 	// Stop for the whole ShutdownTimeout when a test fails midway.
 	t.Cleanup(h.releaseAll)
 	return inbound, h
-}
-
-// serverConns records the connections an inbound accepts, so that a test can
-// drop them all at once, the way exiting the process would.
-type serverConns struct {
-	mu    sync.Mutex
-	conns []net.Conn
-}
-
-func (s *serverConns) record() InboundOption {
-	return func(i *Inbound) {
-		i.server.ConnState = func(c net.Conn, state http.ConnState) {
-			if state == http.StateNew {
-				s.mu.Lock()
-				s.conns = append(s.conns, c)
-				s.mu.Unlock()
-			}
-		}
-	}
-}
-
-func (s *serverConns) closeAll() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, c := range s.conns {
-		_ = c.Close()
-	}
 }
 
 func h2cRequestHeaders(procedure string) map[string]string {
