@@ -28,6 +28,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -105,7 +106,15 @@ func TestWrapListener(t *testing.T) {
 	})
 
 	t.Run("noop helper", func(t *testing.T) {
-		assert.Same(t, l, WrapListener(l, NewShutdownHelper()), "must not wrap for a no-op helper")
+		assert.Same(t, l, WrapListener(l, NewNoopShutdownHelper()), "must not wrap for a no-op helper")
+	})
+
+	t.Run("graceful shutdown helper", func(t *testing.T) {
+		h := newGracefulShutdownHelper()
+		got := WrapListener(l, h)
+		require.IsType(t, &TrackingListener{}, got)
+		assert.Equal(t, []*TrackingListener{got.(*TrackingListener)}, h.listeners,
+			"must stop accepting on shutdown")
 	})
 
 	t.Run("helper", func(t *testing.T) {
@@ -185,6 +194,28 @@ func TestTrackingListenerCloseAndAddr(t *testing.T) {
 		assert.Equal(t, wantErr, l.Close(), "must return the listener's error")
 		assert.True(t, inner.closed, "must close the listener")
 	}
+}
+
+func TestTrackingListenerStopAccepting(t *testing.T) {
+	inner, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	l := newTrackingListener(inner, &recordingHelper{})
+
+	l.stopAccepting()
+	_, err = net.Dial("tcp", l.Addr().String())
+	assert.Error(t, err, "must refuse new connections")
+
+	accepted := make(chan error, 1)
+	go func() {
+		_, err := l.Accept()
+		accepted <- err
+	}()
+	assert.Never(t, func() bool { return len(accepted) > 0 }, 50*time.Millisecond, time.Millisecond,
+		"Accept must only fail once closed")
+
+	assert.NoError(t, l.Close(), "must return what stopAccepting closing the listener did")
+	assert.ErrorIs(t, <-accepted, net.ErrClosed, "Accept must fail once closed")
+	assert.NoError(t, l.Close())
 }
 
 func TestTrackingListenerOverTCP(t *testing.T) {

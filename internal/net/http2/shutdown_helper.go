@@ -25,6 +25,7 @@ package http2
 import (
 	"context"
 	"net"
+	"sync"
 )
 
 // ShutdownHelper is an interface that provides a shutdown callback intended
@@ -56,12 +57,20 @@ type ShutdownHelper interface {
 	IsShutdownComplete(ctx context.Context) bool
 }
 
-// NewShutdownHelper creates an HTTP/2 server shutdown helper.
-func NewShutdownHelper() ShutdownHelper {
+// NewNoopShutdownHelper creates a no-op HTTP/2 server shutdown helper.
+func NewNoopShutdownHelper() ShutdownHelper {
 	return &noopHelper{}
 }
 
-var _ ShutdownHelper = (*noopHelper)(nil)
+// NewShutdownHelper creates an HTTP/2 server shutdown helper.
+func NewShutdownHelper() ShutdownHelper {
+	return newGracefulShutdownHelper()
+}
+
+var (
+	_ ShutdownHelper = (*noopHelper)(nil)
+	_ ShutdownHelper = (*gracefulShutdownHelper)(nil)
+)
 
 // noopHelper is a no-op implementation of [ShutdownHelper].
 type noopHelper struct{}
@@ -83,4 +92,213 @@ func (h *noopHelper) IsShutdownReady(ctx context.Context) bool {
 // IsShutdownComplete implements the [ShutdownHelper] interface for [noopHelper].
 func (h *noopHelper) IsShutdownComplete(ctx context.Context) bool {
 	return true
+}
+
+// shutdownState encodes the state of a [gracefulShutdownHelper]'s shutdown process.
+type shutdownState int
+
+const (
+	shutdownNone     shutdownState = iota // BeginShutdown not invoked yet.
+	shutdownStarted                       // Listeners closed; connections are shutting down.
+	shutdownReady                         // IsShutdownReady returned: the first phase of new connections is not waited on.
+	shutdownComplete                      // IsShutdownComplete invoked: new connections are refused; final state.
+)
+
+var _ listenerTracker = (*gracefulShutdownHelper)(nil)
+
+// gracefulShutdownHelper is an implementation of [ShutdownHelper] that shuts
+// down every tracked HTTP/2 connection gracefully, with two GOAWAY frames,
+// on server shutdown. Each [TrackedConn] runs its own shutdown.
+type gracefulShutdownHelper struct {
+	mu        sync.Mutex
+	conns     map[*TrackedConn]struct{}
+	listeners []*TrackingListener
+	state     shutdownState
+	wg        sync.WaitGroup // one per connection shutting down, until it closes
+
+	firstPhases     int           // connections shutting down before IsShutdownReady returned, in their first phase
+	firstPhasesOver chan struct{} // closed once firstPhases drops to 0, while IsShutdownReady waits
+}
+
+// newGracefulShutdownHelper is the constructor for [gracefulShutdownHelper].
+func newGracefulShutdownHelper() *gracefulShutdownHelper {
+	return &gracefulShutdownHelper{
+		conns: make(map[*TrackedConn]struct{}),
+	}
+}
+
+// TrackConnection implements the [ShutdownHelper] interface for [gracefulShutdownHelper].
+// Only a [TrackedConn] can be shut down gracefully, so other connections are
+// not tracked.
+func (h *gracefulShutdownHelper) TrackConnection(conn net.Conn) func() {
+	tc, ok := conn.(*TrackedConn)
+	if !ok {
+		return nil
+	}
+
+	h.mu.Lock()
+	if h.state == shutdownComplete {
+		h.mu.Unlock()
+		// Too late to shut it down gracefully: refuse it, so that it serves
+		// nothing. It can only come after http.Server.Shutdown gave up.
+		_ = tc.Close()
+		return nil
+	}
+	defer h.mu.Unlock()
+	h.conns[tc] = struct{}{}
+	if h.state != shutdownNone {
+		// Accepted before BeginShutdown closed the listeners, but only sent
+		// its preface since. This happens before http.Server.Shutdown
+		// returns, so before IsShutdownComplete waits.
+		h.shutdownLocked(tc)
+	}
+	return func() {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		delete(h.conns, tc)
+	}
+}
+
+// shutdownLocked starts the graceful shutdown of tc, which wg counts until
+// tc closes.
+// Note: only thread-safe if h.mu is held.
+func (h *gracefulShutdownHelper) shutdownLocked(tc *TrackedConn) {
+	if !tc.startShutdown() {
+		return
+	}
+	h.wg.Add(1)
+	// IsShutdownReady waits for its first phase, even if it already waits.
+	waited := h.state == shutdownStarted
+	if waited {
+		h.firstPhases++
+	}
+	go func() {
+		defer h.wg.Done()
+		tc.drain()
+		if waited {
+			h.firstPhaseOver()
+		}
+		<-tc.done()
+	}()
+}
+
+// firstPhaseOver counts out a connection whose first phase IsShutdownReady
+// waits for.
+func (h *gracefulShutdownHelper) firstPhaseOver() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.firstPhases--; h.firstPhases == 0 && h.firstPhasesOver != nil {
+		close(h.firstPhasesOver)
+		h.firstPhasesOver = nil
+	}
+}
+
+// trackListener implements the listenerTracker interface for [gracefulShutdownHelper].
+func (h *gracefulShutdownHelper) trackListener(tl *TrackingListener) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.state != shutdownNone {
+		tl.stopAccepting()
+		return
+	}
+	h.listeners = append(h.listeners, tl)
+}
+
+// BeginShutdown implements the [ShutdownHelper] interface for [gracefulShutdownHelper].
+// It stops accepting new connections on the listeners wrapped with it, which
+// refuse them from then on, and starts shutting down every tracked
+// connection.
+func (h *gracefulShutdownHelper) BeginShutdown() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.state != shutdownNone {
+		return
+	}
+	h.state = shutdownStarted
+	for _, tl := range h.listeners {
+		tl.stopAccepting()
+	}
+	for tc := range h.conns {
+		h.shutdownLocked(tc)
+	}
+}
+
+// ShutdownCallback implements the [ShutdownHelper] interface for [gracefulShutdownHelper].
+// It is a no-op if BeginShutdown was invoked first, as it must be: net/http
+// runs it in a goroutine that may only start after IsShutdownComplete.
+func (h *gracefulShutdownHelper) ShutdownCallback() {
+	h.BeginShutdown()
+}
+
+// IsShutdownReady implements the [ShutdownHelper] interface for [gracefulShutdownHelper].
+// Once BeginShutdown was invoked, it blocks until the first phase is over on
+// every connection shutting down: the client acknowledged the PING sent with
+// the first GOAWAY, or did not in time, or the connection closed. That
+// includes connections accepted before the listeners closed, that only send
+// their preface while it waits: there are finitely many. It returns false if
+// ctx ends first.
+func (h *gracefulShutdownHelper) IsShutdownReady(ctx context.Context) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.state != shutdownStarted {
+		return true
+	}
+	// No connection is waited on once it returns.
+	defer func() {
+		if h.state == shutdownStarted {
+			h.state = shutdownReady
+		}
+	}()
+	for h.firstPhases > 0 {
+		over := make(chan struct{})
+		h.firstPhasesOver = over
+		h.mu.Unlock()
+		select {
+		case <-over:
+			h.mu.Lock()
+		case <-ctx.Done():
+			h.mu.Lock()
+			h.firstPhasesOver = nil
+			return false
+		}
+	}
+	return true
+}
+
+// IsShutdownComplete implements the [ShutdownHelper] interface for [gracefulShutdownHelper].
+// Once BeginShutdown was invoked, it refuses new connections, and blocks
+// until every tracked connection has closed, or until ctx ends: it then
+// closes the remaining connections and returns false.
+func (h *gracefulShutdownHelper) IsShutdownComplete(ctx context.Context) bool {
+	h.mu.Lock()
+	if h.state == shutdownNone {
+		h.mu.Unlock()
+		return true
+	}
+	// No connection is tracked from now on, so that every wg.Add happens
+	// before wg.Wait.
+	h.state = shutdownComplete
+	h.mu.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		h.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return true
+	case <-ctx.Done():
+	}
+
+	h.mu.Lock()
+	conns := make([]*TrackedConn, 0, len(h.conns))
+	for tc := range h.conns {
+		conns = append(conns, tc)
+	}
+	h.mu.Unlock()
+	for _, tc := range conns {
+		_ = tc.Close()
+	}
+	return false
 }
