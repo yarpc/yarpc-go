@@ -536,7 +536,12 @@ func (pl *List) status(pf *peerFacade) peer.Status {
 
 // notifyStatusChanged must be run under a list lock.
 func (pl *List) notifyStatusChanged(pf *peerFacade) {
-	if pf == nil {
+	// A transport may deliver a status notification for a peer after the list
+	// has already removed it, because peers notify subscribers outside their own
+	// lock. Ignore notifications for facades that are no longer the live entry
+	// for their address. Otherwise an "Available" notification would re-add a
+	// released peer to the implementation, where it could never be removed.
+	if pf == nil || pl.peers[pf.id.Identifier()] != pf {
 		return
 	}
 
