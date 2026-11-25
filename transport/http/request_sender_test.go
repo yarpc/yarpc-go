@@ -23,6 +23,7 @@ package http
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -129,6 +130,16 @@ func TestIsRetryableH2Error(t *testing.T) {
 			want: true,
 		},
 		{
+			msg:  "refused stream that converts to http2.StreamError",
+			err:  convertibleStreamError{code: http2.ErrCodeRefusedStream},
+			want: true,
+		},
+		{
+			msg:  "wrapped refused stream",
+			err:  fmt.Errorf("round trip: %w", http2.StreamError{Code: http2.ErrCodeRefusedStream}),
+			want: true,
+		},
+		{
 			msg:  "other stream error code",
 			err:  http2.StreamError{Code: http2.ErrCodeProtocol},
 			want: false,
@@ -154,6 +165,22 @@ func TestIsRetryableH2Error(t *testing.T) {
 			assert.Equal(t, tt.want, isRetryableH2Error(tt.err))
 		})
 	}
+}
+
+// convertibleStreamError stands in for the stream errors of net/http's own
+// HTTP/2 client, which convert to http2.StreamError only through errors.As.
+type convertibleStreamError struct {
+	code http2.ErrCode
+}
+
+func (e convertibleStreamError) Error() string { return "stream error: " + e.code.String() }
+
+func (e convertibleStreamError) As(target any) bool {
+	se, ok := target.(*http2.StreamError)
+	if ok {
+		*se = http2.StreamError{Code: e.code}
+	}
+	return ok
 }
 
 func TestNextH2Request(t *testing.T) {

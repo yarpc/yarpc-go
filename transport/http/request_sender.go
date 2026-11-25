@@ -261,7 +261,11 @@ const (
 )
 
 func isRetryableH2Error(err error) bool {
-	if se, ok := err.(http2.StreamError); ok {
+	// errors.As, not a type assertion: on Go 1.27 and later, x/net/http2 can
+	// run requests on net/http's own HTTP/2 client, whose stream errors convert
+	// to http2.StreamError only through their As method.
+	var se http2.StreamError
+	if errors.As(err, &se) {
 		return se.Code == http2.ErrCodeRefusedStream
 	}
 	switch err.Error() {
