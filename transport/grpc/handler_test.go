@@ -42,7 +42,7 @@ func TestInvalidStreamContext(t *testing.T) {
 
 	h := handler{i: i}
 
-	_, err = h.getBasicTransportRequest(context.Background(), "serv/proc")
+	_, _, err = h.getBasicTransportRequest(context.Background(), "serv/proc")
 
 	require.Contains(t, err.Error(), "cannot get metadata from ctx:")
 	require.Contains(t, err.Error(), "code:internal")
@@ -58,7 +58,7 @@ func TestInvalidStreamMethod(t *testing.T) {
 	h := handler{i: i}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
 
-	_, err = h.getBasicTransportRequest(ctx, "invalidMethod!")
+	_, _, err = h.getBasicTransportRequest(ctx, "invalidMethod!")
 
 	require.Contains(t, err.Error(), errInvalidGRPCMethod.Error())
 }
@@ -73,7 +73,7 @@ func TestInvalidStreamRequest(t *testing.T) {
 	h := handler{i: i}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
 
-	_, err = h.getBasicTransportRequest(ctx, "service/proc")
+	_, _, err = h.getBasicTransportRequest(ctx, "service/proc")
 
 	require.Contains(t, err.Error(), "code:invalid-argument")
 	require.Contains(t, err.Error(), "missing service name, caller name, encoding")
@@ -94,7 +94,7 @@ func TestInvalidStreamEmptyHeader(t *testing.T) {
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 
-	_, err = h.getBasicTransportRequest(ctx, "service/proc")
+	_, _, err = h.getBasicTransportRequest(ctx, "service/proc")
 
 	require.Contains(t, err.Error(), "code:invalid-argument")
 	require.Contains(t, err.Error(), "missing caller name")
@@ -113,7 +113,7 @@ func TestInvalidStreamMultipleHeaders(t *testing.T) {
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 
-	_, err = h.getBasicTransportRequest(ctx, "service/proc")
+	_, _, err = h.getBasicTransportRequest(ctx, "service/proc")
 
 	require.Contains(t, err.Error(), "code:invalid-argument")
 	require.Contains(t, err.Error(), "header has more than one value: rpc-caller:[caller1 caller2]")
