@@ -53,6 +53,8 @@ func (c *CreateOpenTracingSpan) Do(
 		"rpc.service":   req.Service,
 		"rpc.encoding":  req.Encoding,
 		"rpc.transport": c.TransportName,
+		"span.kind":            ext.SpanKindRPCClientEnum,
+		string(ext.PeerService): req.Service,
 	}
 	for k, v := range c.ExtraTags {
 		tags[k] = v
@@ -63,8 +65,6 @@ func (c *CreateOpenTracingSpan) Do(
 		opentracing.ChildOf(parent),
 		tags,
 	)
-	ext.PeerService.Set(span, req.Service)
-	ext.SpanKindRPCClient.Set(span)
 
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	return ctx, span
@@ -91,6 +91,8 @@ func (e *ExtractOpenTracingSpan) Do(
 		"rpc.service":   req.Service,
 		"rpc.encoding":  req.Encoding,
 		"rpc.transport": e.TransportName,
+		"span.kind":            ext.SpanKindRPCServerEnum,
+		string(ext.PeerService): req.Caller,
 	}
 	for k, v := range e.ExtraTags {
 		tags[k] = v
@@ -103,8 +105,6 @@ func (e *ExtractOpenTracingSpan) Do(
 		// this implies ChildOf
 		ext.RPCServerOption(e.ParentSpanContext),
 	)
-	ext.PeerService.Set(span, req.Caller)
-	ext.SpanKindRPCServer.Set(span)
 
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	return ctx, span
