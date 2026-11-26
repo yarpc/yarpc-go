@@ -29,28 +29,28 @@ import (
 )
 
 // RequestBodyEncodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to encode
+// yarpcerrors.CodeInternal that represents a failure to encode
 // the request body.
 func RequestBodyEncodeError(req *transport.Request, err error) error {
 	return newClientEncodingError(req, false /*isResponse*/, false /*isHeader*/, err)
 }
 
 // ResponseBodyDecodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to decode
+// yarpcerrors.CodeInternal that represents a failure to decode
 // the response body.
 func ResponseBodyDecodeError(req *transport.Request, err error) error {
 	return newClientEncodingError(req, true /*isResponse*/, false /*isHeader*/, err)
 }
 
 // RequestHeadersEncodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to
+// yarpcerrors.CodeInternal that represents a failure to
 // encode the request headers.
 func RequestHeadersEncodeError(req *transport.Request, err error) error {
 	return newClientEncodingError(req, false /*isResponse*/, true /*isHeader*/, err)
 }
 
 // ResponseHeadersDecodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to
+// yarpcerrors.CodeInternal that represents a failure to
 // decode the response headers.
 func ResponseHeadersDecodeError(req *transport.Request, err error) error {
 	return newClientEncodingError(req, true /*isResponse*/, true /*isHeader*/, err)
@@ -71,5 +71,5 @@ func newClientEncodingError(req *transport.Request, isResponse bool, isHeader bo
 	parts = append(parts,
 		fmt.Sprintf("for procedure %q of service %q: %v",
 			req.Procedure, req.Service, err))
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, strings.Join(parts, " "))
+	return yarpcerrors.Newf(yarpcerrors.CodeInternal, strings.Join(parts, " "))
 }
