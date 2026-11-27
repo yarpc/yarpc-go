@@ -63,7 +63,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) (err e
 		return errInvalidGRPCStream
 	}
 
-	transportRequest, err := h.getBasicTransportRequest(ctx, streamMethod)
+	transportRequest, md, err := h.getBasicTransportRequest(ctx, streamMethod)
 	if err != nil {
 		return err
 	}
@@ -77,6 +77,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) (err e
 		return h.handleUnary(
 			ctx,
 			transportRequest,
+			md,
 			serverStream,
 			streamMethod,
 			start,
@@ -89,6 +90,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) (err e
 		return h.handleStream(
 			ctx,
 			transportRequest,
+			md,
 			serverStream,
 			start,
 			middleware.ApplyStreamInbound(
@@ -102,27 +104,27 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) (err e
 
 // getBasicTransportRequest converts the grpc request metadata into a
 // transport.Request without a body field.
-func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod string) (*transport.Request, error) {
+func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod string) (*transport.Request, metadata.MD, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if md == nil || !ok {
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "cannot get metadata from ctx: %v", ctx)
+		return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "cannot get metadata from ctx: %v", ctx)
 	}
 	transportRequest, err := metadataToTransportRequest(md)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	transportRequest.Transport = TransportName
 
 	procedure, err := procedureFromStreamMethod(streamMethod)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	transportRequest.Procedure = procedure
 	if err := transport.ValidateRequest(transportRequest); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return transportRequest, nil
+	return transportRequest, md, nil
 }
 
 // procedureFromStreamMethod converts a GRPC stream method into a yarpc
@@ -145,16 +147,13 @@ func procedureFromStreamMethod(streamMethod string) (string, error) {
 func (h *handler) handleStream(
 	ctx context.Context,
 	transportRequest *transport.Request,
+	md metadata.MD,
 	serverStream grpc.ServerStream,
 	start time.Time,
 	streamHandler transport.StreamHandler,
 ) error {
 	tracer := h.i.t.options.tracer
-	var parentSpanCtx opentracing.SpanContext
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
-	}
+	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            tracer,
@@ -182,6 +181,7 @@ func (h *handler) handleStream(
 func (h *handler) handleUnary(
 	ctx context.Context,
 	transportRequest *transport.Request,
+	md metadata.MD,
 	serverStream grpc.ServerStream,
 	streamMethod string,
 	start time.Time,
@@ -201,7 +201,7 @@ func (h *handler) handleUnary(
 	// Echo accepted rpc-service in response header
 	responseWriter.AddSystemHeader(ServiceHeader, transportRequest.Service)
 
-	err := h.handleUnaryBeforeErrorConversion(ctx, transportRequest, responseWriter, start, handler)
+	err := h.handleUnaryBeforeErrorConversion(ctx, transportRequest, md, responseWriter, start, handler)
 	err = handlerErrorToGRPCError(err, responseWriter)
 
 	// Send the response attributes back and end the stream.
@@ -223,16 +223,13 @@ func (h *handler) handleUnary(
 func (h *handler) handleUnaryBeforeErrorConversion(
 	ctx context.Context,
 	transportRequest *transport.Request,
+	md metadata.MD,
 	responseWriter *responseWriter,
 	start time.Time,
 	handler transport.UnaryHandler,
 ) error {
 	tracer := h.i.t.options.tracer
-	var parentSpanCtx opentracing.SpanContext
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
-	}
+	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            tracer,
